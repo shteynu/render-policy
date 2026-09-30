@@ -31,7 +31,7 @@ describe('properties', () => {
           const index = Math.min(at, value.length);
           value = value.slice(0, index) + ch + value.slice(index);
         }
-        const verdict = checkUrl(value, MODE_PRESETS.balanced);
+        const verdict = checkUrl(value, MODE_PRESETS.balanced.urls);
         // Either blocked, or the control character broke the scheme so the browser would treat it as relative.
         if (verdict.ok) {
           const cleaned = value.replace(/[\t\n\r]/g, '').replace(/^[\u0000- ]+/, '');

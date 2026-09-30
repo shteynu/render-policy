@@ -43,28 +43,29 @@ const ALWAYS_FORBIDDEN_ATTRIBUTES = [
 ];
 
 function buildConfig(policy: RenderPolicy): Config {
-  const forbidTags = new Set<string>([...ALWAYS_FORBIDDEN_TAGS, ...policy.forbidTags]);
-  if (!policy.allowForms) for (const tag of FORM_TAGS) forbidTags.add(tag);
-  if (!policy.allowMedia) for (const tag of MEDIA_TAGS) forbidTags.add(tag);
-  if (!policy.allowImages) forbidTags.add('img');
-  if (!policy.allowSvg) forbidTags.add('svg');
+  const { content } = policy;
+  const forbidTags = new Set<string>([...ALWAYS_FORBIDDEN_TAGS, ...content.forbidTags]);
+  if (!content.allowForms) for (const tag of FORM_TAGS) forbidTags.add(tag);
+  if (!content.allowMedia) for (const tag of MEDIA_TAGS) forbidTags.add(tag);
+  if (!content.allowImages) forbidTags.add('img');
+  if (!content.allowSvg) forbidTags.add('svg');
 
-  const forbidAttributes = new Set<string>([...ALWAYS_FORBIDDEN_ATTRIBUTES, ...policy.forbidAttributes]);
-  if (!policy.allowInlineStyles) forbidAttributes.add('style');
-  if (!policy.allowTargetBlank) forbidAttributes.add('target');
+  const forbidAttributes = new Set<string>([...ALWAYS_FORBIDDEN_ATTRIBUTES, ...content.forbidAttributes]);
+  if (!content.allowInlineStyles) forbidAttributes.add('style');
+  if (!content.allowTargetBlank) forbidAttributes.add('target');
 
   // DOMPurify's own URI check is kept as a second layer, aligned with the policy's scheme allowlist
   // (same shape as DOMPurify's default: listed schemes, or a relative URL).
-  const schemes = policy.allowedSchemes.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const schemes = policy.urls.allowedSchemes.map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   const allowedUri = new RegExp(`^(?:(?:${schemes}):|[^a-z]|[a-z+.\\-]+(?:[^a-z+.\\-:]|$))`, 'i');
 
   return {
-    USE_PROFILES: policy.allowSvg ? { html: true, svg: true, svgFilters: true } : { html: true },
+    USE_PROFILES: content.allowSvg ? { html: true, svg: true, svgFilters: true } : { html: true },
     ALLOWED_URI_REGEXP: allowedUri,
     FORBID_TAGS: [...forbidTags],
     FORBID_ATTR: [...forbidAttributes],
-    ADD_ATTR: policy.allowTargetBlank ? ['target'] : [],
-    ALLOW_DATA_ATTR: policy.allowDataAttributes,
+    ADD_ATTR: content.allowTargetBlank ? ['target'] : [],
+    ALLOW_DATA_ATTR: content.allowDataAttributes,
     ALLOW_ARIA_ATTR: true,
     ALLOW_UNKNOWN_PROTOCOLS: false,
     SANITIZE_DOM: true,
@@ -124,40 +125,41 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     if (origin !== null && url.origin === origin) {
       return { ok: true, value: parsed.normalized, rewritten: null };
     }
-    if (policy.imageHosts === 'none') {
+    const images = policy.images;
+    if (images.hosts === 'none') {
       return { ok: false, code: 'remote-images-disabled', reason: 'remote images are disabled by the policy' };
     }
-    if (policy.imageHosts !== 'any' && !hostMatches(url.host, policy.imageHosts, policy.allowWildcardHosts)) {
+    if (images.hosts !== 'any' && !hostMatches(url.host, images.hosts, images.allowWildcardHosts)) {
       return { ok: false, code: 'image-host-not-allowed', reason: `image host "${url.host}" is not in the allowlist` };
     }
     let rewritten: Problem | null = null;
     const hasQuery = url.search !== '' || url.hash !== '';
-    if (hasQuery && policy.imageQuery === 'deny') {
+    if (hasQuery && images.query === 'deny') {
       return { ok: false, code: 'image-query-denied', reason: 'image URL carries a query string or fragment' };
     }
-    if (hasQuery && policy.imageQuery === 'strip') {
+    if (hasQuery && images.query === 'strip') {
       url.search = '';
       url.hash = '';
       rewritten = { code: 'image-query-stripped', reason: 'query string removed' };
     }
-    if (policy.urlHeuristics) {
-      const problem = checkUrlHeuristics(url, policy.urlHeuristics);
+    if (policy.urls.heuristics) {
+      const problem = checkUrlHeuristics(url, policy.urls.heuristics);
       if (problem) return { ok: false, ...problem };
     }
     let value = rewritten ? url.href : parsed.normalized;
-    if (policy.rewriteImageUrl) {
+    if (images.rewriteUrl) {
       let out: string | null;
       try {
-        out = policy.rewriteImageUrl(url);
+        out = images.rewriteUrl(url);
       } catch (error) {
         // Application code failed: the image is blocked and the render goes on.
-        return { ok: false, code: 'image-rewrite-failed', reason: `rewriteImageUrl threw: ${messageOf(error)}` };
+        return { ok: false, code: 'image-rewrite-failed', reason: `images.rewriteUrl threw: ${messageOf(error)}` };
       }
-      if (out === null) return { ok: false, code: 'image-rewrite-rejected', reason: 'rejected by rewriteImageUrl' };
-      const check = checkUrl(out, policy, pageBase());
-      if (!check.ok) return { ok: false, code: 'image-rewrite-invalid', reason: `rewriteImageUrl returned an invalid URL: ${check.reason}` };
+      if (out === null) return { ok: false, code: 'image-rewrite-rejected', reason: 'rejected by images.rewriteUrl' };
+      const check = checkUrl(out, policy.urls, pageBase());
+      if (!check.ok) return { ok: false, code: 'image-rewrite-invalid', reason: `images.rewriteUrl returned an invalid URL: ${check.reason}` };
       value = out;
-      rewritten = { code: 'image-rewritten', reason: 'rewritten by rewriteImageUrl' };
+      rewritten = { code: 'image-rewritten', reason: 'rewritten by images.rewriteUrl' };
     }
     return { ok: true, value, rewritten };
   };
@@ -181,7 +183,7 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     if (name === 'class') {
       const tokens = original.split(/\s+/).filter(Boolean);
       const kept = tokens.filter((token) =>
-        policy.allowedClassPatterns.some((pattern) => {
+        policy.content.allowedClassPatterns.some((pattern) => {
           pattern.lastIndex = 0;
           return pattern.test(token);
         }),
@@ -199,7 +201,7 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     }
 
     if (name === 'target') {
-      if (!policy.allowTargetBlank || original.trim().toLowerCase() !== '_blank') {
+      if (!policy.content.allowTargetBlank || original.trim().toLowerCase() !== '_blank') {
         drop('attribute', 'target-not-allowed', 'only target="_blank" is allowed');
       }
       return;
@@ -209,25 +211,60 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
 
     const isImage = tag === 'img' && name === 'src';
     const subject: DecisionSubject = isImage ? 'image' : name === 'href' ? 'link' : 'url';
-    const verdict = checkUrl(original, policy, pageBase());
+    const verdict = checkUrl(original, policy.urls, pageBase());
     if (!verdict.ok) {
       drop(subject, verdict.code, verdict.reason);
       return;
     }
-    const parsed = verdict.parsed;
+    let parsed = verdict.parsed;
+    const blockImage = (reason: string): void => {
+      if (isImage && policy.images.blocked === 'placeholder') s.blockedImages.set(node, { src: parsed.url.href, reason });
+    };
 
-    if (!parsed.relative && policy.sinkDenylist !== 'off') {
+    if (!parsed.relative && policy.urls.sinkDenylist !== 'off') {
       const explicitlyAllowed =
-        isImage && Array.isArray(policy.imageHosts) && hostMatches(parsed.url.host, policy.imageHosts, policy.allowWildcardHosts);
+        isImage && Array.isArray(policy.images.hosts) && hostMatches(parsed.url.host, policy.images.hosts, policy.images.allowWildcardHosts);
       const hit = explicitlyAllowed ? null : matchSink(parsed.url, denylist);
       if (hit) {
         const reason = `host matches the sink denylist (${hit.category}: ${hit.pattern}, list ${denylist.version})`;
-        if (policy.sinkDenylist === 'block') {
+        if (policy.urls.sinkDenylist === 'block') {
           drop(subject, 'sink-host', reason);
-          if (isImage && policy.blockedImage === 'placeholder') s.blockedImages.set(node, { src: parsed.url.href, reason });
+          blockImage(reason);
           return;
         }
         record(s, { kind: 'flagged', subject, code: 'sink-host', reason, tag, attribute: name, value: parsed.normalized });
+      }
+    }
+
+    // Application URL hook: the place a link policy lives (deny or redirect off-site links); it runs
+    // for images too, before the image-specific policy. If it throws, that one URL is dropped.
+    if (policy.urls.decide) {
+      let decision;
+      try {
+        decision = policy.urls.decide(new URL(parsed.url.href), { subject: subject as 'link' | 'image' | 'url', tag, attribute: name, relative: parsed.relative });
+      } catch (error) {
+        drop(subject, 'url-decider-failed', `urls.decide threw: ${messageOf(error)}`);
+        blockImage(`urls.decide threw: ${messageOf(error)}`);
+        return;
+      }
+      if (decision) {
+        if (decision.allow === false) {
+          const reason = decision.reason ?? 'denied by urls.decide';
+          drop(subject, 'url-denied', reason);
+          blockImage(reason);
+          return;
+        }
+        if (typeof decision.rewrite === 'string' && decision.rewrite !== parsed.normalized) {
+          const check = checkUrl(decision.rewrite, policy.urls, pageBase());
+          if (!check.ok) {
+            drop(subject, 'url-rewrite-invalid', `urls.decide returned an invalid URL: ${check.reason}`);
+            blockImage(`urls.decide returned an invalid URL: ${check.reason}`);
+            return;
+          }
+          parsed = check.parsed;
+          data.attrValue = decision.rewrite;
+          record(s, { kind: 'rewritten', subject, code: 'url-rewritten', reason: decision.reason ?? 'rewritten by urls.decide', tag, attribute: name, value: original });
+        }
       }
     }
 
@@ -236,7 +273,7 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     const outcome = applyImagePolicy(parsed);
     if (!outcome.ok) {
       drop('image', outcome.code, outcome.reason);
-      if (policy.blockedImage === 'placeholder') s.blockedImages.set(node, { src: parsed.url.href, reason: outcome.reason });
+      blockImage(outcome.reason);
       return;
     }
     if (outcome.value !== original) {

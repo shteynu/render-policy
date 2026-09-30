@@ -5,7 +5,7 @@ export { createContentBinding } from './binding.js';
 export type { ContentBinding, ContentBindingOptions } from './binding.js';
 
 export { DEFAULT_MODE, DEFAULT_URL_HEURISTICS, MODE_PRESETS, resolvePolicy } from './policy.js';
-export type { HostPattern, ImageHosts, RenderMode, RenderPolicy, UrlHeuristics } from './policy.js';
+export type { ContentPolicy, HostPattern, ImagePolicy, ImageHosts, RenderMode, RenderPolicy, RenderPolicyOverrides, UrlContext, UrlDecider, UrlDecision, UrlHeuristics, UrlPolicy, UrlSubject } from './policy.js';
 
 export type { CoreDecisionCode, DecisionCode, DecisionKind, DecisionSubject, RenderDecision } from './decisions.js';
 

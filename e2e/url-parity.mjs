@@ -23,7 +23,7 @@ await writeFile(
   [
     `import { checkUrl, createRenderer, MODE_PRESETS } from ${JSON.stringify(path.join(repoRoot, 'packages/core/src/index.ts'))};`,
     'window.__checkUrl = checkUrl;',
-    'window.__policy = MODE_PRESETS.balanced;',
+    'window.__policy = MODE_PRESETS.balanced.urls;',
     "window.__renderer = createRenderer({ mode: 'permissive' });",
     'window.__ready = true;',
   ].join('\n'),

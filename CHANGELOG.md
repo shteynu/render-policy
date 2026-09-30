@@ -36,6 +36,15 @@ First release.
   default when no `ui.csp` is declared, `frame-src`/`object-src`/`base-uri` locked down, host
   and sandbox on different origins). Closes the loop with the census (what servers declare) and
   mcp-app-lint (what is risky to declare): `npm run conformance`, folded into `npm run check`.
+- `RenderPolicy` is grouped into `content` (elements, attributes, classes), `urls` (schemes,
+  relative URLs, `heuristics`, `sinkDenylist`, and a new `decide` hook) and `images` (`hosts`,
+  `allowWildcardHosts`, `query`, `rewriteUrl`, `blocked`). An override names only the fields it
+  changes; each group is merged onto the mode preset. `urls.decide(url, context)` is the general
+  URL hook the design review asked for: it runs for every URL attribute after the scheme, relative
+  and sink checks, for links and images alike, and can allow, deny or rewrite (a link through a
+  redirector, an image through a proxy, re-checked against the scheme allowlist); it is where a
+  link policy lives. If it throws, that one URL is dropped and the render goes on
+  (`url-denied`, `url-rewritten`, `url-rewrite-invalid`, `url-decider-failed` journal codes).
 - Design pass before the first release. Every journal entry carries a stable `code` next to its
   `reason` (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …).
   Application code that throws no longer aborts a render: a failing `rewriteImageUrl` blocks that

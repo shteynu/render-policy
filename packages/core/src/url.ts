@@ -1,5 +1,5 @@
 import type { CoreDecisionCode } from './decisions.js';
-import type { RenderPolicy, UrlHeuristics } from './policy.js';
+import type { UrlHeuristics, UrlPolicy } from './policy.js';
 
 export interface ParsedUrl {
   readonly raw: string;
@@ -45,7 +45,7 @@ export function usableBase(href: string | undefined | null): string | undefined 
  * `//host` takes the page's scheme, `http:path` on an http page stays on the page, and a
  * declared scheme outside the allowlist is rejected before anything is parsed.
  */
-export function checkUrl(raw: string, policy: Pick<RenderPolicy, 'allowedSchemes' | 'allowRelativeUrls'>, base?: string): UrlVerdict {
+export function checkUrl(raw: string, policy: Pick<UrlPolicy, 'allowedSchemes' | 'allowRelativeUrls'>, base?: string): UrlVerdict {
   const normalized = normalizeUrl(raw);
   const declared = SCHEME_RE.test(normalized) ? normalized.slice(0, normalized.indexOf(':')).toLowerCase() : null;
   if (declared !== null && !policy.allowedSchemes.includes(declared)) {

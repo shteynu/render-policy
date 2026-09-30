@@ -95,7 +95,7 @@ describe('host UI protection', () => {
 
   it('accepts additional class patterns from the policy', () => {
     const target = box();
-    createRenderer({ policy: { allowedClassPatterns: [/^chat-/] } }).renderHtmlInto(target, '<p class="chat-quote hidden">a</p>');
+    createRenderer({ policy: { content: { allowedClassPatterns: [/^chat-/] } } }).renderHtmlInto(target, '<p class="chat-quote hidden">a</p>');
     expect(target.querySelector('p')?.getAttribute('class')).toBe('chat-quote');
   });
 
@@ -151,7 +151,7 @@ describe('host UI protection', () => {
     createRenderer().renderHtmlInto(closed, html);
     expect(closed.querySelector('video, audio')).toBeNull();
     const open = box();
-    createRenderer({ policy: { allowMedia: true } }).renderHtmlInto(open, html);
+    createRenderer({ policy: { content: { allowMedia: true } } }).renderHtmlInto(open, html);
     expect(open.querySelectorAll('video, audio').length).toBe(2);
   });
 });
@@ -216,7 +216,7 @@ describe('decision codes and application-code failures', () => {
   const box = (): HTMLDivElement => document.createElement('div');
 
   it('every decision carries a stable code next to its reason', () => {
-    const renderer = createRenderer({ policy: { imageHosts: ['cdn.example'] } });
+    const renderer = createRenderer({ policy: { images: { hosts: ['cdn.example'] } } });
     const { decisions } = renderer.renderHtmlInto(
       box(),
       '<a href="javascript:alert(1)" onclick="x()" class="evil">l</a><img src="https://cdn.example/a.png?token=1"><img src="https://webhook.site/x.png"><img src="https://other.example/b.png"><form></form>',
@@ -231,10 +231,12 @@ describe('decision codes and application-code failures', () => {
   it('a rewriteImageUrl that throws blocks that image and the render goes on', () => {
     const renderer = createRenderer({
       policy: {
-        imageHosts: ['cdn.example'],
-        rewriteImageUrl: (url) => {
-          if (url.pathname.endsWith('boom.png')) throw new Error('proxy down');
-          return `https://proxy.example/?u=${encodeURIComponent(url.href)}`;
+        images: {
+          hosts: ['cdn.example'],
+          rewriteUrl: (url) => {
+            if (url.pathname.endsWith('boom.png')) throw new Error('proxy down');
+            return `https://proxy.example/?u=${encodeURIComponent(url.href)}`;
+          },
         },
       },
     });
@@ -254,10 +256,12 @@ describe('decision codes and application-code failures', () => {
     const other = box();
     const renderer = createRenderer({
       policy: {
-        imageHosts: ['cdn.example'],
-        rewriteImageUrl: () => {
-          renderer.renderHtmlInto(other, '<b>nested</b>');
-          return null;
+        images: {
+          hosts: ['cdn.example'],
+          rewriteUrl: () => {
+            renderer.renderHtmlInto(other, '<b>nested</b>');
+            return null;
+          },
         },
       },
     });

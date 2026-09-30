@@ -7,7 +7,7 @@ or `bypassSecurityTrustHtml()`.
 import { provideRenderPolicy, RpMarkdownComponent, RpRenderDirective } from '@render-policy/angular';
 
 bootstrapApplication(AppComponent, {
-  providers: [provideRenderPolicy({ mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } })],
+  providers: [provideRenderPolicy({ mode: 'balanced', policy: { images: { hosts: ['cdn.example.com'] } } })],
 });
 ```
 

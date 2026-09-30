@@ -70,7 +70,7 @@ contract is string-based; the policy's own output is a fragment.
 | Resolved-value guard | `guardA2uiValue(kind, value)` for `image`/`media` (image-host allowlist, sink denylist, URL heuristics, `rewriteImageUrl`) and `link` (schemes, sinks); every decision is a journal entry with the existing codes; application hooks that throw become entries, never aborted renders | not started |
 | Strict text mode | A policy preset for `Text`: Markdown without HTML, images or links, matching the catalog's contract | not started |
 | Markdown plug-in | Fragment path: our React and Angular components render `Text` themselves. Compatibility path: a string for the reference renderers' plug-in contract, documented as weaker than a fragment | not started |
-| Public URL API | `checkUrlHeuristics` moves from `core/internal` to the public entry; a link decision hook (`decideUrl`, already on the core list) lands here | not started |
+| Public URL API | a link decision hook lands as `urls.decide(url, context)` (allow / deny / rewrite, for links and images); `checkUrlHeuristics` stays in `core/internal` for now | done: `urls.decide` |
 | Static message scan | Literal hazards in A2UI messages (`javascript:` in `openUrl`, image hosts outside the allowlist) as `mcp-app-lint` rules; a CI aid, not a substitute for the guard | not started |
 | Proofs | jsdom for the guard and presets; Chromium proof that an image URL arriving through `updateDataModel` and blocked by the policy makes no request | not started |
 | Corpus | A2UI cases next to the evil-Markdown ones (bound URLs, `formatString`-assembled URLs, Markdown in `Text` that breaks the catalog contract) | not started |

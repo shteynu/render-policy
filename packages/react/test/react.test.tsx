@@ -77,7 +77,7 @@ describe('RpMarkdown', () => {
   });
 
   it('streams: withholds an incomplete image, renders it once complete, keeps settled nodes', () => {
-    const config = { policy: { imageHosts: ['cdn.example'] } };
+    const config = { policy: { images: { hosts: ['cdn.example'] } } };
     const ui = (content: string, streaming: boolean): ReactElement => (
       <RenderPolicyProvider config={config}>
         <RpMarkdown content={content} streaming={streaming} scheduler={sync} />

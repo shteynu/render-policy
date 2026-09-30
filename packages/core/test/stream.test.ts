@@ -56,7 +56,7 @@ describe('holdIncompleteHtml', () => {
 describe('streaming render', () => {
   it('never renders an image before its URL is closed and verified', () => {
     const target = box();
-    const stream = createRenderer({ policy: { imageHosts: ['cdn.example'] } }).createStream(target);
+    const stream = createRenderer({ policy: { images: { hosts: ['cdn.example'] } } }).createStream(target);
     stream.push('Look: ![chart](https://cdn.exa');
     expect(target.querySelector('img')).toBeNull();
     expect(target.textContent).not.toContain('https://');

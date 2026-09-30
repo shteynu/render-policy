@@ -6,7 +6,7 @@ React adapter for [`@render-policy/core`](../core): render agent Markdown or HTM
 ```tsx
 import { RenderPolicyProvider, RpMarkdown, RpHtml, useRenderPolicy } from '@render-policy/react';
 
-const config = { mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } };
+const config = { mode: 'balanced', policy: { images: { hosts: ['cdn.example.com'] } } };
 
 function App() {
   return (

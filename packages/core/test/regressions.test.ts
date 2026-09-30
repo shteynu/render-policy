@@ -61,7 +61,7 @@ describe('regression classes', () => {
     const target = box();
     const secret = encodeURIComponent('user said: my API key is sk-live-123');
     const encoded = Buffer.from('user said: my API key is sk-live-123 '.repeat(4)).toString('base64url');
-    createRenderer({ policy: { imageHosts: ['cdn.example'] } }).renderMarkdownInto(
+    createRenderer({ policy: { images: { hosts: ['cdn.example'] } } }).renderMarkdownInto(
       target,
       `![a](https://cdn.example/pixel.png?c=${secret}) ![b](https://cdn.example/${encoded}.png)`,
     );

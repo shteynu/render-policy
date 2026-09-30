@@ -18,7 +18,7 @@ describe('createContentBinding', () => {
   });
 
   it('streams while streaming is true, ends with a final render when it turns false, reports once', () => {
-    const renderer = createRenderer({ policy: { imageHosts: ['cdn.example'] } });
+    const renderer = createRenderer({ policy: { images: { hosts: ['cdn.example'] } } });
     const target = box();
     const journals: (readonly RenderDecision[])[] = [];
     const binding = createContentBinding(renderer, target, { schedule: sync, onDecisions: (d) => journals.push(d) });

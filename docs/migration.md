@@ -11,7 +11,7 @@ element.innerHTML = DOMPurify.sanitize(marked.parse(message));
 After:
 
 ```ts
-const renderer = createRenderer({ policy: { imageHosts: ['cdn.example.com'] } });
+const renderer = createRenderer({ policy: { images: { hosts: ['cdn.example.com'] } } });
 renderer.renderMarkdownInto(element, message);
 ```
 
@@ -45,7 +45,7 @@ After:
 ```
 
 ```ts
-bootstrapApplication(AppComponent, { providers: [provideRenderPolicy({ mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } })] });
+bootstrapApplication(AppComponent, { providers: [provideRenderPolicy({ mode: 'balanced', policy: { images: { hosts: ['cdn.example.com'] } } })] });
 ```
 
 Angular's built-in sanitizer keeps every `https:` image and every `https:` link; it has no notion of

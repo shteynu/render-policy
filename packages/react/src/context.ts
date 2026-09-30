@@ -17,7 +17,7 @@ export interface RenderPolicyProviderProps {
 /**
  * Provides one renderer to the tree:
  *
- *   <RenderPolicyProvider config={{ mode: 'balanced', policy: { imageHosts: ['cdn.example'] } }}>
+ *   <RenderPolicyProvider config={{ mode: 'balanced', policy: { images: { hosts: ['cdn.example'] } } }}>
  *
  * On the server (no window) the provided value is null and components render empty containers.
  */

@@ -7,7 +7,7 @@ Trusted Types compatible. Streaming aware.
 ```ts
 import { createRenderer } from '@render-policy/core';
 
-const renderer = createRenderer({ mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } });
+const renderer = createRenderer({ mode: 'balanced', policy: { images: { hosts: ['cdn.example.com'] } } });
 renderer.renderMarkdownInto(element, message.content);
 
 const stream = renderer.createStream(element);

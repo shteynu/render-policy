@@ -45,7 +45,7 @@ import { createRenderer } from '@render-policy/core';
 
 const renderer = createRenderer({
   mode: 'balanced',
-  policy: { imageHosts: ['cdn.example.com'] },
+  policy: { images: { hosts: ['cdn.example.com'] } },
   onDecision: (d) => console.debug('[render-policy]', d.code, d.kind, d.subject, d.reason),
 });
 
@@ -60,13 +60,13 @@ stream.end();
 
 `renderHtmlInto()`, `renderTextInto()`, `markdownToFragment()` and `sanitizeHtml()` cover the other shapes. `trustedHTML()` is the escape hatch for a string sink you cannot remove: it returns a `TrustedHTML` where the API exists (through DOMPurify's `dompurify` policy) and a string elsewhere.
 
-Every decision in the journal carries a stable `code` for programs (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …) and a `reason` for people. Application code that throws never aborts a render: a `rewriteImageUrl` that fails blocks that one image, a transform that fails is skipped, and the journal says so. Building blocks the renderer is made of (`patchChildren`, `createSanitizer`, the URL heuristics) live in `@render-policy/core/internal`, outside semver. The packages are ESM only; Node 20.19 and later can `require()` them, older CommonJS code needs a dynamic `import()`.
+Every decision in the journal carries a stable `code` for programs (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …) and a `reason` for people. Application code that throws never aborts a render: an `images.rewriteUrl` that fails blocks that one image, a transform that fails is skipped, and the journal says so. Building blocks the renderer is made of (`patchChildren`, `createSanitizer`, the URL heuristics) live in `@render-policy/core/internal`, outside semver. The packages are ESM only; Node 20.19 and later can `require()` them, older CommonJS code needs a dynamic `import()`.
 
 ### Angular
 
 ```ts
 bootstrapApplication(AppComponent, {
-  providers: [provideRenderPolicy({ mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } })],
+  providers: [provideRenderPolicy({ mode: 'balanced', policy: { images: { hosts: ['cdn.example.com'] } } })],
 });
 ```
 
@@ -83,7 +83,7 @@ No `[innerHTML]`, no `DomSanitizer.bypassSecurityTrustHtml()`, nothing for Trust
 ```tsx
 import { RenderPolicyProvider, RpMarkdown } from '@render-policy/react';
 
-const config = { mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } };
+const config = { mode: 'balanced', policy: { images: { hosts: ['cdn.example.com'] } } };
 
 <RenderPolicyProvider config={config}>
   <RpMarkdown content={message.content} streaming={message.pending} className="message" />
@@ -125,18 +125,13 @@ Strict is for surfaces that show untrusted sources (web browsing agents, inbound
 
 ## Policy reference
 
-| Field | Default (balanced) | Meaning |
+The policy has three groups: `content` (which elements, attributes and classes agent output may carry), `urls` (which URLs any attribute may point at) and `images` (what happens to the image requests those URLs would make). An override names only the fields it changes; each group is merged onto the mode preset, so `policy: { images: { hosts: ['cdn.example'] } }` keeps every other image and URL default.
+
+**`content`**
+
+| Field | Default | Meaning |
 | --- | --- | --- |
-| `allowedSchemes` | `http, https, mailto, tel` | Schemes allowed in `href`, `src` and every other URL attribute. Everything else is dropped, after browser-style normalization (`java\tscript:` is `javascript:`). |
-| `allowRelativeUrls` | `true` | Scheme-less URLs resolve against the host page. Protocol-relative (`//host`, `\\host`) counts as remote. |
 | `allowImages` | `true` | Allow `<img>` at all. |
-| `imageHosts` | `[]` | `'none'`, `'any'`, or exact host patterns (`host[:port]`). Same-origin images are always allowed. |
-| `allowWildcardHosts` | `false` | Honour `*.example.com`. A wildcard allows every subdomain, including user-controlled ones, so it is an explicit choice; a wildcard without it throws at startup. |
-| `imageQuery` | `'strip'` | Keep, strip or reject query strings on remote images. Stripping breaks signed URLs and defeats `?data=` exfiltration; choose per host with `rewriteImageUrl`. |
-| `rewriteImageUrl` | `null` | Rewrite allowed remote images, for example through an image proxy. `null` blocks the image. |
-| `blockedImage` | `'placeholder'` | Replace a blocked image with `<a class="rp-blocked-image" href="…" target="_blank" rel="noopener noreferrer">[image blocked: alt]</a>` (the "click to open" pattern), or remove it. The placeholder goes through the same policy: a sink host gets no link either. |
-| `urlHeuristics` | `{ maxLength: 2048, maxTokenLength: 64, minEntropy: 4 }` | Block remote image URLs that are too long or carry a long high-entropy or hex token in the path or query. `false` disables. |
-| `sinkDenylist` | `'block'` | Hosts that exist to receive data: OAST services, request catchers, tunnels, anonymous serverless endpoints, form builders, public object storage. [The list](packages/core/src/data/sink-domains.ts) is data with its own version; replace it with `createRenderer({ sinkDenylist })`. An explicit `imageHosts` entry wins over the denylist. |
 | `allowTargetBlank` | `true` | Keep `target="_blank"` (other targets are dropped). `rel="noopener noreferrer"` is always set when a target is present. |
 | `allowForms` | `false` | Form controls. Off: a rendered password field is a phishing form inside the chat. |
 | `allowSvg` | `false` | Inline SVG (DOMPurify's sanitized subset). |
@@ -145,6 +140,26 @@ Strict is for surfaces that show untrusted sources (web browsing agents, inbound
 | `allowDataAttributes` | `false` | `data-*`. Host scripts commonly read them as configuration. |
 | `allowedClassPatterns` | `language-*`, `rp-*` | Class names the content may carry; everything else is stripped, so agent content cannot borrow host CSS. |
 | `forbidTags`, `forbidAttributes` | `[]` | Extra denials on top of the built-in ones. |
+
+**`urls`**
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `allowedSchemes` | `http, https, mailto, tel` | Schemes allowed in `href`, `src` and every other URL attribute. Everything else is dropped, after browser-style normalization (`java\tscript:` is `javascript:`). |
+| `allowRelativeUrls` | `true` | Scheme-less URLs resolve against the host page. Protocol-relative (`//host`, `\\host`) counts as remote. |
+| `heuristics` | `{ maxLength: 2048, maxTokenLength: 64, minEntropy: 4 }` | Block remote image URLs that are too long or carry a long high-entropy or hex token in the path or query. `false` disables. |
+| `sinkDenylist` | `'block'` | Hosts that exist to receive data: OAST services, request catchers, tunnels, anonymous serverless endpoints, form builders, public object storage. [The list](packages/core/src/data/sink-domains.ts) is data with its own version; replace it with `createRenderer({ sinkDenylist })`. An explicit `images.hosts` entry wins over the denylist. |
+| `decide` | `null` | Application hook run for every URL after the checks above, for links and images alike: return `{ allow: false }` to drop it, `{ rewrite }` to route it (a link through a redirector, an image through a proxy; re-checked against `allowedSchemes`), or `null` to leave it. This is where a link policy lives. If it throws, that one URL is dropped and the render goes on. |
+
+**`images`** (image requests fire without a click)
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `hosts` | `[]` | `'none'`, `'any'`, or exact host patterns (`host[:port]`). Same-origin images are always allowed. |
+| `allowWildcardHosts` | `false` | Honour `*.example.com`. A wildcard allows every subdomain, including user-controlled ones, so it is an explicit choice; a wildcard without it throws at startup. |
+| `query` | `'strip'` | Keep, strip or reject query strings on remote images. Stripping breaks signed URLs and defeats `?data=` exfiltration; choose per host with `rewriteUrl`. |
+| `rewriteUrl` | `null` | Rewrite allowed remote images, for example through an image proxy. `null` blocks the image. |
+| `blocked` | `'placeholder'` | Replace a blocked image with `<a class="rp-blocked-image" href="…" target="_blank" rel="noopener noreferrer">[image blocked: alt]</a>` (the "click to open" pattern), or remove it. The placeholder goes through the same policy: a sink host gets no link either. |
 
 Always removed, in every mode: `script`, `style`, `template`, `iframe`, `object`, `embed`, `base`, `meta`, `link`, `math`, `dialog`, `marquee`; the attributes `srcset`, `sizes`, `ping`, `background`, `formaction`, `action`, `usemap`, `is`, `slot`, `part`, `popover*`, `contenteditable`, `autofocus`, and every `on*` handler. `id` and `name` are prefixed (`user-content-`) against DOM clobbering.
 
@@ -169,7 +184,7 @@ Always removed, in every mode: `script`, `style`, `template`, `iframe`, `object`
 What is deliberately **not** covered:
 
 - The text itself. Prompt injection, a misleading answer, a link to a convincing phishing page on an allowed host: rendering cannot judge content. render-policy makes the rendered output inert; it does not make it true.
-- CSP. Set one; the renderer needs nothing beyond `trusted-types dompurify` if you use `trustedHTML()`. `img-src` is the second line behind `imageHosts`.
+- CSP. Set one; the renderer needs nothing beyond `trusted-types dompurify` if you use `trustedHTML()`. `img-src` is the second line behind `images.hosts`.
 - iframes and MCP App sandboxes. Host-side isolation of embedded apps is a different problem, on the roadmap as a separate test suite.
 - Server-side rendering. Sanitizing needs a DOM; on the server the Angular adapter emits text.
 

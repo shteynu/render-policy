@@ -30,7 +30,7 @@ export const RENDERER = new InjectionToken<Renderer>('render-policy.renderer', {
 /**
  * Configure the policy once, for the whole application:
  *
- *   bootstrapApplication(App, { providers: [provideRenderPolicy({ mode: 'balanced', policy: { imageHosts: ['cdn.example'] } })] })
+ *   bootstrapApplication(App, { providers: [provideRenderPolicy({ mode: 'balanced', policy: { images: { hosts: ['cdn.example'] } } })] })
  */
 export function provideRenderPolicy(config: RenderPolicyConfig): Provider[] {
   return [{ provide: RENDER_POLICY_CONFIG, useValue: config }];

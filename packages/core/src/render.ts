@@ -4,7 +4,7 @@ import type { RenderDecision } from './decisions.js';
 import { patchChildren } from './dom.js';
 import { messageOf } from './errors.js';
 import { createMarkdownRenderer, type MarkdownRenderer } from './markdown.js';
-import { resolvePolicy, type RenderMode, type RenderPolicy } from './policy.js';
+import { resolvePolicy, type RenderMode, type RenderPolicy, type RenderPolicyOverrides } from './policy.js';
 import { createSanitizer } from './sanitize.js';
 import type { SinkDenylist } from './sinks.js';
 import { createRenderStream, type RenderStream, type StreamOptions } from './stream.js';
@@ -57,8 +57,8 @@ export interface RendererOptions {
   readonly window?: RenderWindow;
   /** Policy preset. Default 'balanced'. */
   readonly mode?: RenderMode;
-  /** Overrides applied on top of the preset. */
-  readonly policy?: Partial<RenderPolicy>;
+  /** Overrides applied on top of the preset. Each group (`content`, `urls`, `images`) is merged. */
+  readonly policy?: RenderPolicyOverrides;
   /** Replace the bundled sink denylist. */
   readonly sinkDenylist?: SinkDenylist;
   /** Replace the Markdown renderer. Its output is sanitized regardless. */
