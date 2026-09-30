@@ -39,6 +39,49 @@ Also planned for the core:
 - [x] an evil-Markdown corpus other renderers can run (`corpus/`, 49 cases, reference results in `corpus/RESULTS.md`)
 - [ ] image proxy guidance (SSRF-safe) for `rewriteImageUrl`
 
+## Proposed: structured agent UI (A2UI)
+
+Not yet in the plan document; dates to be set there. Scope and design notes, from reading the
+A2UI specification v0.9 and the v1.0 candidate (`google/A2UI`, `specification/`).
+
+An A2UI agent sends no HTML: `createSurface`, `updateComponents`, `updateDataModel` and
+`deleteSurface` messages describe components from a catalog, and the client renders them with its
+own widgets. What a sanitizer used to cover is gone by construction; what the policy covers is not.
+In the basic catalog the policy-relevant places are:
+
+| Place | Content | Class |
+| --- | --- | --- |
+| `Text.text` | Markdown; the catalog says "without HTML, images, or links", which is guidance to the agent, not a guarantee | markup injection, images and links that should not be there |
+| `Image.url`, `Video.url`, `AudioPlayer.url` | URLs the browser requests without a click | exfiltration through the request, the same class as `<img>` in Markdown |
+| `openUrl` function (button actions) | navigation | dangerous schemes, sink hosts; the spec itself mandates an `http`/`https` allowlist and `noopener,noreferrer` |
+| `updateDataModel` | the data the fields above bind to | see below |
+
+Nearly every property is `Dynamic*`: a literal, a JSON Pointer `path` into the data model, or a
+function call such as `formatString` (`"https://${/host}/${/token}"`). The effective value exists
+only after binding and changes with every data-model update, so checking message JSON is not
+enough: the check has to run on the resolved value, at the moment the renderer uses it.
+
+Integration point: the reference renderers (React, Lit, Angular) take Markdown through a plug-in,
+`(text, options) => Promise<string>`, returning an HTML string the renderer inserts itself. That
+contract is string-based; the policy's own output is a fragment.
+
+| Component | Plan | Status |
+| --- | --- | --- |
+| Resolved-value guard | `guardA2uiValue(kind, value)` for `image`/`media` (image-host allowlist, sink denylist, URL heuristics, `rewriteImageUrl`) and `link` (schemes, sinks); every decision is a journal entry with the existing codes; application hooks that throw become entries, never aborted renders | not started |
+| Strict text mode | A policy preset for `Text`: Markdown without HTML, images or links, matching the catalog's contract | not started |
+| Markdown plug-in | Fragment path: our React and Angular components render `Text` themselves. Compatibility path: a string for the reference renderers' plug-in contract, documented as weaker than a fragment | not started |
+| Public URL API | `checkUrlHeuristics` moves from `core/internal` to the public entry; a link decision hook (`decideUrl`, already on the core list) lands here | not started |
+| Static message scan | Literal hazards in A2UI messages (`javascript:` in `openUrl`, image hosts outside the allowlist) as `mcp-app-lint` rules; a CI aid, not a substitute for the guard | not started |
+| Proofs | jsdom for the guard and presets; Chromium proof that an image URL arriving through `updateDataModel` and blocked by the policy makes no request | not started |
+| Corpus | A2UI cases next to the evil-Markdown ones (bound URLs, `formatString`-assembled URLs, Markdown in `Text` that breaks the catalog contract) | not started |
+
+Open questions: a new package (`@render-policy/a2ui`) or a core entry point; which spec version
+to target first (v0.9 is what renderers ship, v1.0 is the stable candidate); whether a
+`formatString` result should be checked as one value or also per interpolated part.
+
+AG-UI needs no adapter of its own: it transports text deltas, which the existing streaming mode
+already renders.
+
 ## Stage 3: census of CSP in public MCP Apps (26 Oct – 27 Nov 2026)
 
 Measure how public MCP Apps declare CSP and allowed domains (`_meta.ui`: CSP, `connectDomains`,
