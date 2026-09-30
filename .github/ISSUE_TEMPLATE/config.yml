@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security: a sanitizer or policy bypass
+    url: https://github.com/shteynu/render-policy/security/advisories/new
+    about: Bypasses are reported privately. Please do not open a public issue for them.

@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      security-critical:
+        patterns: ["dompurify", "marked"]
+      dev-tooling:
+        patterns: ["vitest", "typescript", "esbuild", "playwright", "jsdom", "@types/*", "eslint*", "@angular-eslint/*"]
+      angular:
+        patterns: ["@angular/*", "ng-packagr", "rxjs", "tslib"]
+      react:
+        patterns: ["react", "react-dom"]
+      mermaid:
+        patterns: ["mermaid"]
+    open-pull-requests-limit: 10
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
