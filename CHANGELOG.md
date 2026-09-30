@@ -29,6 +29,13 @@ First release.
 - MCP Apps UI census (`census/`): registry snapshot, static census over npm packages using a UI
   SDK, protocol census over remote servers (read-only), analyzer for `_meta.ui` CSP domain lists,
   permissions, tool visibility and resource HTML, report of aggregates.
+- MCP Apps host conformance (`conformance/`): a reference for the CSP and iframe `allow`
+  attribute the specification (SEP-1865) makes a host build from a resource's `_meta.ui`, with
+  `node:test` unit tests against the spec formula and a Chromium run asserting the browser
+  enforces it (declared hosts reachable, undeclared blocked by `connect-src`, the restrictive
+  default when no `ui.csp` is declared, `frame-src`/`object-src`/`base-uri` locked down, host
+  and sandbox on different origins). Closes the loop with the census (what servers declare) and
+  mcp-app-lint (what is risky to declare): `npm run conformance`, folded into `npm run check`.
 - Streaming v2: a Markdown stream re-parses and re-sanitizes only the unsettled tail of the
   buffer. The settled prefix ends at the last cut where the text before renders the same on
   its own as inside the whole document (after a blank line; never inside a fence or an HTML

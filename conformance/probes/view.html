@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>conformance probe</title>
+  </head>
+  <body>
+    <script>
+      // A minimal UI view. It attempts one operation per CSP directive and records, for each,
+      // whether the browser allowed it or reported a Content-Security-Policy violation. The
+      // conformance runner reads these globals to assert what a host's CSP must enforce. No
+      // operation targets anything real: the runner fulfils whatever the CSP lets through.
+      window.__violations = [];
+      addEventListener('securitypolicyviolation', (event) => {
+        window.__violations.push({ directive: event.effectiveDirective, blocked: event.blockedURI });
+      });
+      window.__fetch = {};
+
+      async function attempt(name, url) {
+        try {
+          const response = await fetch(url);
+          window.__fetch[name] = response.status;
+        } catch {
+          window.__fetch[name] = 'error';
+        }
+      }
+
+      (async () => {
+        await attempt('connect-declared', 'https://declared.test/data');
+        await attempt('connect-undeclared', 'https://undeclared.test/data');
+
+        const img = document.createElement('img');
+        img.src = 'https://resource.test/pixel.png';
+        document.body.appendChild(img);
+
+        const frame = document.createElement('iframe');
+        frame.src = 'https://frame.test/nested';
+        document.body.appendChild(frame);
+
+        const object = document.createElement('object');
+        object.data = 'https://object.test/payload';
+        document.body.appendChild(object);
+
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        window.__ready = true;
+      })();
+    </script>
+  </body>
+</html>

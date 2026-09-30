@@ -28,6 +28,9 @@ technical part. Documentation is written in English; the maintainer communicates
   `bench.mjs` render timings) and the shared harness `e2e/lib/harness.mjs`.
 - `corpus/`: evil-Markdown corpus, runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.
 - `demo/`: the naive-vs-policy demo; `demo/build.mjs` produces `site/` for GitHub Pages.
+- `conformance/`: MCP Apps host conformance. `host.mjs` is a reference for the CSP and `allow` attribute the spec
+  makes a host build from `_meta.ui`; `host.test.mjs` checks it against the spec formula; `run.mjs` is a Chromium
+  proof that the browser enforces the built policy. `npm run conformance`; folded into `npm run check` and CI.
 - `census/`: MCP Apps UI census (registry snapshot, static npm census, protocol census, report). The analysis
   code is imported from `mcp-app-lint`; the report re-classifies domain lists from the raw entries kept in each
   scan, so a classifier change shows up on `npm run census:report` without a rescan. Tests with `node:test`

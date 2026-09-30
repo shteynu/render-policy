@@ -70,7 +70,13 @@ Plus `mcp-app-lint`: SARIF rules for existing scanners. Lives in its own reposit
 
 Status: `mcp-app-lint` exists as a prototype in [`packages/mcp-app-lint`](packages/mcp-app-lint):
 18 SARIF rules distilled from the census analyzer and a CLI over a package, a directory or the
-JSON a server returned. The evil-mcp-app suite has not started.
+JSON a server returned. A host conformance harness has started in [`conformance/`](conformance):
+a reference for the CSP and `allow` attribute the specification makes a host build from
+`_meta.ui`, with unit tests against the spec formula and a Chromium run that asserts the
+browser enforces it (declared hosts reachable, undeclared blocked, restrictive default with no
+metadata, `frame-src`/`object-src`/`base-uri` locked down, host and sandbox on different
+origins). The full adversarial suite (sandbox-proxy message relay, tool-call consent,
+`ui/message` spoofing) is not started.
 
 ## Ordering
 

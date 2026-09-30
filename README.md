@@ -289,7 +289,7 @@ node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
 
 ## MCP Apps census
 
-[`census/`](census) measures what public MCP servers declare about the interfaces they ask hosts to render: the `_meta.ui` of `ui://` resources (CSP domain lists, permissions), tool visibility, and what the HTML of those resources does on its own (inline `innerHTML` sinks are found with this repository's own ESLint rule). Aggregates only, in [`census/SUMMARY.md`](census/SUMMARY.md), including a breakdown of the declared hosts by category (fonts, analytics, maps, storage, media, CDNs, APIs, development leftovers, sinks). The analyzer became [`mcp-app-lint`](packages/mcp-app-lint): the same checks as SARIF rules for scanners and CI. A draft write-up of the results is in [`docs/writeup-mcp-apps-census.md`](docs/writeup-mcp-apps-census.md).
+[`census/`](census) measures what public MCP servers declare about the interfaces they ask hosts to render: the `_meta.ui` of `ui://` resources (CSP domain lists, permissions), tool visibility, and what the HTML of those resources does on its own (inline `innerHTML` sinks are found with this repository's own ESLint rule). Aggregates only, in [`census/SUMMARY.md`](census/SUMMARY.md), including a breakdown of the declared hosts by category (fonts, analytics, maps, storage, media, CDNs, APIs, development leftovers, sinks). The analyzer became [`mcp-app-lint`](packages/mcp-app-lint): the same checks as SARIF rules for scanners and CI. A draft write-up of the results is in [`docs/writeup-mcp-apps-census.md`](docs/writeup-mcp-apps-census.md). [`conformance/`](conformance) closes the loop: a Chromium check that a host enforces the very policy the census measures, built from the specification's own CSP formula.
 
 ## Roadmap
 

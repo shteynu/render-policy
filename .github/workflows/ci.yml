@@ -23,6 +23,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:census
+      - run: node --test "conformance/*.test.mjs"
 
   browser:
     name: browser proofs (core, Angular, Pages demo, corpus)
