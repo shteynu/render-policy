@@ -33,7 +33,7 @@ jobs:
       - name: Check that the tag matches the package versions
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          for pkg in packages/core packages/eslint-plugin packages/react packages/angular; do
+          for pkg in packages/core packages/eslint-plugin packages/react packages/mermaid packages/angular; do
             version="$(node -p "require('./$pkg/package.json').version")"
             if [ "$version" != "$tag" ]; then
               echo "$pkg is $version, tag is $tag" >&2
@@ -43,7 +43,7 @@ jobs:
       - name: Pack tarballs
         run: |
           mkdir -p artifacts
-          npm pack -w packages/core -w packages/eslint-plugin -w packages/react --pack-destination artifacts
+          npm pack -w packages/core -w packages/eslint-plugin -w packages/react -w packages/mermaid --pack-destination artifacts
           (cd packages/angular/dist && npm pack --pack-destination ../../../artifacts)
           ls -l artifacts
       - name: GitHub release with the tarballs
@@ -61,6 +61,10 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - if: env.HAS_NPM_TOKEN == 'true'
         run: npm publish --provenance --access public -w packages/react
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - if: env.HAS_NPM_TOKEN == 'true'
+        run: npm publish --provenance --access public -w packages/mermaid
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - if: env.HAS_NPM_TOKEN == 'true'
