@@ -46,10 +46,17 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/shteynu/render-policy.git",
+    "url": "git+https://github.com/shteynu/render-policy.git",
     "directory": "packages/core"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "typesVersions": {
+    "*": {
+      "internal": [
+        "./dist/internal.d.ts"
+      ]
+    }
   }
 }

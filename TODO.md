@@ -14,6 +14,7 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 ## 2. Релиз v0.1.0
 
 - [ ] Версии всех шести пакетов (включая `mcp-app-lint`) сейчас `0.1.0`; в `CHANGELOG.md` заменить «(unreleased)» на дату.
+- [x] Проверка тарболов перед публикацией: `npm pack` всех шести, publint и arethetypeswrong чистые (ESM-only предупреждение ожидаемо), установка в чистый проект: ESM-импорт, `require()`, типы под `node16` и `bundler`, `@render-policy/core/internal` через `typesVersions`; LICENSE лежит в каждом пакете.
 - [ ] `npm ci && npm run check` локально (нужен Chromium: `npx playwright install chromium`).
 - [ ] `git tag v0.1.0 && git push origin v0.1.0` → `release.yml`: проверки, сверка версий с тегом, тарболы на GitHub Release, публикация на npm с provenance при наличии `NPM_TOKEN` (порядок: core, eslint-plugin, react, mermaid, angular из `packages/angular/dist`).
 - [ ] После публикации: в `README.md` убрать блок «install from release tarballs», проверить `npm install @render-policy/core` в чистом проекте.

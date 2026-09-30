@@ -60,7 +60,7 @@ stream.end();
 
 `renderHtmlInto()`, `renderTextInto()`, `markdownToFragment()` and `sanitizeHtml()` cover the other shapes. `trustedHTML()` is the escape hatch for a string sink you cannot remove: it returns a `TrustedHTML` where the API exists (through DOMPurify's `dompurify` policy) and a string elsewhere.
 
-Every decision in the journal carries a stable `code` for programs (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …) and a `reason` for people. Application code that throws never aborts a render: a `rewriteImageUrl` that fails blocks that one image, a transform that fails is skipped, and the journal says so. Building blocks the renderer is made of (`patchChildren`, `createSanitizer`, the URL heuristics) live in `@render-policy/core/internal`, outside semver.
+Every decision in the journal carries a stable `code` for programs (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …) and a `reason` for people. Application code that throws never aborts a render: a `rewriteImageUrl` that fails blocks that one image, a transform that fails is skipped, and the journal says so. Building blocks the renderer is made of (`patchChildren`, `createSanitizer`, the URL heuristics) live in `@render-policy/core/internal`, outside semver. The packages are ESM only; Node 20.19 and later can `require()` them, older CommonJS code needs a dynamic `import()`.
 
 ### Angular
 
