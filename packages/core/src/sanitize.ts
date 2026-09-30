@@ -3,7 +3,7 @@ import type { TrustedHTML } from 'trusted-types/lib/index.js';
 import type { RenderDecision, DecisionSubject } from './decisions.js';
 import type { RenderPolicy } from './policy.js';
 import { matchSink, type SinkDenylist } from './sinks.js';
-import { checkUrl, checkUrlHeuristics, hostMatches, type ParsedUrl } from './url.js';
+import { checkUrl, checkUrlHeuristics, hostMatches, usableBase, type ParsedUrl } from './url.js';
 
 export interface SanitizeOutcome<T> {
   readonly output: T;
@@ -95,6 +95,7 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
     const origin = win.document?.location?.origin;
     return origin && origin !== 'null' ? origin : null;
   };
+  const pageBase = (): string | undefined => usableBase(win.document?.location?.href);
 
   const record = (s: CallState, decision: RenderDecision): void => {
     s.decisions.push(decision);
@@ -104,8 +105,8 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
   };
 
   const applyImagePolicy = (parsed: ParsedUrl): ImageOutcome => {
-    if (!parsed.url) {
-      // Relative: resolves against the host page, so it is same-origin by construction.
+    if (parsed.relative) {
+      // Resolves within the host page's own origin.
       return { ok: true, value: parsed.normalized, rewritten: null };
     }
     const origin = pageOrigin();
@@ -137,7 +138,7 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
     if (policy.rewriteImageUrl) {
       const out = policy.rewriteImageUrl(url);
       if (out === null) return { ok: false, reason: 'rejected by rewriteImageUrl' };
-      const check = checkUrl(out, policy);
+      const check = checkUrl(out, policy, pageBase());
       if (!check.ok) return { ok: false, reason: `rewriteImageUrl returned an invalid URL: ${check.reason}` };
       value = out;
       rewritten = 'rewritten by rewriteImageUrl';
@@ -192,14 +193,14 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
 
     const isImage = tag === 'img' && name === 'src';
     const subject: DecisionSubject = isImage ? 'image' : name === 'href' ? 'link' : 'url';
-    const verdict = checkUrl(original, policy);
+    const verdict = checkUrl(original, policy, pageBase());
     if (!verdict.ok) {
       drop(subject, verdict.reason);
       return;
     }
     const parsed = verdict.parsed;
 
-    if (parsed.url && policy.sinkDenylist !== 'off') {
+    if (!parsed.relative && policy.sinkDenylist !== 'off') {
       const explicitlyAllowed =
         isImage && Array.isArray(policy.imageHosts) && hostMatches(parsed.url.host, policy.imageHosts, policy.allowWildcardHosts);
       const hit = explicitlyAllowed ? null : matchSink(parsed.url, denylist);
@@ -219,7 +220,7 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
     const outcome = applyImagePolicy(parsed);
     if (!outcome.ok) {
       drop('image', outcome.reason);
-      if (policy.blockedImage === 'placeholder') s.blockedImages.set(node, { src: parsed.url?.href ?? parsed.normalized, reason: outcome.reason });
+      if (policy.blockedImage === 'placeholder') s.blockedImages.set(node, { src: parsed.url.href, reason: outcome.reason });
       return;
     }
     if (outcome.value !== original) {

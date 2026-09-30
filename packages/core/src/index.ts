@@ -17,7 +17,7 @@ export type { MarkdownOptions, MarkdownRenderer } from './markdown.js';
 export { closeOpenFences, completeFences, createRenderStream, frameScheduler, holdIncompleteHtml, holdIncompleteMarkdown } from './stream.js';
 export type { RenderStream, Scheduler, StreamOptions, StreamRenderOps } from './stream.js';
 
-export { checkUrl, checkUrlHeuristics, hostMatches, normalizeUrl, shannonEntropy } from './url.js';
+export { checkUrl, checkUrlHeuristics, hostMatches, normalizeUrl, shannonEntropy, usableBase } from './url.js';
 export type { ParsedUrl, UrlVerdict } from './url.js';
 
 export { matchSink, mergeSinkDenylists } from './sinks.js';

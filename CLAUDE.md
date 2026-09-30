@@ -16,7 +16,8 @@ technical part. Documentation is written in English; the maintainer communicates
   Runtime proof in `packages/angular/e2e` (JIT app over the FESM, Playwright).
 - `packages/mermaid`: `@render-policy/mermaid`. Strict Mermaid as a fragment transform; unit tests with a fake
   mermaid, browser proof with the real one in `packages/mermaid/e2e`.
-- `e2e/`: browser proofs (`run.mjs` core, `site.mjs` Pages build) and the shared harness `e2e/lib/harness.mjs`.
+- `e2e/`: browser proofs (`run.mjs` core, `url-parity.mjs` URL classification vs Chromium, `site.mjs` Pages build)
+  and the shared harness `e2e/lib/harness.mjs`.
 - `corpus/`: evil-Markdown corpus, runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.
 - `demo/`: the naive-vs-policy demo; `demo/build.mjs` produces `site/` for GitHub Pages.
 

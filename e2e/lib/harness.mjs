@@ -30,9 +30,18 @@ const MIME = {
 export async function startServer({ root = repoRoot, cspFor = () => undefined } = {}) {
   const requests = [];
   const server = http.createServer(async (req, res) => {
-    const url = new URL(req.url ?? '/', 'http://localhost');
+    let url;
+    let pathname;
+    try {
+      url = new URL(req.url ?? '/', 'http://localhost');
+      pathname = decodeURIComponent(url.pathname);
+    } catch {
+      requests.push(req.url ?? '');
+      res.writeHead(400).end('bad request');
+      return;
+    }
     requests.push(url.pathname + url.search);
-    const file = path.join(root, decodeURIComponent(url.pathname));
+    const file = path.join(root, pathname);
     if (!file.startsWith(root)) {
       res.writeHead(403).end();
       return;
@@ -63,9 +72,15 @@ export async function openPage(browser, base, pathAndQuery, { readyFlag, settle 
   const page = await browser.newPage();
   const external = [];
   await page.route('**/*', (route) => {
-    const url = new URL(route.request().url());
-    if (url.origin === base) return route.continue();
-    external.push(url.href);
+    const raw = route.request().url();
+    let origin = null;
+    try {
+      origin = new URL(raw).origin;
+    } catch {
+      origin = null; // Chromium issued a request Node's URL parser rejects: treat as off-origin
+    }
+    if (origin === base) return route.continue();
+    external.push(raw);
     return route.abort();
   });
   const errors = [];

