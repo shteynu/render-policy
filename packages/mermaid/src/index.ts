@@ -79,9 +79,9 @@ export function createDiagramSanitizer(win: WindowLike): (svg: string) => Diagra
   const purify = createDOMPurify(win);
   return (svg) => {
     const decisions: RenderDecision[] = [];
-    const before = purify.removed.length;
     const fragment = purify.sanitize(svg, { ...SVG_CONFIG, RETURN_DOM_FRAGMENT: true });
-    for (const removed of purify.removed.slice(before)) {
+    // DOMPurify resets `removed` on every sanitize() call, so this is exactly this call's list.
+    for (const removed of purify.removed) {
       if ('element' in removed && removed.element) {
         const tag = (removed.element.nodeName ?? '').toLowerCase();
         if (tag === 'body' || tag === 'html' || tag === 'head') continue; // parser scaffolding, not content

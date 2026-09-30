@@ -161,6 +161,13 @@ describe('createDiagramSanitizer', () => {
     expect(imported.fragment.querySelector('style')).toBeNull();
   });
 
+  it('reports the removals of each call, not a suffix of the previous one', () => {
+    const noisy = sanitize('<svg xmlns="http://www.w3.org/2000/svg"><script>1</script><a href="x"/><image href="y"/><use href="z"/><rect onload="1" onclick="2" data-a="1"/></svg>');
+    expect(noisy.decisions.length).toBeGreaterThan(3);
+    const quiet = sanitize('<svg xmlns="http://www.w3.org/2000/svg"><script>1</script><rect/></svg>');
+    expect(quiet.decisions.map((d) => d.tag)).toEqual(['script']);
+  });
+
   it('allows only an svg root', () => {
     const { fragment } = sanitize('<div>x</div><svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>');
     expect(fragment.children.length).toBe(1);
