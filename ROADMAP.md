@@ -53,7 +53,11 @@ repository with `git subtree split`). Three collectors (registry snapshot, stati
 npm packages that use a UI SDK, protocol census over remote servers), one analyzer that reuses
 the sink denylist and the ESLint rule, a report of aggregates. The registry snapshot and the
 static census run from anywhere; the protocol census needs a machine with ordinary outbound
-access. Results so far: [`census/SUMMARY.md`](census/SUMMARY.md).
+access. Results so far ([`census/SUMMARY.md`](census/SUMMARY.md), snapshot of 30 Sep 2026): 37,759 servers
+in the registry, 62% with a remote endpoint; 168 npm packages depend on a UI SDK, 153 declare UI
+resources, 39% of those declare any CSP domain list; 596 UI HTML documents analyzed. The protocol
+census over the 22,618 streamable-http remotes still has to run from a machine with ordinary
+outbound access.
 
 ## Stage 4: evil-mcp-app and rules for MCP scanners (30 Nov 2026 – 29 Jan 2027)
 

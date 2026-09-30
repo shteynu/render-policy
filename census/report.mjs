@@ -38,7 +38,7 @@ if (registry) {
   };
   const r = summary.registry;
   lines.push('## Registry composition', '', `Snapshot ${registry.collectedAt.slice(0, 10)} of registry.modelcontextprotocol.io.`, '', '| Measure | Count |', '| --- | --- |',
-    `| entries (all versions) | ${r.entries} |`, `| servers (latest version each) | ${r.servers} |`, `| with a remote endpoint | ${r.withRemotes} (${pct(r.withRemotes, r.servers)}) |`,
+    `| servers (latest version of each) | ${r.servers} |`, `| with a remote endpoint | ${r.withRemotes} (${pct(r.withRemotes, r.servers)}) |`,
     `| remote: streamable-http | ${r.withStreamableHttp} |`, `| remote: sse (legacy) | ${r.withSse} |`, `| with a package (stdio) | ${r.withPackages} (${pct(r.withPackages, r.servers)}) |`,
     `| package registries | ${Object.entries(r.packageRegistries).map(([k, v]) => `${k} ${v}`).join(', ')} |`, '');
 }
@@ -71,10 +71,14 @@ if (npm.length > 0) {
     toolsVisibleToApp: count(declaring, (p) => p.scan.toolVisibility.app > 0),
     htmlDocuments: htmlDocs.length,
     htmlWithInlineScripts: count(htmlDocs, (h) => h.inlineScripts > 0),
+    htmlWithHandwrittenScripts: count(htmlDocs, (h) => (h.handwrittenScripts ?? 0) > 0),
     htmlWithUnsafeInnerHtml: count(htmlDocs, (h) => h.unsafeInnerHtml > 0),
+    htmlWithUnsafeInnerHtmlHandwritten: count(htmlDocs, (h) => (h.unsafeInnerHtmlHandwritten ?? 0) > 0),
     htmlWithPostMessageStar: count(htmlDocs, (h) => h.postMessageStar > 0),
+    htmlWithPostMessageStarHandwritten: count(htmlDocs, (h) => (h.postMessageStarHandwritten ?? 0) > 0),
     htmlWithInlineHandlers: count(htmlDocs, (h) => h.inlineHandlers > 0),
     htmlWithEval: count(htmlDocs, (h) => h.evalLike > 0),
+    htmlWithEvalHandwritten: count(htmlDocs, (h) => (h.evalLikeHandwritten ?? 0) > 0),
     htmlWithExternalHosts: count(htmlDocs, (h) => h.externalHosts.length > 0),
     htmlWithSinkHosts: count(htmlDocs, (h) => h.sinkHosts.length > 0),
     htmlWithFormsAction: count(htmlDocs, (h) => h.formsWithAction > 0),
@@ -94,9 +98,10 @@ if (npm.length > 0) {
     `| requesting sandbox permissions | ${Object.entries(n.permissions).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'} |`,
     `| tools declared visible to the app | ${n.toolsVisibleToApp} packages |`, '',
     '### The HTML of the UI resources', '', '| Measure | Count |', '| --- | --- |',
-    `| HTML documents found (files and embedded) | ${n.htmlDocuments} |`, `| with inline scripts | ${n.htmlWithInlineScripts} |`,
-    `| with a dynamic innerHTML/insertAdjacentHTML/document.write sink (render-policy lint) | ${n.htmlWithUnsafeInnerHtml} (${pct(n.htmlWithUnsafeInnerHtml, n.htmlWithInlineScripts)} of those with inline scripts) |`,
-    `| with postMessage(…, '*') | ${n.htmlWithPostMessageStar} |`, `| with inline event handlers | ${n.htmlWithInlineHandlers} |`, `| with eval or new Function | ${n.htmlWithEval} |`,
+    `| HTML documents found (files and embedded) | ${n.htmlDocuments} |`, `| with inline scripts | ${n.htmlWithInlineScripts} (${n.htmlWithHandwrittenScripts} with a handwritten script, the rest bundles) |`,
+    `| with a dynamic innerHTML/insertAdjacentHTML/document.write sink (render-policy lint) | ${n.htmlWithUnsafeInnerHtml} in any script; ${n.htmlWithUnsafeInnerHtmlHandwritten} in handwritten scripts (${pct(n.htmlWithUnsafeInnerHtmlHandwritten, n.htmlWithHandwrittenScripts)} of those) |`,
+    `| with postMessage(…, '*') | ${n.htmlWithPostMessageStar} in any script (the MCP Apps SDK bridge posts to '*' by design, so bundles count the SDK); ${n.htmlWithPostMessageStarHandwritten} in handwritten scripts |`,
+    `| with inline event handlers | ${n.htmlWithInlineHandlers} |`, `| with eval or new Function | ${n.htmlWithEval} in any script; ${n.htmlWithEvalHandwritten} in handwritten scripts |`,
     `| loading from external hosts | ${n.htmlWithExternalHosts} |`, `| referencing a sink host | ${n.htmlWithSinkHosts} |`, `| with a form that posts somewhere | ${n.htmlWithFormsAction} |`,
     `| with a CSP meta tag of its own | ${n.htmlWithMetaCsp} |`, '',
     `Metadata errors: ${Object.entries(n.errors).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}.`, '');

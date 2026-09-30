@@ -113,8 +113,12 @@ export function analyzeHtml(html) {
   const result = {
     bytes: text.length,
     inlineScripts: 0,
+    handwrittenScripts: 0,
     externalScripts: [],
     unsafeInnerHtml: 0,
+    unsafeInnerHtmlHandwritten: 0,
+    evalLikeHandwritten: 0,
+    postMessageStarHandwritten: 0,
     lintErrors: 0,
     unparsedScripts: 0,
     inlineHandlers: (text.match(/\son[a-z]+\s*=/gi) ?? []).length,
@@ -148,6 +152,14 @@ export function analyzeHtml(html) {
     const type = /\btype\s*=\s*["']([^"']+)["']/i.exec(attrs)?.[1]?.toLowerCase();
     if (type && !/javascript|module|ecmascript/.test(type)) continue;
     result.inlineScripts += 1;
+    // A bundled or minified script mostly carries framework internals; "handwritten" scripts
+    // (short lines, few of them) are what the app author wrote and can change.
+    const handwritten = isHandwritten(body);
+    if (handwritten) {
+      result.handwrittenScripts += 1;
+      result.evalLikeHandwritten += (body.match(/\beval\s*\(|new\s+Function\s*\(/g) ?? []).length;
+      result.postMessageStarHandwritten += (body.match(/postMessage\s*\([^)]*['"]\*['"]/g) ?? []).length;
+    }
     try {
       const messages = lintInlineScript(body);
       const fatal = messages.filter((m) => m.fatal);
@@ -155,12 +167,22 @@ export function analyzeHtml(html) {
         result.unparsedScripts += 1;
         continue;
       }
-      result.unsafeInnerHtml += messages.filter((m) => m.ruleId === 'render-policy/no-unsafe-innerhtml').length;
+      const hits = messages.filter((m) => m.ruleId === 'render-policy/no-unsafe-innerhtml').length;
+      result.unsafeInnerHtml += hits;
+      if (handwritten) result.unsafeInnerHtmlHandwritten += hits;
     } catch {
       result.unparsedScripts += 1;
     }
   }
   return result;
+}
+
+/** Short lines and not too many of them: written by a person, not emitted by a bundler. */
+export function isHandwritten(code) {
+  const lines = code.split('\n');
+  const longest = Math.max(0, ...lines.map((l) => l.length));
+  const average = code.length / Math.max(1, lines.length);
+  return longest < 2000 && average < 200 && lines.length < 3000;
 }
 
 /** Everything the HTML analysis reports about hosts, joined with the sink denylist. */

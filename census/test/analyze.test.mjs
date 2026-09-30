@@ -61,7 +61,10 @@ test('html: inline scripts are linted with no-unsafe-innerhtml, hosts and sinks 
 </body></html>`;
   const a = withSinkHosts(analyzeHtml(html));
   assert.equal(a.inlineScripts, 2);
+  assert.equal(a.handwrittenScripts, 2);
   assert.equal(a.unsafeInnerHtml, 1);
+  assert.equal(a.unsafeInnerHtmlHandwritten, 1);
+  assert.equal(a.postMessageStarHandwritten, 1);
   assert.equal(a.unparsedScripts, 1);
   assert.equal(a.inlineHandlers, 1);
   assert.equal(a.postMessageStar, 1);
@@ -70,6 +73,15 @@ test('html: inline scripts are linted with no-unsafe-innerhtml, hosts and sinks 
   assert.deepEqual(a.externalScripts, ['https://cdn.example.com/app.js']);
   assert.deepEqual(a.externalHosts, ['cdn.example.com', 'forms.gle', 'webhook.site']);
   assert.deepEqual(a.sinkHosts, ['forms.gle', 'webhook.site']);
+});
+
+test('html: a minified bundle is not counted as handwritten', () => {
+  const bundle = `<script>${'var e=document.createElement("div");e.innerHTML=window.x;'.repeat(60)}</script>`;
+  const a = analyzeHtml(bundle);
+  assert.equal(a.inlineScripts, 1);
+  assert.equal(a.handwrittenScripts, 0);
+  assert.equal(a.unsafeInnerHtml, 60);
+  assert.equal(a.unsafeInnerHtmlHandwritten, 0);
 });
 
 test('sse: the message with the matching id is picked out of a stream', () => {

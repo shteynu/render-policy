@@ -44,20 +44,29 @@ export function normalizeServer(entry) {
   };
 }
 
-/** Every server the registry lists, normalized. `onPage` receives progress. */
-export async function listAllServers({ base = DEFAULT_BASE, pageSize = 100, onPage = () => {}, maxPages = 5000 } = {}) {
-  const servers = [];
-  let cursor = null;
+/**
+ * Every server the registry lists, normalized. `onPage` receives progress. Pass `resume`
+ * ({ cursor, servers }) to continue an earlier run, and `deadline` (ms timestamp) to stop
+ * early: the result then carries `cursor` so the next run can pick up where this one stopped.
+ */
+export async function listAllServers({ base = DEFAULT_BASE, pageSize = 100, onPage = () => {}, maxPages = 20000, resume = null, deadline = Infinity, latest = true } = {}) {
+  const servers = resume?.servers ? [...resume.servers] : [];
+  let cursor = resume?.cursor ?? null;
+  let complete = false;
   for (let page = 1; page <= maxPages; page += 1) {
-    const url = `${base}/v0/servers?limit=${pageSize}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    if (Date.now() > deadline) break;
+    const url = `${base}/v0/servers?limit=${pageSize}${latest ? '&version=latest' : ''}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
     const data = await fetchJson(url);
     const entries = Array.isArray(data.servers) ? data.servers : [];
     for (const entry of entries) servers.push(normalizeServer(entry));
     onPage({ page, received: entries.length, total: servers.length });
     cursor = data.metadata?.nextCursor ?? data.metadata?.next_cursor ?? null;
-    if (!cursor || entries.length === 0) break;
+    if (!cursor || entries.length === 0) {
+      complete = true;
+      break;
+    }
   }
-  return servers;
+  return { servers, cursor: complete ? null : cursor, complete };
 }
 
 /** Only the newest version of each server name. */

@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-09-30T18:28:09.365Z",
+  "registry": {
+    "collectedAt": "2026-09-30T18:18:31.436Z",
+    "entries": 37759,
+    "servers": 37759,
+    "withRemotes": 23358,
+    "withStreamableHttp": 22618,
+    "withSse": 1077,
+    "withPackages": 15795,
+    "packageRegistries": {
+      "npm": 10462,
+      "oci": 1027,
+      "pypi": 4101,
+      "mcpb": 1377,
+      "cargo": 64,
+      "nuget": 135
+    }
+  },
+  "npm": {
+    "candidates": 10077,
+    "metadataOk": 9995,
+    "usingUiSdk": 168,
+    "bySdk": {
+      "@modelcontextprotocol/ext-apps": 159,
+      "@mcp-ui/server": 13,
+      "@mcp-ui/client": 1
+    },
+    "scanned": 168,
+    "declaringUiResources": 153,
+    "cspDeclared": 60,
+    "cspWithWildcard": 6,
+    "cspWithFullWildcard": 1,
+    "cspWithInsecureScheme": 2,
+    "cspWithSinkHost": 1,
+    "permissions": {
+      "clipboardWrite": 3,
+      "microphone": 1
+    },
+    "toolsVisibleToApp": 46,
+    "htmlDocuments": 596,
+    "htmlWithInlineScripts": 373,
+    "htmlWithHandwrittenScripts": 144,
+    "htmlWithUnsafeInnerHtml": 205,
+    "htmlWithUnsafeInnerHtmlHandwritten": 24,
+    "htmlWithPostMessageStar": 189,
+    "htmlWithPostMessageStarHandwritten": 32,
+    "htmlWithInlineHandlers": 59,
+    "htmlWithEval": 76,
+    "htmlWithEvalHandwritten": 0,
+    "htmlWithExternalHosts": 88,
+    "htmlWithSinkHosts": 0,
+    "htmlWithFormsAction": 7,
+    "htmlWithMetaCsp": 15,
+    "errors": {
+      "http-404": 82
+    }
+  }
+}
