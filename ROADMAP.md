@@ -15,7 +15,7 @@ framework; Angular is the first adapter. MIT, so upstream projects can take the 
 | Core | Policy for `img`, `a`, media, SVG; host allowlist without wildcards by default; query-string removal or proxy; URL length and entropy heuristics; "click to load" placeholder; applied as the last step over the final HTML | done: `@render-policy/core` |
 | Sink denylist | Forms, blob storage, `workers.dev`, webhook services; data separate from code, versioned | done: `packages/core/src/data/sink-domains.ts` (starting set) |
 | Angular adapter | Renders without `innerHTML`; streaming withholds images and links until the URL is closed and checked; Trusted Types | done (`[rpRender]`, `<rp-markdown>`, `provideRenderPolicy`); builds with ng-packagr in partial compilation mode, publish from `packages/angular/dist`; runtime proof in Chromium (`packages/angular/e2e`) |
-| Angular adapter: strict Mermaid | Diagram blocks rendered only by a strict renderer | not started (Mermaid stays a code block) |
+| Strict Mermaid | Diagram blocks rendered only by a strict renderer | done as a framework-free transform: `@render-policy/mermaid` (works with every adapter through `transforms`) |
 | Angular adapter: ngx-markdown bridge | A provider that routes ngx-markdown through the policy | not started (migration guide only) |
 | ESLint | Forbid `innerHTML` and `[innerHTML]` for untrusted content | done: `no-unsafe-innerhtml`, `no-innerhtml-binding` |
 | Regression tests | One per class of real advisories: sanitization order, fallback render, SVG in `data:`, Mermaid loose mode, sink through an allowed domain | done: `packages/core/test/regressions.test.ts` |

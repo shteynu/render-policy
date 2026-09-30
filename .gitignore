@@ -10,3 +10,4 @@ site/
 packages/angular/e2e/dist/
 
 corpus/.build/
+packages/mermaid/e2e/dist/

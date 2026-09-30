@@ -1,4 +1,5 @@
 import type { RenderDecision } from './decisions.js';
+import type { InsertOptions } from './render.js';
 
 export type Scheduler = (render: () => void) => void;
 
@@ -29,8 +30,8 @@ export interface RenderStream {
 }
 
 export interface StreamRenderOps {
-  markdown(target: ParentNode, markdown: string, options: { readonly patch: boolean }): { readonly decisions: readonly RenderDecision[] };
-  html(target: ParentNode, html: string, options: { readonly patch: boolean }): { readonly decisions: readonly RenderDecision[] };
+  markdown(target: ParentNode, markdown: string, options: InsertOptions): { readonly decisions: readonly RenderDecision[] };
+  html(target: ParentNode, html: string, options: InsertOptions): { readonly decisions: readonly RenderDecision[] };
 }
 
 export function createRenderStream(target: ParentNode, options: StreamOptions, ops: StreamRenderOps): RenderStream {
@@ -38,7 +39,7 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
   const schedule: Scheduler = options.schedule ?? ((render) => render());
   const hold = options.holdIncompleteUrls ?? true;
   const closeFences = options.closeFences ?? true;
-  const insert = { patch: options.patch ?? true };
+  const patch = options.patch ?? true;
   let text = '';
   let ended = false;
 
@@ -46,11 +47,16 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
     let source = text;
     if (mode === 'markdown') {
       if (!final && hold) source = holdIncompleteMarkdown(source);
-      if (closeFences) source = closeOpenFences(source);
-      ops.markdown(target, source, insert);
+      let openFenceAtEnd = false;
+      if (closeFences) {
+        const completed = completeFences(source);
+        source = completed.text;
+        openFenceAtEnd = completed.closed;
+      }
+      ops.markdown(target, source, { patch, streaming: true, final, openFenceAtEnd });
     } else {
       if (!final && hold) source = holdIncompleteHtml(source);
-      ops.html(target, source, insert);
+      ops.html(target, source, { patch, streaming: true, final, openFenceAtEnd: false });
     }
   };
 
@@ -109,6 +115,11 @@ const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 
 /** Append the closing fence of an unfinished ``` or ~~~ block. */
 export function closeOpenFences(markdown: string): string {
+  return completeFences(markdown).text;
+}
+
+/** Like closeOpenFences, and says whether a fence had to be closed. */
+export function completeFences(markdown: string): { readonly text: string; readonly closed: boolean } {
   let open: { char: string; length: number } | null = null;
   for (const line of markdown.split('\n')) {
     const match = FENCE_RE.exec(line);
@@ -124,9 +135,9 @@ export function closeOpenFences(markdown: string): string {
       open = null;
     }
   }
-  if (open === null) return markdown;
+  if (open === null) return { text: markdown, closed: false };
   const newline = markdown.endsWith('\n') ? '' : '\n';
-  return `${markdown}${newline}${open.char.repeat(open.length)}`;
+  return { text: `${markdown}${newline}${open.char.repeat(open.length)}`, closed: true };
 }
 
 // A bare URL still being received. A URL preceded by `(` or `<` belongs to a link or autolink handled above.

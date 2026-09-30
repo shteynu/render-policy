@@ -14,6 +14,7 @@ Framework-free core with Angular and React adapters.
 | [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 96 unit tests + a real-Chromium proof |
 | [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | builds with ng-packagr; browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
+| [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 10 unit tests + browser proof with the real mermaid |
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 45 rule tests |
 
 Until the packages are on npm, every [GitHub release](https://github.com/shteynu/render-policy/releases) carries their tarballs:
@@ -157,7 +158,7 @@ Always removed, in every mode: `script`, `style`, `template`, `iframe`, `object`
 | Host script gadgets | `data-toggle="modal"`, `<a id="location">` | blocked | `data-*` forbidden, `id`/`name` prefixed | `sanitize.test.ts` |
 | Reverse tabnabbing | `<a target="_blank" rel="opener">` | mitigated | `rel="noopener noreferrer"` enforced | `sanitize.test.ts` |
 | SVG through `data:` URLs | `<img src="data:image/svg+xml,…">` | blocked | `data:` is not an allowed scheme; blocked in every mode | `regressions.test.ts` #3 |
-| Diagram renderers in loose mode | ```` ```mermaid ```` with `click … "javascript:"` | stays text | no diagram renderer in core; the block renders as `<pre><code>` | `regressions.test.ts` #4 |
+| Diagram renderers in loose mode | ```` ```mermaid ```` with `click … "javascript:"` | stays text; with `@render-policy/mermaid`, a strict diagram with no link | no diagram renderer in core; the transform forces `securityLevel: 'strict'`, sanitizes the SVG and isolates it | `regressions.test.ts` #4, `packages/mermaid/e2e` |
 | Unsafe fallback | Markdown parser throws | plain text | text-node fallback, decision journaled | `regressions.test.ts` #2 |
 | Trusted Types violations | `innerHTML` under `require-trusted-types-for 'script'` | none | no string sinks anywhere; only `trustedHTML()` touches a policy | `e2e/run.mjs` |
 
@@ -208,6 +209,17 @@ npm ci
 npm run build
 npm run e2e
 ```
+
+## Diagrams
+
+```ts
+import mermaid from 'mermaid';
+import { createMermaidTransform } from '@render-policy/mermaid';
+
+const renderer = createRenderer({ transforms: [createMermaidTransform({ mermaid })] });
+```
+
+`transforms` post-process every sanitized fragment before insertion, with a context that says whether the render is streaming and whether the source ends inside an open code fence. The Mermaid transform renders in `securityLevel: 'strict'` without HTML labels, sanitizes the SVG (no links, scripts, `foreignObject`, images, external references, `:host` or `@import` in styles), and isolates the result in a shadow root inside a `contain: paint` wrapper. Open fences stay code until they close; finished diagrams stay in place while the rest streams. Details in [`packages/mermaid`](packages/mermaid).
 
 ## Evil-Markdown corpus
 

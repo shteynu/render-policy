@@ -1,0 +1,51 @@
+{
+  "name": "@render-policy/mermaid",
+  "version": "0.1.0",
+  "description": "Strict Mermaid diagrams for @render-policy/core: rendered in securityLevel strict without HTML labels, sanitized as SVG, isolated in a shadow root.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@render-policy/core": "^0.1.0",
+    "mermaid": ">=11.0.0"
+  },
+  "devDependencies": {
+    "@render-policy/core": "^0.1.0",
+    "mermaid": "^11.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mermaid",
+    "diagram",
+    "sanitize",
+    "xss",
+    "markdown",
+    "llm",
+    "agent",
+    "security"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shteynu/render-policy.git",
+    "directory": "packages/mermaid"
+  }
+}

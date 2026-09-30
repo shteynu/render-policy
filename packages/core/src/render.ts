@@ -22,7 +22,28 @@ export interface InsertOptions {
    * from the first difference. Used by streams; a one-shot render replaces everything.
    */
   readonly patch?: boolean;
+  /** True while a stream renders an intermediate state. Default false. */
+  readonly streaming?: boolean;
+  /** True for a one-shot render or the final render of a stream. Default true. */
+  readonly final?: boolean;
+  /** True when the source ended inside a code fence that the stream closed for display. Default false. */
+  readonly openFenceAtEnd?: boolean;
 }
+
+/** What a transform knows about the render it is post-processing. */
+export interface TransformContext {
+  readonly streaming: boolean;
+  readonly final: boolean;
+  readonly openFenceAtEnd: boolean;
+  readonly document: Document;
+}
+
+/**
+ * Post-processes a sanitized fragment before insertion: diagrams, syntax highlighting,
+ * link decorations. A transform runs on already-sanitized content and is trusted code;
+ * whatever it adds is inserted as is.
+ */
+export type FragmentTransform = (fragment: DocumentFragment, context: TransformContext) => void;
 
 export interface FragmentResult extends RenderResult {
   readonly fragment: DocumentFragment;
@@ -41,14 +62,16 @@ export interface RendererOptions {
   readonly markdown?: MarkdownRenderer;
   /** Receive every policy decision as it is made. */
   readonly onDecision?: (decision: RenderDecision) => void;
+  /** Post-processors applied to every sanitized fragment before insertion, in order. */
+  readonly transforms?: readonly FragmentTransform[];
 }
 
 export interface Renderer {
   readonly policy: RenderPolicy;
   /** Sanitize HTML into an inert fragment without touching any live DOM. */
-  sanitizeHtml(html: string): FragmentResult;
+  sanitizeHtml(html: string, options?: InsertOptions): FragmentResult;
   /** Convert Markdown and sanitize into an inert fragment. */
-  markdownToFragment(markdown: string): FragmentResult;
+  markdownToFragment(markdown: string, options?: InsertOptions): FragmentResult;
   /** Sanitize and insert with replaceChildren(). innerHTML is never used. */
   renderHtmlInto(target: RenderTarget, html: string, options?: InsertOptions): RenderResult;
   /** Convert Markdown, sanitize and insert with replaceChildren(). Falls back to plain text if the Markdown step throws. */
@@ -69,6 +92,19 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
   const sanitizer = createSanitizer(win, policy, options.sinkDenylist ?? SINK_DENYLIST);
   const markdown = options.markdown ?? createMarkdownRenderer();
   const onDecision = options.onDecision;
+  const transforms = options.transforms ?? [];
+
+  const applyTransforms = (fragment: DocumentFragment, insert?: InsertOptions): void => {
+    if (transforms.length === 0) return;
+    const context: TransformContext = {
+      streaming: insert?.streaming ?? false,
+      final: insert?.final ?? true,
+      openFenceAtEnd: insert?.openFenceAtEnd ?? false,
+      // The fragment belongs to the sanitizer's parser document; transforms create nodes in the live one.
+      document: win.document ?? fragment.ownerDocument,
+    };
+    for (const transform of transforms) transform(fragment, context);
+  };
 
   const emit = (decisions: readonly RenderDecision[]): void => {
     if (!onDecision) return;
@@ -99,13 +135,14 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
     target.replaceChildren(documentOf(target).createTextNode(text));
   };
 
-  const sanitizeHtml = (html: string): FragmentResult => {
+  const sanitizeHtml = (html: string, insert?: InsertOptions): FragmentResult => {
     const { output, decisions } = sanitizer.toFragment(html);
+    applyTransforms(output, insert);
     emit(decisions);
     return { fragment: output, decisions };
   };
 
-  const markdownToFragment = (source: string): FragmentResult => {
+  const markdownToFragment = (source: string, insert?: InsertOptions): FragmentResult => {
     const converted = toHtml(source);
     if ('failed' in converted) {
       const fragment = (win.document ?? globalThis.document).createDocumentFragment();
@@ -113,7 +150,7 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
       emit([markdownFailed]);
       return { fragment, decisions: [markdownFailed] };
     }
-    return sanitizeHtml(converted.html);
+    return sanitizeHtml(converted.html, insert);
   };
 
   const insert = (target: RenderTarget, fragment: DocumentFragment, options?: InsertOptions): void => {
@@ -125,7 +162,7 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
   };
 
   const renderHtmlInto = (target: RenderTarget, html: string, options?: InsertOptions): RenderResult => {
-    const { fragment, decisions } = sanitizeHtml(html);
+    const { fragment, decisions } = sanitizeHtml(html, options);
     insert(target, fragment, options);
     return { decisions };
   };

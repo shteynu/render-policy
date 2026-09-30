@@ -1,5 +1,5 @@
 export { createRenderer } from './render.js';
-export type { FragmentResult, InsertOptions, RenderResult, RenderTarget, Renderer, RendererOptions } from './render.js';
+export type { FragmentResult, FragmentTransform, InsertOptions, RenderResult, RenderTarget, Renderer, RendererOptions, TransformContext } from './render.js';
 
 export { patchChildren } from './dom.js';
 
@@ -14,7 +14,7 @@ export type { SanitizeOutcome, Sanitizer } from './sanitize.js';
 export { createMarkdownRenderer } from './markdown.js';
 export type { MarkdownOptions, MarkdownRenderer } from './markdown.js';
 
-export { closeOpenFences, createRenderStream, frameScheduler, holdIncompleteHtml, holdIncompleteMarkdown } from './stream.js';
+export { closeOpenFences, completeFences, createRenderStream, frameScheduler, holdIncompleteHtml, holdIncompleteMarkdown } from './stream.js';
 export type { RenderStream, Scheduler, StreamOptions, StreamRenderOps } from './stream.js';
 
 export { checkUrl, checkUrlHeuristics, hostMatches, normalizeUrl, shannonEntropy } from './url.js';
