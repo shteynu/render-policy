@@ -1,14 +1,22 @@
 name: Release
 
-# On a version tag (git tag v0.1.0 && git push origin v0.1.0):
+# On a version tag (git tag v0.1.0 && git push origin v0.1.0), or a manual
+# "Run workflow" with the tag as input (workflow_dispatch):
 #   1. runs the checks and builds every package;
 #   2. attaches the npm tarballs to a GitHub Release, so the packages can be installed
 #      from the release URL without npm;
 #   3. publishes to npm with provenance when the NPM_TOKEN secret is set.
+# A dispatch run creates the tag itself, at the checked-out commit, via the release step.
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Version tag to release, for example v0.1.0
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -20,6 +28,23 @@ jobs:
     env:
       HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
     steps:
+      - name: Resolve the release tag
+        id: tag
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            ref="$INPUT_TAG"
+          else
+            ref="$GITHUB_REF_NAME"
+          fi
+          case "$ref" in
+            v*) ;;
+            *) echo "release tag must start with v (got '$ref')" >&2; exit 1 ;;
+          esac
+          echo "name=$ref" >> "$GITHUB_OUTPUT"
+          echo "version=${ref#v}" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
@@ -32,7 +57,7 @@ jobs:
       - run: npm run build
       - name: Check that the tag matches the package versions
         run: |
-          tag="${GITHUB_REF_NAME#v}"
+          tag="${{ steps.tag.outputs.version }}"
           for pkg in packages/core packages/eslint-plugin packages/react packages/mermaid packages/mcp-app-lint packages/angular; do
             version="$(node -p "require('./$pkg/package.json').version")"
             if [ "$version" != "$tag" ]; then
@@ -49,6 +74,7 @@ jobs:
       - name: GitHub release with the tarballs
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.tag.outputs.name }}
           files: artifacts/*.tgz
           generate_release_notes: true
       - if: env.HAS_NPM_TOKEN == 'true'
