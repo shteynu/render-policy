@@ -11,11 +11,12 @@ Framework-free core with Angular and React adapters.
 
 | Package | What it is | Status |
 | --- | --- | --- |
-| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 96 unit tests + a real-Chromium proof |
+| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 110 unit and property tests + a real-Chromium proof |
 | [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | builds with ng-packagr; browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
-| [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 10 unit tests + browser proof with the real mermaid |
+| [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 11 unit tests + browser proof with the real mermaid |
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 45 rule tests |
+| [`mcp-app-lint`](packages/mcp-app-lint) | SARIF findings about what an MCP App declares (`_meta.ui` CSP lists, permissions, tool visibility, list/read policy differences) and what its HTML does; CLI over a package, a directory or the JSON a server returned | 18 rules, 10 tests; also the analyzer behind the census |
 
 Until the packages are on npm, every [GitHub release](https://github.com/shteynu/render-policy/releases) carries their tarballs:
 
@@ -176,7 +177,41 @@ What is deliberately **not** covered:
 - cuts the buffer before an inline link or image whose destination has no closing parenthesis, a bare `https://` or `www.` URL still being typed, a raw tag without its `>`, and a link reference definition on the last line;
 - closes an unfinished ```` ``` ```` or `~~~` fence so a streaming code block renders as code rather than as Markdown.
 
-`end()` renders the final text once with nothing withheld. Everything rendered, intermediate or final, goes through the same policy. Each intermediate render converts and sanitizes the whole buffer, but only the DOM from the first changed block is replaced (`patchChildren`): settled blocks keep their nodes, so nothing above the cursor flickers or loses its selection.
+`end()` renders the final text once with nothing withheld. Everything rendered, intermediate or final, goes through the same policy. Each intermediate render converts and sanitizes the whole buffer, but only the DOM from the first changed block is replaced (`patchChildren`): settled blocks keep their nodes, so nothing above the cursor flickers or loses its selection. Timings are in [Size and speed](#size-and-speed).
+
+## Size and speed
+
+Measured with `npm run size` (esbuild, minified, then gzip and brotli) and `npm run bench` (a real headless Chromium) on 30 Sep 2026 in a shared cloud container. Your machine will differ; the ratios should not.
+
+| Bundle | minified | gzip | brotli |
+| --- | --- | --- | --- |
+| `@render-policy/core` (own code) | 17.5 kB | 6.6 kB | 5.9 kB |
+| `@render-policy/core` + DOMPurify + marked (everything a page ships) | 91.5 kB | 30.6 kB | 27.6 kB |
+| `@render-policy/react` (own code) | 1.6 kB | 0.7 kB | 0.6 kB |
+| `@render-policy/angular` (own code) | 3.8 kB | 1.3 kB | 1.1 kB |
+| `@render-policy/mermaid` (own code, mermaid itself not included) | 33.2 kB | 12.9 kB | 11.5 kB |
+
+One-shot rendering in `balanced` mode of generated Markdown that looks like an assistant reply (prose with links and inline code, lists, fences, tables, images that the policy blocks):
+
+| Document | Markdown to DOM (median / p95) | HTML to DOM only (median) | DOM nodes |
+| --- | --- | --- | --- |
+| 8 kB | 9.2 ms / 12.5 ms | 4.0 ms | 177 |
+| 64 kB | 27.8 ms / 35.4 ms | 22.1 ms | 1,461 |
+| 256 kB | 118 ms / 132 ms | 100 ms | 5,829 |
+
+Streaming the same documents in 32-byte chunks, about a token each:
+
+| Scenario | per push (median / p95 / max) | whole reply |
+| --- | --- | --- |
+| 8 kB, render on every push | 2.1 ms / 5.7 ms / 7.8 ms | 0.6 s |
+| 64 kB, render on every push | 17.2 ms / 41.4 ms / 59.5 ms | 37 s |
+| 64 kB, 4 chunks per animation frame through `frameScheduler` | per frame 33 ms / 50 ms / 69 ms | 18 s |
+
+What the numbers say:
+
+- For a short reply the Markdown parse is about half of the time; for a long one the sanitize-and-insert step dominates (four fifths at 256 kB). Neither is free, and there is no `innerHTML` shortcut to take: the policy needs the DOM.
+- A reply of the usual size, a few kB, costs single-digit milliseconds per push in either streaming mode.
+- Each intermediate render re-parses and re-sanitizes the whole buffer, so the cost of a push grows with the length of the reply, and a 64 kB reply is over the frame budget towards its end even with the frame scheduler. `patchChildren` does not change that (per-push time is the same within noise with it on or off); it exists so that settled blocks keep their nodes: no flicker, no re-fetch of images, no lost selection. Streaming v2 on the roadmap re-parses only the unsettled tail, which is what removes the growth.
 
 ## Trusted Types and CSP
 
@@ -245,11 +280,11 @@ node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
 
 ## MCP Apps census
 
-[`census/`](census) measures what public MCP servers declare about the interfaces they ask hosts to render: the `_meta.ui` of `ui://` resources (CSP domain lists, permissions), tool visibility, and what the HTML of those resources does on its own (inline `innerHTML` sinks are found with this repository's own ESLint rule). Aggregates only, in [`census/SUMMARY.md`](census/SUMMARY.md).
+[`census/`](census) measures what public MCP servers declare about the interfaces they ask hosts to render: the `_meta.ui` of `ui://` resources (CSP domain lists, permissions), tool visibility, and what the HTML of those resources does on its own (inline `innerHTML` sinks are found with this repository's own ESLint rule). Aggregates only, in [`census/SUMMARY.md`](census/SUMMARY.md), including a breakdown of the declared hosts by category (fonts, analytics, maps, storage, media, CDNs, APIs, development leftovers, sinks). The analyzer became [`mcp-app-lint`](packages/mcp-app-lint): the same checks as SARIF rules for scanners and CI. A draft write-up of the results is in [`docs/writeup-mcp-apps-census.md`](docs/writeup-mcp-apps-census.md).
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md). Next: publish the packages to npm, a strict Mermaid renderer and an ngx-markdown bridge for the Angular adapter, an evil-Markdown corpus other renderers can run.
+See [ROADMAP.md](ROADMAP.md). Next: publish the packages to npm, streaming v2 (re-parse only the unsettled tail), the protocol census over remote servers, and evil-mcp-app, a Playwright suite that grades MCP Apps hosts.
 
 ## Security
 

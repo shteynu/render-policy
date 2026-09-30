@@ -13,7 +13,7 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 
 ## 2. Релиз v0.1.0
 
-- [ ] Версии всех пяти пакетов сейчас `0.1.0`; в `CHANGELOG.md` заменить «(unreleased)» на дату.
+- [ ] Версии всех шести пакетов (включая `mcp-app-lint`) сейчас `0.1.0`; в `CHANGELOG.md` заменить «(unreleased)» на дату.
 - [ ] `npm ci && npm run check` локально (нужен Chromium: `npx playwright install chromium`).
 - [ ] `git tag v0.1.0 && git push origin v0.1.0` → `release.yml`: проверки, сверка версий с тегом, тарболы на GitHub Release, публикация на npm с provenance при наличии `NPM_TOKEN` (порядок: core, eslint-plugin, react, mermaid, angular из `packages/angular/dist`).
 - [ ] После публикации: в `README.md` убрать блок «install from release tarballs», проверить `npm install @render-policy/core` в чистом проекте.
@@ -34,7 +34,8 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 
 ## 4. Публикация по переписи (Этап 3 плана, до 27 ноября)
 
-- [ ] Черновик статьи на данных: реестр (37 759 серверов, 62% с remote), 168 пакетов с UI SDK, 153 с UI-ресурсами, CSP объявляют 39%, 596 HTML-документов, `innerHTML`-сток в рукописных скриптах у 17%; добавить результаты протокольного обхода (доля CSP, wildcard'ы, расхождение list/read, инструменты с побочными эффектами, видимые UI).
+- [x] Черновик статьи на данных: `docs/writeup-mcp-apps-census.md` (реестр 37 759 серверов, 62% с remote; 168 пакетов с UI SDK, 153 с UI-ресурсами, CSP объявляют 39%, 4 разрешают любой хост через `*` или `https:`; 596 HTML-документов, `innerHTML`-сток в рукописных скриптах у 17%; категории объявленных хостов).
+- [ ] После протокольного обхода вставить в статью раздел «Live policies» (доля CSP, wildcard'ы, расхождение list/read, инструменты с побочными эффектами, видимые UI) и вычитать.
 - [ ] Не называть непочиненные серверы; агрегаты и метод; скрипт уже открыт в `census/`.
 - [ ] При необходимости вынести перепись в отдельный репозиторий: `git subtree split -P census -b census-only`.
 - [ ] Заявки на доклады; пост после публикации.
@@ -47,7 +48,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 
 ## 6. Библиотека: следующие задачи
 
-- [ ] Стриминг v2: перепарсинг только незавершённого хвоста Markdown вместо всего буфера (сейчас патчится только DOM).
+- [ ] Стриминг v2: перепарсинг только незавершённого хвоста Markdown вместо всего буфера (сейчас патчится только DOM). `npm run bench`: push стоит 2 ms при 8 kB буфера и 17 ms при 64 kB, потому что каждый раз перепарсивается всё; `patchChildren` экономит DOM, не CPU.
 - [ ] React: `onDecisions` и для стримингового режима (сейчас только для one-shot).
 - [ ] Angular: тесты на TestBed поверх существующего браузерного прогона; мост для ngx-markdown отложен (ngx-markdown пишет в `innerHTML`, мост стал бы заменой компонента).
 - [ ] Гайд по image proxy для `rewriteImageUrl` (защита от SSRF на стороне прокси).
@@ -59,7 +60,8 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 
 - [ ] Набор на Playwright со злым MCP-сервером: изоляция и origin песочницы, подделка `sandbox-*` сообщений, `postMessage` с `"*"`, вызовы инструментов из UI без согласия, `ui/message` от имени пользователя, `open-link` с опасными схемами, выход данных через формы и навигацию фрейма, поддельный интерфейс согласия.
 - [ ] Табели для open-source и встраиваемых хостов из плана; закрытые хосты только вручную по правилам их баунти-программ.
-- [ ] `mcp-app-lint`: SARIF-правила из `census/lib/analyze.mjs` для существующих MCP-сканеров; PR хотя бы в один.
+- [x] `mcp-app-lint`: прототип в `packages/mcp-app-lint` (18 SARIF-правил из анализатора переписи, CLI: `--dir`, `--package`, `--read/--list/--tools`, `--html`).
+- [ ] `mcp-app-lint`: прогнать по реальным пакетам из переписи (`npx mcp-app-lint --package <name>`), поправить ложные срабатывания; PR хотя бы в один MCP-сканер.
 - [ ] Предложить набор в ext-apps как проверку соответствия хостов.
 
 ## 8. Этапы 5–6 плана (деньги и enterprise), с вашим участием

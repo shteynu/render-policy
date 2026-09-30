@@ -35,7 +35,7 @@ Done when:
 Also planned for the core:
 
 - [x] streaming v1: keep settled blocks, replace only from the first changed node (`patchChildren`)
-- [ ] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer
+- [ ] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer (`npm run bench`: with the whole buffer re-parsed on every push, a push costs 2 ms at 8 kB and 17 ms at 64 kB)
 - [x] an evil-Markdown corpus other renderers can run (`corpus/`, 49 cases, reference results in `corpus/RESULTS.md`)
 - [ ] image proxy guidance (SSRF-safe) for `rewriteImageUrl`
 
@@ -57,7 +57,9 @@ access. Results so far ([`census/SUMMARY.md`](census/SUMMARY.md), snapshot of 30
 in the registry, 62% with a remote endpoint; 168 npm packages depend on a UI SDK, 153 declare UI
 resources, 39% of those declare any CSP domain list; 596 UI HTML documents analyzed. The protocol
 census over the 22,618 streamable-http remotes still has to run from a machine with ordinary
-outbound access.
+outbound access. A draft publication built on these numbers is in
+[`docs/writeup-mcp-apps-census.md`](docs/writeup-mcp-apps-census.md); its live-policy section
+waits for that run.
 
 ## Stage 4: evil-mcp-app and rules for MCP scanners (30 Nov 2026 – 29 Jan 2027)
 
@@ -65,6 +67,10 @@ A Playwright suite with a malicious MCP server that grades any MCP Apps host: is
 origin, message spoofing, tool calls from UI without consent, `ui/message` as the user, links
 with dangerous schemes, data egress through forms and frame navigation, fake consent UI.
 Plus `mcp-app-lint`: SARIF rules for existing scanners. Lives in its own repository.
+
+Status: `mcp-app-lint` exists as a prototype in [`packages/mcp-app-lint`](packages/mcp-app-lint):
+18 SARIF rules distilled from the census analyzer and a CLI over a package, a directory or the
+JSON a server returned. The evil-mcp-app suite has not started.
 
 ## Ordering
 

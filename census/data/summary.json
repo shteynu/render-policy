@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-30T18:28:09.365Z",
+  "generatedAt": "2026-09-30T18:51:49.597Z",
   "registry": {
     "collectedAt": "2026-09-30T18:18:31.436Z",
     "entries": 37759,
@@ -30,9 +30,136 @@
     "declaringUiResources": 153,
     "cspDeclared": 60,
     "cspWithWildcard": 6,
-    "cspWithFullWildcard": 1,
+    "cspWithFullWildcard": 4,
     "cspWithInsecureScheme": 2,
     "cspWithSinkHost": 1,
+    "cspEntries": 211,
+    "cspDistinctHosts": 93,
+    "cspCategories": {
+      "every-host": {
+        "packages": 4,
+        "entries": 8,
+        "byList": {
+          "connectDomains": 3,
+          "resourceDomains": 5,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "development": {
+        "packages": 2,
+        "entries": 12,
+        "byList": {
+          "connectDomains": 2,
+          "resourceDomains": 4,
+          "frameDomains": 6,
+          "baseUriDomains": 0
+        }
+      },
+      "sink": {
+        "packages": 1,
+        "entries": 1,
+        "byList": {
+          "connectDomains": 0,
+          "resourceDomains": 1,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "fonts": {
+        "packages": 3,
+        "entries": 12,
+        "byList": {
+          "connectDomains": 4,
+          "resourceDomains": 8,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "analytics": {
+        "packages": 3,
+        "entries": 8,
+        "byList": {
+          "connectDomains": 7,
+          "resourceDomains": 1,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "maps": {
+        "packages": 5,
+        "entries": 41,
+        "byList": {
+          "connectDomains": 19,
+          "resourceDomains": 16,
+          "frameDomains": 6,
+          "baseUriDomains": 0
+        }
+      },
+      "storage": {
+        "packages": 2,
+        "entries": 2,
+        "byList": {
+          "connectDomains": 0,
+          "resourceDomains": 2,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "media": {
+        "packages": 7,
+        "entries": 33,
+        "byList": {
+          "connectDomains": 0,
+          "resourceDomains": 33,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "cdn": {
+        "packages": 10,
+        "entries": 34,
+        "byList": {
+          "connectDomains": 14,
+          "resourceDomains": 20,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "api": {
+        "packages": 4,
+        "entries": 38,
+        "byList": {
+          "connectDomains": 38,
+          "resourceDomains": 0,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      },
+      "other": {
+        "packages": 7,
+        "entries": 22,
+        "byList": {
+          "connectDomains": 9,
+          "resourceDomains": 13,
+          "frameDomains": 0,
+          "baseUriDomains": 0
+        }
+      }
+    },
+    "htmlExternalHostCategories": {
+      "every-host": 0,
+      "development": 0,
+      "sink": 0,
+      "fonts": 28,
+      "analytics": 0,
+      "maps": 8,
+      "storage": 0,
+      "media": 0,
+      "cdn": 31,
+      "api": 2,
+      "other": 32
+    },
     "permissions": {
       "clipboardWrite": 3,
       "microphone": 1

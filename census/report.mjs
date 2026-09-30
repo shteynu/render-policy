@@ -5,7 +5,10 @@
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { categorizeHost, classifyDomains, DOMAIN_CATEGORIES } from 'mcp-app-lint';
 import { censusRoot, dataDir, readJsonl } from './lib/io.mjs';
+
+const CSP_KEYS = ['connectDomains', 'resourceDomains', 'frameDomains', 'baseUriDomains'];
 
 const pct = (part, whole) => (whole ? `${((100 * part) / whole).toFixed(0)}%` : 'n/a');
 const count = (items, predicate) => items.filter(predicate).length;
@@ -50,11 +53,33 @@ if (npm.length > 0) {
   const scanned = sdk.filter((p) => p.scan?.ok);
   const declaring = scanned.filter((p) => p.scan.declaresUi);
   const withCsp = declaring.filter((p) => p.scan.cspDeclared);
-  const anyWild = (p) => Object.values(p.scan.domainsClassified).some((d) => d.wildcards > 0);
-  const anyFull = (p) => Object.values(p.scan.domainsClassified).some((d) => d.fullWildcards > 0);
-  const anyInsecure = (p) => Object.values(p.scan.domainsClassified).some((d) => d.insecure > 0);
-  const anySink = (p) => Object.values(p.scan.domainsClassified).some((d) => d.sinks.length > 0);
+  // Classify from the raw domain lists when the scan kept them, so the report follows the
+  // current classifier without a rescan; older scans only carry the classification.
+  const classified = new Map(withCsp.map((p) => [p, p.scan.domains ? Object.fromEntries(Object.entries(p.scan.domains).map(([k, v]) => [k, classifyDomains(v)])) : p.scan.domainsClassified]));
+  const lists = (p) => Object.values(classified.get(p));
+  const anyWild = (p) => lists(p).some((d) => d.wildcards > 0);
+  const anyFull = (p) => lists(p).some((d) => d.fullWildcards > 0);
+  const anyInsecure = (p) => lists(p).some((d) => d.insecure > 0);
+  const anySink = (p) => lists(p).some((d) => d.sinks.length > 0);
+  const categories = Object.fromEntries(DOMAIN_CATEGORIES.map((c) => [c, { packages: 0, entries: 0, byList: Object.fromEntries(CSP_KEYS.map((k) => [k, 0])) }]));
+  let cspEntries = 0;
+  const cspHosts = new Set();
+  for (const p of withCsp) {
+    const seen = new Set();
+    for (const [key, d] of Object.entries(classified.get(p))) {
+      cspEntries += d.count;
+      d.hosts.forEach((h) => h && cspHosts.add(h));
+      (d.categories ?? []).forEach((c) => {
+        categories[c].entries += 1;
+        categories[c].byList[key] = (categories[c].byList[key] ?? 0) + 1;
+        seen.add(c);
+      });
+    }
+    for (const c of seen) categories[c].packages += 1;
+  }
   const htmlDocs = scanned.flatMap((p) => p.scan.html);
+  const htmlHostCategories = Object.fromEntries(DOMAIN_CATEGORIES.map((c) => [c, 0]));
+  for (const h of htmlDocs) for (const c of new Set((h.externalHosts ?? []).map(categorizeHost))) htmlHostCategories[c] += 1;
   summary.npm = {
     candidates: npm.length,
     metadataOk: meta.length,
@@ -67,6 +92,10 @@ if (npm.length > 0) {
     cspWithFullWildcard: count(withCsp, anyFull),
     cspWithInsecureScheme: count(withCsp, anyInsecure),
     cspWithSinkHost: count(withCsp, anySink),
+    cspEntries,
+    cspDistinctHosts: cspHosts.size,
+    cspCategories: categories,
+    htmlExternalHostCategories: htmlHostCategories,
     permissions: tally(declaring, (p) => p.scan.permissions),
     toolsVisibleToApp: count(declaring, (p) => p.scan.toolVisibility.app > 0),
     htmlDocuments: htmlDocs.length,
@@ -97,12 +126,16 @@ if (npm.length > 0) {
     `| CSP naming a sink host (denylist) | ${n.cspWithSinkHost} |`,
     `| requesting sandbox permissions | ${Object.entries(n.permissions).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'} |`,
     `| tools declared visible to the app | ${n.toolsVisibleToApp} packages |`, '',
+    '### What the declared domains are', '',
+    `${n.cspEntries} entries (${n.cspDistinctHosts} distinct hosts) across the ${n.cspDeclared} packages that declare a list, by a heuristic category of the host (\`categorizeDomain\` in mcp-app-lint; a host fits the first category listed). A package counts once per category.`, '',
+    '| Category | Packages | Entries | connect | resource | frame | base-uri |', '| --- | --- | --- | --- | --- | --- | --- |',
+    ...DOMAIN_CATEGORIES.filter((c) => n.cspCategories[c].entries > 0).map((c) => `| ${c} | ${n.cspCategories[c].packages} | ${n.cspCategories[c].entries} | ${CSP_KEYS.map((k) => n.cspCategories[c].byList[k] ?? 0).join(' | ')} |`), '',
     '### The HTML of the UI resources', '', '| Measure | Count |', '| --- | --- |',
     `| HTML documents found (files and embedded) | ${n.htmlDocuments} |`, `| with inline scripts | ${n.htmlWithInlineScripts} (${n.htmlWithHandwrittenScripts} with a handwritten script, the rest bundles) |`,
     `| with a dynamic innerHTML/insertAdjacentHTML/document.write sink (render-policy lint) | ${n.htmlWithUnsafeInnerHtml} in any script; ${n.htmlWithUnsafeInnerHtmlHandwritten} in handwritten scripts (${pct(n.htmlWithUnsafeInnerHtmlHandwritten, n.htmlWithHandwrittenScripts)} of those) |`,
     `| with postMessage(…, '*') | ${n.htmlWithPostMessageStar} in any script (the MCP Apps SDK bridge posts to '*' by design, so bundles count the SDK); ${n.htmlWithPostMessageStarHandwritten} in handwritten scripts |`,
     `| with inline event handlers | ${n.htmlWithInlineHandlers} |`, `| with eval or new Function | ${n.htmlWithEval} in any script; ${n.htmlWithEvalHandwritten} in handwritten scripts |`,
-    `| loading from external hosts | ${n.htmlWithExternalHosts} |`, `| referencing a sink host | ${n.htmlWithSinkHosts} |`, `| with a form that posts somewhere | ${n.htmlWithFormsAction} |`,
+    `| loading from external hosts | ${n.htmlWithExternalHosts} (${DOMAIN_CATEGORIES.filter((c) => n.htmlExternalHostCategories[c] > 0).map((c) => `${c} ${n.htmlExternalHostCategories[c]}`).join(', ') || 'none'}) |`, `| referencing a sink host | ${n.htmlWithSinkHosts} |`, `| with a form that posts somewhere | ${n.htmlWithFormsAction} |`,
     `| with a CSP meta tag of its own | ${n.htmlWithMetaCsp} |`, '',
     `Metadata errors: ${Object.entries(n.errors).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}.`, '');
 }

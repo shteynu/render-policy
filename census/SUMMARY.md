@@ -27,11 +27,29 @@ Candidates come from npm keyword searches and the npm packages named in the regi
 | declaring UI resources | 153 |
 | of which declare a CSP (any domain list) | 60 (39%) |
 | CSP with a wildcard domain | 6 (10% of declared) |
-| CSP with a full wildcard (`*`) | 1 |
+| CSP with a full wildcard (`*`) | 4 |
 | CSP with an http: domain | 2 |
 | CSP naming a sink host (denylist) | 1 |
 | requesting sandbox permissions | clipboardWrite 3, microphone 1 |
 | tools declared visible to the app | 46 packages |
+
+### What the declared domains are
+
+211 entries (93 distinct hosts) across the 60 packages that declare a list, by a heuristic category of the host (`categorizeDomain` in mcp-app-lint; a host fits the first category listed). A package counts once per category.
+
+| Category | Packages | Entries | connect | resource | frame | base-uri |
+| --- | --- | --- | --- | --- | --- | --- |
+| every-host | 4 | 8 | 3 | 5 | 0 | 0 |
+| development | 2 | 12 | 2 | 4 | 6 | 0 |
+| sink | 1 | 1 | 0 | 1 | 0 | 0 |
+| fonts | 3 | 12 | 4 | 8 | 0 | 0 |
+| analytics | 3 | 8 | 7 | 1 | 0 | 0 |
+| maps | 5 | 41 | 19 | 16 | 6 | 0 |
+| storage | 2 | 2 | 0 | 2 | 0 | 0 |
+| media | 7 | 33 | 0 | 33 | 0 | 0 |
+| cdn | 10 | 34 | 14 | 20 | 0 | 0 |
+| api | 4 | 38 | 38 | 0 | 0 | 0 |
+| other | 7 | 22 | 9 | 13 | 0 | 0 |
 
 ### The HTML of the UI resources
 
@@ -43,7 +61,7 @@ Candidates come from npm keyword searches and the npm packages named in the regi
 | with postMessage(…, '*') | 189 in any script (the MCP Apps SDK bridge posts to '*' by design, so bundles count the SDK); 32 in handwritten scripts |
 | with inline event handlers | 59 |
 | with eval or new Function | 76 in any script; 0 in handwritten scripts |
-| loading from external hosts | 88 |
+| loading from external hosts | 88 (fonts 28, maps 8, cdn 31, api 2, other 32) |
 | referencing a sink host | 0 |
 | with a form that posts somewhere | 7 |
 | with a CSP meta tag of its own | 15 |

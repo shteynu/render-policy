@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, uiMetaOf, withSinkHosts } from '../lib/analyze.mjs';
-import { classifyDomains, parseDomainPattern, sinkFor } from '../lib/domains.mjs';
+import { analyzeHtml, analyzeTools, analyzeUiMeta, classifyDomains, compareListRead, parseDomainPattern, sinkFor, uiMetaOf, withSinkHosts } from 'mcp-app-lint';
 import { firstJsonRpcFromSse } from '../lib/mcp-client.mjs';
 import { latestOnly, normalizeServer } from '../lib/registry.mjs';
 

@@ -29,6 +29,15 @@ First release.
 - MCP Apps UI census (`census/`): registry snapshot, static census over npm packages using a UI
   SDK, protocol census over remote servers (read-only), analyzer for `_meta.ui` CSP domain lists,
   permissions, tool visibility and resource HTML, report of aggregates.
+- `mcp-app-lint`: the census analyzer as a package with 18 SARIF rules (MCPAPP001–018) over
+  `_meta.ui` CSP domain lists, permissions, tool visibility, list/read policy differences and the
+  HTML of UI resources; a CLI for a package directory, an npm package, a UI document or the JSON a
+  server returned (`--format sarif|text`, `--fail-on`).
+- Census: scheme-only CSP entries (`https:`) count as allowing every host, as they do in CSP; the
+  report breaks the declared hosts down by category (fonts, analytics, maps, storage, media, CDNs,
+  APIs, development leftovers, sinks) and re-classifies from the raw lists kept in each scan.
+- `npm run size` (bundle sizes: esbuild, gzip, brotli) and `npm run bench` (one-shot and streaming
+  render timings in Chromium); one run is quoted in the README.
 - Evil-Markdown corpus (`corpus/`): 49 cases across script execution, URL schemes, exfiltration,
   UI spoofing, DOM clobbering, Markdown specifics, over-blocking guards and streaming, with a
   Chromium runner for any renderer and reference results for naive, DOMPurify-default and

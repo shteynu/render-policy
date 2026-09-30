@@ -7,7 +7,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, UI_MIME, withSinkHosts } from './lib/analyze.mjs';
+import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, UI_MIME, withSinkHosts } from 'mcp-app-lint';
 import { appendJsonl, argValue, dataDir, ensureDataDir, mapLimit, readJsonl } from './lib/io.mjs';
 import { failureKind, McpHttpClient } from './lib/mcp-client.mjs';
 

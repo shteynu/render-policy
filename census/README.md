@@ -17,10 +17,13 @@ Three collectors, one analyzer:
 | registry snapshot | `collect-registry.mjs` | registry.modelcontextprotocol.io, `GET /v0/servers` | every server: remotes, packages, status; latest version per name |
 | static census | `collect-npm.mjs` | npm: keyword searches plus the npm packages the registry names | package metadata; for packages depending on a UI SDK (`@modelcontextprotocol/ext-apps`, `@mcp-ui/*`) the tarball is downloaded (25 MB cap), and the sources are scanned for app resource registrations, CSP domain lists, permissions, tool visibility and the HTML of the UI resources |
 | protocol census | `collect-remote.mjs` | the registry's streamable-http remotes | `initialize`, `resources/list`, `resources/read` of UI resources (10 per server), `tools/list`; the `_meta.ui` of list and read compared; the HTML analyzed |
-| report | `report.mjs` | `data/*.json[l]` | `SUMMARY.md` and `data/summary.json` |
+| report | `report.mjs` | `data/*.json[l]` | `SUMMARY.md` and `data/summary.json`; domain lists are re-classified from the raw entries kept in each scan, so a classifier change needs no rescan |
 
-The analyzer (`lib/analyze.mjs`, `lib/domains.mjs`) classifies domain patterns (wildcards, a full
-`*`, `http:` schemes, hosts on the render-policy sink denylist), compares the policy a host sees
+The analyzer lives in [`packages/mcp-app-lint`](../packages/mcp-app-lint) (`analyze.mjs`,
+`domains.mjs`, `npm.mjs`); the same code is the `mcp-app-lint` scanner. It classifies domain
+patterns (wildcards, a full `*` or a scheme-only `https:`, `http:` schemes, hosts on the
+render-policy sink denylist, and a heuristic category per host: fonts, analytics, maps, storage,
+media, CDN, API, development leftovers), compares the policy a host sees
 in `resources/list` with the one in `resources/read` (the read result wins in the specification,
 so a server can present a stricter policy at connection time and a wider one at render time),
 and inspects HTML: inline scripts are linted with `eslint-plugin-render-policy`'s

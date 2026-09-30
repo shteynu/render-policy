@@ -18,13 +18,18 @@ technical part. Documentation is written in English; the maintainer communicates
   Runtime proof in `packages/angular/e2e` (JIT app over the FESM, Playwright).
 - `packages/mermaid`: `@render-policy/mermaid`. Strict Mermaid as a fragment transform; unit tests with a fake
   mermaid, browser proof with the real one in `packages/mermaid/e2e`.
-- `e2e/`: browser proofs (`run.mjs` core, `url-parity.mjs` URL classification vs Chromium, `site.mjs` Pages build)
-  and the shared harness `e2e/lib/harness.mjs`.
+- `packages/mcp-app-lint`: `mcp-app-lint`. Plain ESM, no build. The census analyzer (`analyze.mjs`, `domains.mjs`,
+  `npm.mjs`) plus SARIF rules (`rules.mjs`, `lint.mjs`, `sarif.mjs`) and a CLI. It `require`s the built `dist` of
+  core and eslint-plugin, so build before `npm run test:census`. Tests with `node:test`.
+- `e2e/`: browser proofs (`run.mjs` core, `url-parity.mjs` URL classification vs Chromium, `site.mjs` Pages build,
+  `bench.mjs` render timings) and the shared harness `e2e/lib/harness.mjs`.
 - `corpus/`: evil-Markdown corpus, runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.
 - `demo/`: the naive-vs-policy demo; `demo/build.mjs` produces `site/` for GitHub Pages.
-- `census/`: MCP Apps UI census (registry snapshot, static npm census, protocol census, report). Tests with
-  `node:test` (`npm run test:census`). `census/data/` is not committed except `summary.json`; `SUMMARY.md`
-  is aggregates only and never names a server or package.
+- `census/`: MCP Apps UI census (registry snapshot, static npm census, protocol census, report). The analysis
+  code is imported from `mcp-app-lint`; the report re-classifies domain lists from the raw entries kept in each
+  scan, so a classifier change shows up on `npm run census:report` without a rescan. Tests with `node:test`
+  (`npm run test:census`). `census/data/` is not committed except `summary.json`; `SUMMARY.md` is aggregates
+  only and never names a server or package.
 
 ## Commands
 
@@ -38,7 +43,10 @@ npm run corpus:results # regenerates corpus/RESULTS.md
 npm run demo:build     # site/
 npm run test:census    # census analyzer and client tests (node:test)
 npm run census:registry | census:npm | census:remote | census:report
-npx vitest run -w packages/core   # one package
+npm run size           # bundle sizes (esbuild + gzip/brotli), after a build
+npm run bench          # render timings in Chromium; writes e2e/output/bench.json
+npx mcp-app-lint --dir packages/x --format text   # the scanner on a package directory
+npm test -w packages/core         # one package (vitest's own -w means watch; use npm's)
 ```
 
 Build order matters: core first (others resolve `@render-policy/core` through the workspace link to its `dist`).

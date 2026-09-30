@@ -8,7 +8,7 @@ import { mkdir, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { appendJsonl, argValue, dataDir, ensureDataDir, mapLimit, readJsonl } from './lib/io.mjs';
-import { packageMeta, scanPackage, searchPackages } from './lib/npm.mjs';
+import { packageMeta, scanPackage, searchPackages } from 'mcp-app-lint';
 
 await ensureDataDir();
 const out = path.join(dataDir, 'npm-packages.jsonl');

@@ -18,7 +18,7 @@
     "build": "npm run build -w packages/core && npm run build -w packages/eslint-plugin -w packages/react -w packages/mermaid -w packages/angular",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "check": "npm run typecheck && npm test && npm run build && npm run test:census && npm run e2e && npm run corpus",
+    "check": "npm run typecheck && npm run build && npm test && npm run test:census && npm run e2e && npm run corpus",
     "e2e": "node e2e/run.mjs && node e2e/url-parity.mjs && node packages/angular/e2e/run.mjs && node packages/mermaid/e2e/run.mjs && node demo/build.mjs && node e2e/site.mjs",
     "demo:build": "node demo/build.mjs",
     "corpus": "node corpus/run.mjs --require-pass render-policy",
@@ -27,11 +27,14 @@
     "census:registry": "node census/collect-registry.mjs",
     "census:npm": "node census/collect-npm.mjs",
     "census:remote": "node census/collect-remote.mjs",
-    "census:report": "node census/report.mjs"
+    "census:report": "node census/report.mjs",
+    "size": "node scripts/size.mjs",
+    "bench": "node e2e/bench.mjs"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.3",
+    "esbuild": "^0.28.2",
     "fast-check": "^4.10.2",
     "jsdom": "^30.1.1",
     "playwright": "^1.63.0",

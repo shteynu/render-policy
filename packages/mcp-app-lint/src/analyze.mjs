@@ -89,7 +89,7 @@ let linter = null;
 function lintInlineScript(code) {
   if (!linter) {
     const { Linter } = require('eslint');
-    const plugin = require('../../packages/eslint-plugin/dist/index.js').default;
+    const plugin = require('eslint-plugin-render-policy').default;
     const instance = new Linter({ configType: 'flat' });
     const config = [
       {
@@ -122,6 +122,7 @@ export function analyzeHtml(html) {
     lintErrors: 0,
     unparsedScripts: 0,
     inlineHandlers: (text.match(/\son[a-z]+\s*=/gi) ?? []).length,
+    sinks: [],
     evalLike: (text.match(/\beval\s*\(|new\s+Function\s*\(/g) ?? []).length,
     postMessageStar: (text.match(/postMessage\s*\([^)]*['"]\*['"]/g) ?? []).length,
     forms: (text.match(/<form\b/gi) ?? []).length,
@@ -167,9 +168,11 @@ export function analyzeHtml(html) {
         result.unparsedScripts += 1;
         continue;
       }
-      const hits = messages.filter((m) => m.ruleId === 'render-policy/no-unsafe-innerhtml').length;
-      result.unsafeInnerHtml += hits;
-      if (handwritten) result.unsafeInnerHtmlHandwritten += hits;
+      const hits = messages.filter((m) => m.ruleId === 'render-policy/no-unsafe-innerhtml');
+      result.unsafeInnerHtml += hits.length;
+      if (handwritten) result.unsafeInnerHtmlHandwritten += hits.length;
+      const scriptLine = text.slice(0, match.index).split('\n').length + (match[0].slice(0, match[0].indexOf('>') + 1).split('\n').length - 1);
+      for (const hit of hits) result.sinks.push({ line: scriptLine + hit.line - 1, column: hit.column, handwritten, message: hit.message });
     } catch {
       result.unparsedScripts += 1;
     }

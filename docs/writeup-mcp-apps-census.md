@@ -4,7 +4,7 @@
 
 ## In one paragraph
 
-MCP Apps let a server ship an interactive interface that a host renders in a sandboxed iframe. The specification puts almost all of the security work on the host: it must build a Content Security Policy from what the server declares, apply a no-network default when nothing is declared, prefer the policy delivered at read time over the one seen at listing time, and keep the sandbox on a separate origin. We measured what servers actually declare. Of 37,759 servers in the official registry, 168 npm packages depend on a UI SDK and 153 of them ship UI resources. Only 39% of those declare any CSP domain list; the rest fall under the specification's restrictive default, which means no network at all if the host follows the rules. Where lists are declared, wildcards are rare (10%), one package allows every `https:` host, two allow `http:` origins, one names a host on a data-sink denylist. In the HTML of the interfaces themselves, 17% of hand-written inline scripts build DOM through `innerHTML` with dynamic values, which under the specification's default `script-src 'unsafe-inline'` turns any injected tool result into script running inside the sandbox, with the app's tool surface as the blast radius.
+MCP Apps let a server ship an interactive interface that a host renders in a sandboxed iframe. The specification puts almost all of the security work on the host: it must build a Content Security Policy from what the server declares, apply a no-network default when nothing is declared, prefer the policy delivered at read time over the one seen at listing time, and keep the sandbox on a separate origin. We measured what servers actually declare. Of 37,759 servers in the official registry, 168 npm packages depend on a UI SDK and 153 of them ship UI resources. Only 39% of those declare any CSP domain list; the rest fall under the specification's restrictive default, which means no network at all if the host follows the rules. Where lists are declared, wildcards are rare (10%), four packages allow every host (a bare `*` or a scheme-only `https:` entry), two allow `http:` origins, one names a host on a data-sink denylist. In the HTML of the interfaces themselves, 17% of hand-written inline scripts build DOM through `innerHTML` with dynamic values, which under the specification's default `script-src 'unsafe-inline'` turns any injected tool result into script running inside the sandbox, with the app's tool surface as the blast radius.
 
 ## Why this matters
 
@@ -53,17 +53,33 @@ UI adoption among published servers is still small in absolute terms. The SDK's 
 | --- | --- |
 | declare any CSP domain list | 60 of 153 (39%) |
 | with a wildcard host (`*.example.com`) | 6 (10% of declared) |
-| with a scheme-only entry (`https:`), which allows every host of that scheme | 1 |
+| allowing every host (a bare `*` or a scheme-only entry such as `https:`) | 4 |
 | with an `http:` origin | 2 |
 | naming a host on the sink denylist | 1 |
 | requesting sandbox permissions | clipboardWrite 3, microphone 1 |
 | setting tool visibility explicitly | 46 |
 
+The 211 declared entries (93 distinct hosts) fall into these categories. The classification is heuristic, by well-known hosts and naming conventions; a package counts once per category.
+
+| Category | Packages | Entries |
+| --- | --- | --- |
+| maps and tiles | 5 | 41 |
+| API endpoints | 4 | 38 |
+| script and asset CDNs | 10 | 34 |
+| images and media | 7 | 33 |
+| fonts | 3 | 12 |
+| development leftovers (localhost, 127.0.0.1, `blob:`) | 2 | 12 |
+| analytics and telemetry | 3 | 8 |
+| every host (`*`, `https:`) | 4 | 8 |
+| object storage | 2 | 2 |
+| sink denylist | 1 | 1 |
+| other, mostly the vendor's own site | 7 | 22 |
+
 Three readings of the 39%:
 
-- **The default is doing the work.** Under the specification, the 93 packages that declare nothing get `connect-src 'none'` and `img-src 'self' data:`. Their interfaces cannot fetch anything. That is consistent with what the HTML shows: only 88 of 596 documents reference an external host, and most of those reference fonts and script CDNs, not APIs. A large share of today's MCP Apps are self-contained, and the restrictive default costs them nothing.
+- **The default is doing the work.** Under the specification, the 93 packages that declare nothing get `connect-src 'none'` and `img-src 'self' data:`. Their interfaces cannot fetch anything. That is consistent with what the HTML shows: only 88 of 596 documents reference an external host, and those hosts are mostly fonts (28 documents) and script or asset CDNs (31), then map tiles (8) and an API host (2); the rest (32) are the vendor's own sites. A large share of today's MCP Apps are self-contained, and the restrictive default costs them nothing.
 - **The pressure is on hosts to relax it.** An app that needs an API and forgot to declare it breaks on a compliant host and works on a lenient one. The census cannot see which hosts are lenient; the evil-mcp-app test suite in the roadmap will. Until then, "declares nothing" is safe only as long as hosts keep the default.
-- **The declared lists are where the surface is.** Wildcards are rare, which is good news. The scheme-only `https:` entry is the one to watch: it is syntactically a valid CSP source and it allows every host on the web, including request catchers and tunnels. A host that expands declared entries into its CSP verbatim will honour it. Development leftovers also reach published packages: `frameDomains` with `blob:` and `http://127.0.0.1:*` appear in the data.
+- **The declared lists are where the surface is.** Wildcards are rare, which is good news. The entries that allow every host are the ones to watch: a bare `*` in one package and a scheme-only `https:` in three others. `https:` is syntactically a valid CSP source and it allows every host on the web, including request catchers and tunnels. A host that expands declared entries into its CSP verbatim will honour it. Development leftovers also reach published packages: `frameDomains` with `blob:` and `http://127.0.0.1:*` appear in the data.
 
 ### What the interfaces do on their own
 
