@@ -14,6 +14,42 @@ npx mcp-app-lint --html app.html                      # one UI document
 Options: `--out file.sarif`, `--format sarif|text`, `--fail-on error|warning|note|none` (default
 `error`; the exit code is 1 when a finding reaches the threshold, 2 on usage errors).
 
+## Use in CI (GitHub code scanning)
+
+This repository ships a composite action that runs the scanner and uploads the SARIF to code
+scanning, so findings appear in the Security tab and on pull requests:
+
+```yaml
+# .github/workflows/mcp-app-lint.yml
+name: mcp-app-lint
+on: [push, pull_request]
+permissions:
+  contents: read
+  security-events: write   # required for the SARIF upload
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shteynu/render-policy@v1
+        with:
+          directory: .
+          fail-on: error     # error | warning | note | none
+```
+
+Inputs: `directory` (default `.`), `fail-on` (default `error`), `upload-sarif` (default `true`),
+`sarif-file` (default `mcp-app-lint.sarif`), `version` (npm dist-tag or version, default `latest`),
+`args` (passed through), `node-version` (default `22`, empty to use the runner's Node). The SARIF
+is written even when findings fail the job, so it still uploads; paths are repo-relative so code
+scanning maps them to the source.
+
+Any CI can run the CLI directly and read the exit code (`0` clean, `1` findings at or above
+`--fail-on`, `2` usage error):
+
+```
+npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
+```
+
 ## Rules
 
 | Id | Name | Level | What it means |

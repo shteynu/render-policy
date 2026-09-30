@@ -66,7 +66,8 @@ waits for that run.
 A Playwright suite with a malicious MCP server that grades any MCP Apps host: isolation and
 origin, message spoofing, tool calls from UI without consent, `ui/message` as the user, links
 with dangerous schemes, data egress through forms and frame navigation, fake consent UI.
-Plus `mcp-app-lint`: SARIF rules for existing scanners. Lives in its own repository.
+Plus `mcp-app-lint`: SARIF rules for existing scanners, runnable in any CI. A GitHub composite
+action (`action.yml`) runs it and uploads the SARIF to code scanning. Lives in its own repository.
 
 Status: `mcp-app-lint` exists as a prototype in [`packages/mcp-app-lint`](packages/mcp-app-lint):
 18 SARIF rules distilled from the census analyzer and a CLI over a package, a directory or the

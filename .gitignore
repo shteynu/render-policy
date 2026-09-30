@@ -12,3 +12,7 @@ packages/angular/e2e/dist/
 corpus/.build/
 packages/mermaid/e2e/dist/
 e2e/.build/
+
+# mcp-app-lint CLI test scratch dirs (created under cwd, cleaned up)
+.cli-fixture-*/
+packages/*/.cli-fixture-*/

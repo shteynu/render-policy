@@ -1,0 +1,77 @@
+name: mcp-app-lint
+description: >-
+  Lint the MCP Apps a repository ships (CSP domain lists, sandbox permissions, tool visibility,
+  and the HTML of UI resources) and upload the findings to GitHub code scanning as SARIF.
+author: render-policy
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  directory:
+    description: Directory to scan. A package, built or from source.
+    default: .
+  fail-on:
+    description: "Lowest finding level that fails the job: error, warning, note, or none."
+    default: error
+  upload-sarif:
+    description: Upload the SARIF to GitHub code scanning (needs security-events write permission).
+    default: "true"
+  sarif-file:
+    description: Where the SARIF is written.
+    default: mcp-app-lint.sarif
+  version:
+    description: npm version or dist-tag of mcp-app-lint to run.
+    default: latest
+  args:
+    description: Extra arguments passed through to mcp-app-lint.
+    default: ""
+  node-version:
+    description: Node.js to set up for the run. Leave empty to use the runner's Node.
+    default: "22"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      if: inputs.node-version != ''
+      uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Run mcp-app-lint
+      id: lint
+      shell: bash
+      env:
+        RP_DIR: ${{ inputs.directory }}
+        RP_FAIL_ON: ${{ inputs.fail-on }}
+        RP_SARIF: ${{ inputs.sarif-file }}
+        RP_VERSION: ${{ inputs.version }}
+        RP_ARGS: ${{ inputs.args }}
+      run: |
+        set -o pipefail
+        # Always write SARIF (so it can be uploaded) and record the exit code separately, so the
+        # job fails on findings rather than on the tool being unable to write its report.
+        set +e
+        npx --yes "mcp-app-lint@${RP_VERSION}" --dir "${RP_DIR}" --format sarif --out "${RP_SARIF}" --fail-on "${RP_FAIL_ON}" ${RP_ARGS}
+        code=$?
+        set -e
+        echo "exit-code=${code}" >> "$GITHUB_OUTPUT"
+        if [ ! -f "${RP_SARIF}" ]; then
+          echo "mcp-app-lint did not produce ${RP_SARIF}" >&2
+          exit 1
+        fi
+
+    - name: Upload SARIF to code scanning
+      if: ${{ always() && inputs.upload-sarif == 'true' && hashFiles(inputs.sarif-file) != '' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: mcp-app-lint
+
+    - name: Fail the job when findings reached the threshold
+      if: ${{ steps.lint.outputs.exit-code != '0' }}
+      shell: bash
+      run: |
+        echo "mcp-app-lint reported findings at or above '${{ inputs.fail-on }}'. See the code scanning results, or the ${{ inputs.sarif-file }} artifact." >&2
+        exit 1

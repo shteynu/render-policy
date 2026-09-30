@@ -22,8 +22,10 @@ technical part. Documentation is written in English; the maintainer communicates
 - `packages/mermaid`: `@render-policy/mermaid`. Strict Mermaid as a fragment transform; unit tests with a fake
   mermaid, browser proof with the real one in `packages/mermaid/e2e`.
 - `packages/mcp-app-lint`: `mcp-app-lint`. Plain ESM, no build. The census analyzer (`analyze.mjs`, `domains.mjs`,
-  `npm.mjs`) plus SARIF rules (`rules.mjs`, `lint.mjs`, `sarif.mjs`) and a CLI. It `require`s the built `dist` of
-  core and eslint-plugin, so build before `npm run test:census`. Tests with `node:test`.
+  `npm.mjs`) plus SARIF rules (`rules.mjs`, `lint.mjs`, `sarif.mjs`) and a CLI (`cli.mjs`, SARIF paths are made
+  repo-relative for code scanning). It `require`s the built `dist` of core and eslint-plugin, so build before its
+  tests. Tests with `node:test` (`test/*.test.mjs`, run by root `npm test`). The repo-root `action.yml` is a
+  composite GitHub Action that runs the CLI and uploads SARIF to code scanning.
 - `e2e/`: browser proofs (`run.mjs` core, `url-parity.mjs` URL classification vs Chromium, `site.mjs` Pages build,
   `bench.mjs` render timings) and the shared harness `e2e/lib/harness.mjs`.
 - `corpus/`: evil-Markdown corpus, runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.

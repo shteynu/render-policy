@@ -64,6 +64,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [ ] Табели для open-source и встраиваемых хостов из плана; закрытые хосты только вручную по правилам их баунти-программ.
 - [x] `mcp-app-lint`: прототип в `packages/mcp-app-lint` (18 SARIF-правил из анализатора переписи, CLI: `--dir`, `--package`, `--read/--list/--tools`, `--html`).
 - [ ] `mcp-app-lint`: прогнать по реальным пакетам из переписи (`npx mcp-app-lint --package <name>`), поправить ложные срабатывания; PR хотя бы в один MCP-сканер.
+- [x] GitHub Action для `mcp-app-lint` (`action.yml`, composite): запуск сканера и загрузка SARIF в code scanning; SARIF-пути сделаны репо-относительными. Готово к использованию как `uses: shteynu/render-policy@v1` после публикации тега.
 - [ ] Предложить набор в ext-apps как проверку соответствия хостов.
 
 ## 8. Этапы 5–6 плана (деньги и enterprise), с вашим участием

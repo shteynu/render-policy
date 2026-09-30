@@ -61,6 +61,10 @@ First release.
   and `resolveWindow` exported so adapters stop duplicating them.
 - `@render-policy/mermaid` is proven against mermaid 12 as well as 11 (ELK layout, new default look);
   the peer range already allowed it, the development dependency and the browser proof now use 12.
+- `mcp-app-lint` ships a GitHub composite action (`action.yml`): it runs the scanner and uploads
+  the SARIF to code scanning, with `directory`, `fail-on`, `upload-sarif`, `version` and `args`
+  inputs. The CLI now normalises filesystem locations to repo-relative forward-slash paths so code
+  scanning maps them to the source, and records the command line in the SARIF invocation.
 - `mcp-app-lint`: the census analyzer as a package with 18 SARIF rules (MCPAPP001–018) over
   `_meta.ui` CSP domain lists, permissions, tool visibility, list/read policy differences and the
   HTML of UI resources; a CLI for a package directory, an npm package, a UI document or the JSON a

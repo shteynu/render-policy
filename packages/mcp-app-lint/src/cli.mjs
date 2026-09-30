@@ -41,6 +41,13 @@ function parseArgs(argv) {
 const readJson = async (file) => JSON.parse(await readFile(file, 'utf8'));
 const isUiResource = (r) => (r?.mimeType ?? '').startsWith('text/html') || String(r?.uri ?? '').startsWith('ui://');
 
+/** A filesystem path under the working directory becomes a forward-slash repo-relative uri; anything else is unchanged. */
+function relativeUri(uri) {
+  if (typeof uri !== 'string' || !path.isAbsolute(uri)) return uri;
+  const rel = path.relative(process.cwd(), uri);
+  return rel && !rel.startsWith('..') ? rel.split(path.sep).join('/') : uri;
+}
+
 export async function run(argv, { stdout = process.stdout, stderr = process.stderr } = {}) {
   const options = parseArgs(argv);
   if (options.help || (!options.dir && !options.package && !options.read && !options.html && !options.tools)) {
@@ -84,11 +91,15 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
     findings.push(...lintTools(Array.isArray(tools?.tools) ? tools.tools : tools, options.tools));
   }
 
-  const output = options.format === 'text' ? toText(findings) : `${JSON.stringify(toSarif(findings, { commandLine: `mcp-app-lint ${argv.join(' ')}` }), null, 2)}\n`;
+  // Code scanning maps a SARIF location by a repo-relative path. A filesystem uri under the
+  // working directory is made relative; ui://, npm: and tools/list locations are left as they are.
+  const located = findings.map((f) => ({ ...f, uri: relativeUri(f.uri) }));
+
+  const output = options.format === 'text' ? toText(located) : `${JSON.stringify(toSarif(located, { invocation: { commandLine: `mcp-app-lint ${argv.join(' ')}` } }), null, 2)}\n`;
   if (options.out) await writeFile(options.out, output);
   else stdout.write(output);
 
   const threshold = LEVEL_RANK[options.failOn] ?? 3;
-  const worst = Math.max(0, ...findings.map((f) => LEVEL_RANK[f.level ?? levelOf(f.ruleId)] ?? 0));
+  const worst = Math.max(0, ...located.map((f) => LEVEL_RANK[f.level ?? levelOf(f.ruleId)] ?? 0));
   return threshold > 0 && worst >= threshold ? 1 : 0;
 }
