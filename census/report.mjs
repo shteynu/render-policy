@@ -5,7 +5,7 @@
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { categorizeHost, classifyDomains, DOMAIN_CATEGORIES } from 'mcp-app-lint';
+import { categorizeHost, classifyDomains, DOMAIN_CATEGORIES, lintPackageScan, RULES } from 'mcp-app-lint';
 import { censusRoot, dataDir, readJsonl } from './lib/io.mjs';
 
 const CSP_KEYS = ['connectDomains', 'resourceDomains', 'frameDomains', 'baseUriDomains'];
@@ -77,6 +77,15 @@ if (npm.length > 0) {
     }
     for (const c of seen) categories[c].packages += 1;
   }
+  const ruleHits = Object.fromEntries(RULES.map((r) => [r.id, { name: r.name, level: r.level, packages: 0, findings: 0 }]));
+  for (const p of scanned) {
+    const seen = new Set();
+    for (const f of lintPackageScan(p.scan, '.')) {
+      ruleHits[f.ruleId].findings += 1;
+      seen.add(f.ruleId);
+    }
+    for (const id of seen) ruleHits[id].packages += 1;
+  }
   const htmlDocs = scanned.flatMap((p) => p.scan.html);
   const htmlHostCategories = Object.fromEntries(DOMAIN_CATEGORIES.map((c) => [c, 0]));
   for (const h of htmlDocs) for (const c of new Set((h.externalHosts ?? []).map(categorizeHost))) htmlHostCategories[c] += 1;
@@ -96,6 +105,7 @@ if (npm.length > 0) {
     cspDistinctHosts: cspHosts.size,
     cspCategories: categories,
     htmlExternalHostCategories: htmlHostCategories,
+    lintFindings: ruleHits,
     permissions: tally(declaring, (p) => p.scan.permissions),
     toolsVisibleToApp: count(declaring, (p) => p.scan.toolVisibility.app > 0),
     htmlDocuments: htmlDocs.length,
@@ -137,7 +147,11 @@ if (npm.length > 0) {
     `| with inline event handlers | ${n.htmlWithInlineHandlers} |`, `| with eval or new Function | ${n.htmlWithEval} in any script; ${n.htmlWithEvalHandwritten} in handwritten scripts |`,
     `| loading from external hosts | ${n.htmlWithExternalHosts} (${DOMAIN_CATEGORIES.filter((c) => n.htmlExternalHostCategories[c] > 0).map((c) => `${c} ${n.htmlExternalHostCategories[c]}`).join(', ') || 'none'}) |`, `| referencing a sink host | ${n.htmlWithSinkHosts} |`, `| with a form that posts somewhere | ${n.htmlWithFormsAction} |`,
     `| with a CSP meta tag of its own | ${n.htmlWithMetaCsp} |`, '',
-    `Metadata errors: ${Object.entries(n.errors).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}.`, '');
+    `Metadata errors: ${Object.entries(n.errors).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}.`, '',
+    '### What mcp-app-lint reports over the same packages', '',
+    `The scanner's rules run over the ${n.scanned} scanned packages from the stored scans (static data, so MCPAPP008/009 on tools and MCPAPP017/018 on list/read differences, which need a live server, do not occur here). "Packages" is packages with at least one finding of the rule.`, '',
+    '| Rule | Level | Packages | Findings |', '| --- | --- | --- | --- |',
+    ...Object.entries(n.lintFindings).filter(([, r]) => r.findings > 0).map(([id, r]) => `| ${id} ${r.name} | ${r.level} | ${r.packages} | ${r.findings} |`), '');
 }
 
 const remote = await readJsonl(path.join(dataDir, 'remote-servers.jsonl'));

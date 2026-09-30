@@ -94,7 +94,12 @@ export function lintPackageScan(scan, root = '.') {
   }
   for (const doc of scan.html ?? []) {
     const uri = `${root}/${doc.file}`.replace(/^\.\//, '');
-    for (const sink of (doc.sinks ?? []).filter((s) => s.handwritten)) findings.push(finding('MCPAPP010', sink.message, uri, { region: { startLine: sink.line, startColumn: sink.column } }));
+    if (Array.isArray(doc.sinks)) {
+      for (const sink of doc.sinks.filter((s) => s.handwritten)) findings.push(finding('MCPAPP010', sink.message, uri, { region: { startLine: sink.line, startColumn: sink.column } }));
+    } else if ((doc.unsafeInnerHtmlHandwritten ?? 0) > 0) {
+      // A scan from before sinks carried positions: one finding per document.
+      findings.push(finding('MCPAPP010', `${doc.unsafeInnerHtmlHandwritten} dynamic HTML sink(s) in hand-written script.`, uri));
+    }
     if ((doc.postMessageStarHandwritten ?? 0) > 0) findings.push(finding('MCPAPP011', `${doc.postMessageStarHandwritten} hand-written postMessage(…, '*') call(s).`, uri));
     if (doc.inlineHandlers > 0) findings.push(finding('MCPAPP012', `${doc.inlineHandlers} inline event handler attribute(s).`, uri));
     if ((doc.evalLikeHandwritten ?? 0) > 0) findings.push(finding('MCPAPP013', `${doc.evalLikeHandwritten} eval/new Function use(s) in hand-written script.`, uri));

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-30T18:51:49.597Z",
+  "generatedAt": "2026-09-30T19:07:38.854Z",
   "registry": {
     "collectedAt": "2026-09-30T18:18:31.436Z",
     "entries": 37759,
@@ -159,6 +159,116 @@
       "cdn": 31,
       "api": 2,
       "other": 32
+    },
+    "lintFindings": {
+      "MCPAPP001": {
+        "name": "csp-missing",
+        "level": "warning",
+        "packages": 93,
+        "findings": 93
+      },
+      "MCPAPP002": {
+        "name": "csp-allows-every-host",
+        "level": "error",
+        "packages": 4,
+        "findings": 8
+      },
+      "MCPAPP003": {
+        "name": "csp-wildcard-host",
+        "level": "warning",
+        "packages": 5,
+        "findings": 35
+      },
+      "MCPAPP004": {
+        "name": "csp-insecure-scheme",
+        "level": "warning",
+        "packages": 2,
+        "findings": 7
+      },
+      "MCPAPP005": {
+        "name": "csp-sink-host",
+        "level": "error",
+        "packages": 1,
+        "findings": 1
+      },
+      "MCPAPP006": {
+        "name": "csp-development-origin",
+        "level": "note",
+        "packages": 2,
+        "findings": 10
+      },
+      "MCPAPP007": {
+        "name": "permissions-sensitive",
+        "level": "note",
+        "packages": 1,
+        "findings": 1
+      },
+      "MCPAPP008": {
+        "name": "tool-side-effects-app-visible",
+        "level": "warning",
+        "packages": 0,
+        "findings": 0
+      },
+      "MCPAPP009": {
+        "name": "tool-visibility-implicit",
+        "level": "note",
+        "packages": 0,
+        "findings": 0
+      },
+      "MCPAPP010": {
+        "name": "html-dynamic-innerhtml",
+        "level": "warning",
+        "packages": 10,
+        "findings": 24
+      },
+      "MCPAPP011": {
+        "name": "html-postmessage-wildcard",
+        "level": "warning",
+        "packages": 18,
+        "findings": 32
+      },
+      "MCPAPP012": {
+        "name": "html-inline-handlers",
+        "level": "note",
+        "packages": 24,
+        "findings": 59
+      },
+      "MCPAPP013": {
+        "name": "html-eval",
+        "level": "warning",
+        "packages": 0,
+        "findings": 0
+      },
+      "MCPAPP014": {
+        "name": "html-form-action",
+        "level": "note",
+        "packages": 7,
+        "findings": 7
+      },
+      "MCPAPP015": {
+        "name": "html-external-host",
+        "level": "note",
+        "packages": 29,
+        "findings": 88
+      },
+      "MCPAPP016": {
+        "name": "html-sink-host",
+        "level": "error",
+        "packages": 0,
+        "findings": 0
+      },
+      "MCPAPP017": {
+        "name": "meta-list-read-mismatch",
+        "level": "warning",
+        "packages": 0,
+        "findings": 0
+      },
+      "MCPAPP018": {
+        "name": "meta-read-wider-than-list",
+        "level": "error",
+        "packages": 0,
+        "findings": 0
+      }
     },
     "permissions": {
       "clipboardWrite": 3,

@@ -67,3 +67,22 @@ Candidates come from npm keyword searches and the npm packages named in the regi
 | with a CSP meta tag of its own | 15 |
 
 Metadata errors: http-404 82.
+
+### What mcp-app-lint reports over the same packages
+
+The scanner's rules run over the 168 scanned packages from the stored scans (static data, so MCPAPP008/009 on tools and MCPAPP017/018 on list/read differences, which need a live server, do not occur here). "Packages" is packages with at least one finding of the rule.
+
+| Rule | Level | Packages | Findings |
+| --- | --- | --- | --- |
+| MCPAPP001 csp-missing | warning | 93 | 93 |
+| MCPAPP002 csp-allows-every-host | error | 4 | 8 |
+| MCPAPP003 csp-wildcard-host | warning | 5 | 35 |
+| MCPAPP004 csp-insecure-scheme | warning | 2 | 7 |
+| MCPAPP005 csp-sink-host | error | 1 | 1 |
+| MCPAPP006 csp-development-origin | note | 2 | 10 |
+| MCPAPP007 permissions-sensitive | note | 1 | 1 |
+| MCPAPP010 html-dynamic-innerhtml | warning | 10 | 24 |
+| MCPAPP011 html-postmessage-wildcard | warning | 18 | 32 |
+| MCPAPP012 html-inline-handlers | note | 24 | 59 |
+| MCPAPP014 html-form-action | note | 7 | 7 |
+| MCPAPP015 html-external-host | note | 29 | 88 |
