@@ -14,18 +14,18 @@ framework; Angular is the first adapter. MIT, so upstream projects can take the 
 | --- | --- | --- |
 | Core | Policy for `img`, `a`, media, SVG; host allowlist without wildcards by default; query-string removal or proxy; URL length and entropy heuristics; "click to load" placeholder; applied as the last step over the final HTML | done: `@render-policy/core` |
 | Sink denylist | Forms, blob storage, `workers.dev`, webhook services; data separate from code, versioned | done: `packages/core/src/data/sink-domains.ts` (starting set) |
-| Angular adapter | Renders without `innerHTML`; streaming withholds images and links until the URL is closed and checked; Trusted Types | done (`[rpRender]`, `<rp-markdown>`, `provideRenderPolicy`); builds with ng-packagr in partial compilation mode, publish from `packages/angular/dist` |
+| Angular adapter | Renders without `innerHTML`; streaming withholds images and links until the URL is closed and checked; Trusted Types | done (`[rpRender]`, `<rp-markdown>`, `provideRenderPolicy`); builds with ng-packagr in partial compilation mode, publish from `packages/angular/dist`; runtime proof in Chromium (`packages/angular/e2e`) |
 | Angular adapter: strict Mermaid | Diagram blocks rendered only by a strict renderer | not started (Mermaid stays a code block) |
 | Angular adapter: ngx-markdown bridge | A provider that routes ngx-markdown through the policy | not started (migration guide only) |
 | ESLint | Forbid `innerHTML` and `[innerHTML]` for untrusted content | done: `no-unsafe-innerhtml`, `no-innerhtml-binding` |
 | Regression tests | One per class of real advisories: sanitization order, fallback render, SVG in `data:`, Mermaid loose mode, sink through an allowed domain | done: `packages/core/test/regressions.test.ts` |
 | Modes | strict (no remote images), balanced (allowlist, no query), permissive (everything, with a journal) | done |
-| Demo | The same hostile markup rendered naively and through the policy | done: `demo/` plus a Chromium proof in `e2e/` |
+| Demo | The same hostile markup rendered naively and through the policy | done: `demo/`, deployed to GitHub Pages, plus Chromium proofs in `e2e/` |
 | Docs | Threat model, modes, migration from `innerHTML` and ngx-markdown | done: `README.md`, `docs/migration.md` |
 
 Done when:
 
-- [ ] core, Angular and React adapters and the ESLint plugin published on npm as v0.1 (`.github/workflows/release.yml` publishes on a `v*` tag once `NPM_TOKEN` is set)
+- [ ] core, Angular and React adapters and the ESLint plugin published on npm as v0.1 (`.github/workflows/release.yml` attaches the tarballs to a GitHub release on every `v*` tag and publishes to npm once `NPM_TOKEN` is set)
 - [x] every advisory class in the table has a test
 - [x] the streaming render makes no request to an unclosed or unchecked URL (unit + browser)
 - [x] demo of the same hostile markup with and without the policy

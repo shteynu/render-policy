@@ -19,7 +19,8 @@
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "npm run typecheck && npm test && npm run build && npm run e2e",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "node e2e/run.mjs && node packages/angular/e2e/run.mjs && node demo/build.mjs && node e2e/site.mjs",
+    "demo:build": "node demo/build.mjs"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",

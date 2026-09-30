@@ -1,22 +1,24 @@
 name: Release
 
-# Publishes every package to npm when a version tag is pushed:
-#   git tag v0.1.0 && git push origin v0.1.0
-# Needs the NPM_TOKEN secret (an automation token for the @render-policy scope and
-# eslint-plugin-render-policy). Provenance attestations are attached through the
-# workflow's OIDC token.
+# On a version tag (git tag v0.1.0 && git push origin v0.1.0):
+#   1. runs the checks and builds every package;
+#   2. attaches the npm tarballs to a GitHub Release, so the packages can be installed
+#      from the release URL without npm;
+#   3. publishes to npm with provenance when the NPM_TOKEN secret is set.
 
 on:
   push:
     tags: ['v*']
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
+    env:
+      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,15 +40,32 @@ jobs:
               exit 1
             fi
           done
-      - run: npm publish --provenance --access public -w packages/core
+      - name: Pack tarballs
+        run: |
+          mkdir -p artifacts
+          npm pack -w packages/core -w packages/eslint-plugin -w packages/react --pack-destination artifacts
+          (cd packages/angular/dist && npm pack --pack-destination ../../../artifacts)
+          ls -l artifacts
+      - name: GitHub release with the tarballs
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.tgz
+          generate_release_notes: true
+      - if: env.HAS_NPM_TOKEN == 'true'
+        run: npm publish --provenance --access public -w packages/core
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: npm publish --provenance --access public -w packages/eslint-plugin
+      - if: env.HAS_NPM_TOKEN == 'true'
+        run: npm publish --provenance --access public -w packages/eslint-plugin
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: npm publish --provenance --access public -w packages/react
+      - if: env.HAS_NPM_TOKEN == 'true'
+        run: npm publish --provenance --access public -w packages/react
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: cd packages/angular/dist && npm publish --provenance --access public
+      - if: env.HAS_NPM_TOKEN == 'true'
+        run: cd packages/angular/dist && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - if: env.HAS_NPM_TOKEN != 'true'
+        run: echo "NPM_TOKEN is not set; tarballs are on the GitHub release, npm publish skipped."

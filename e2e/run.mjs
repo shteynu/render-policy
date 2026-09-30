@@ -8,72 +8,14 @@
  *
  * Usage: npm run build -w packages/core && node e2e/run.mjs
  */
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import http from 'node:http';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { createChecker, launchBrowser, openPage, startServer } from './lib/harness.mjs';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.map': 'application/json',
-};
 const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src * data:; require-trusted-types-for 'script'; trusted-types dompurify";
 
-const requests = [];
-const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, 'http://localhost');
-  requests.push(url.pathname + url.search);
-  const file = path.join(root, decodeURIComponent(url.pathname));
-  if (!file.startsWith(root)) {
-    res.writeHead(403).end();
-    return;
-  }
-  try {
-    const body = await readFile(file);
-    const headers = { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' };
-    if (url.searchParams.get('csp') === '1') headers['content-security-policy'] = CSP;
-    res.writeHead(200, headers).end(body);
-  } catch {
-    res.writeHead(404).end('not found');
-  }
-});
-await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-const base = `http://127.0.0.1:${server.address().port}`;
-
-const defaultExecutable = chromium.executablePath();
-const executablePath = process.env.RP_CHROMIUM ?? (existsSync(defaultExecutable) ? undefined : '/opt/pw-browsers/chromium');
-const browser = await chromium.launch({ executablePath });
-
-let failures = 0;
-const check = (ok, label, detail = '') => {
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${label}${detail ? `  (${detail})` : ''}`);
-  if (!ok) failures += 1;
-};
-
-async function open(query) {
-  const page = await browser.newPage();
-  const external = [];
-  await page.route('**/*', (route) => {
-    const url = new URL(route.request().url());
-    if (url.origin === base) return route.continue();
-    external.push(url.href);
-    return route.abort();
-  });
-  const errors = [];
-  page.on('pageerror', (error) => errors.push(error.message));
-  await page.goto(`${base}/demo/index.html?${query}`);
-  await page.waitForFunction(() => window.__demoReady === true);
-  await page.waitForTimeout(300);
-  return { page, external, errors };
-}
+const { base, requests, close } = await startServer({ cspFor: (url) => (url.searchParams.get('csp') === '1' ? CSP : undefined) });
+const browser = await launchBrowser();
+const { check, finish } = createChecker('@render-policy/core in Chromium');
+const open = (query) => openPage(browser, base, `/demo/index.html?${query}`, { readyFlag: '__demoReady' });
 
 try {
   {
@@ -81,7 +23,7 @@ try {
     const pwned = await page.evaluate(() => window.__pwned);
     check(pwned.onerror === true, 'naive: <img onerror> payload executed', JSON.stringify(pwned));
     check(external.some((u) => u.includes('evil.example')), 'naive: request to attacker host attempted', external.join(' '));
-    check(await page.locator('#naive form input[type=password]').count() === 1, 'naive: phishing form rendered');
+    check((await page.locator('#naive form input[type=password]').count()) === 1, 'naive: phishing form rendered');
     await page.close();
   }
 
@@ -91,11 +33,11 @@ try {
     check(Object.keys(pwned).length === 0, 'policy: no payload executed', JSON.stringify(pwned));
     check(external.length === 0, 'policy: no off-origin request', external.join(' '));
     check(errors.length === 0, 'policy: no page errors', errors.join(' | '));
-    check(await page.locator('#policy h1').textContent() === 'Assistant reply', 'policy: content rendered');
-    check(await page.locator('#policy form, #policy input, #policy style, #policy svg, #policy [style], #policy [onerror]').count() === 0, 'policy: forms, styles, svg, handlers removed');
-    check(await page.locator('#policy a.rp-blocked-image').count() === 2, 'policy: two remote images replaced by placeholders');
+    check((await page.locator('#policy h1').textContent()) === 'Assistant reply', 'policy: content rendered');
+    check((await page.locator('#policy form, #policy input, #policy style, #policy svg, #policy [style], #policy [onerror]').count()) === 0, 'policy: forms, styles, svg, handlers removed');
+    check((await page.locator('#policy a.rp-blocked-image').count()) === 2, 'policy: two remote images replaced by placeholders');
     const images = await page.locator('#policy img').evaluateAll((nodes) => nodes.map((n) => n.getAttribute('src')));
-    check(images.length === 2 && images.every((src) => src.startsWith('/')), 'policy: only same-origin images kept (onerror stripped from the first)', images.join(' '));
+    check(images.length === 2 && images.every((src) => !src.includes('://')), 'policy: only same-origin images kept (onerror stripped from the first)', images.join(' '));
     const links = await page.locator('#policy a:not(.rp-blocked-image)').evaluateAll((nodes) => nodes.map((n) => n.getAttribute('href')));
     check(links.every((h) => h === null || h.startsWith('https://example.com/')), 'policy: javascript: link neutralized', links.join(' '));
     const decisions = await page.evaluate(() => window.__decisions.length);
@@ -108,7 +50,7 @@ try {
     const violations = await page.evaluate(() => window.__cspViolations);
     check(violations.length === 0, 'trusted types: zero securitypolicyviolation events', violations.join(' | '));
     check(errors.length === 0, 'trusted types: no page errors', errors.join(' | '));
-    check(await page.locator('#policy h1').textContent() === 'Assistant reply', 'trusted types: content rendered under enforcement');
+    check((await page.locator('#policy h1').textContent()) === 'Assistant reply', 'trusted types: content rendered under enforcement');
     const escapeHatch = await page.evaluate(() => {
       const out = window.__renderer.trustedHTML('<b>bold</b><img src=x onerror=alert(1)>');
       const div = document.createElement('div');
@@ -128,7 +70,6 @@ try {
 
   {
     const { page } = await open('mode=policy');
-    const before = requests.length;
     const pixel = `${base}/demo/ok.svg?stream=1`;
     const countPixel = () => requests.filter((r) => r.includes('stream=1')).length;
     await page.evaluate((url) => {
@@ -143,14 +84,12 @@ try {
     await page.evaluate(() => window.__stream.push(') done'));
     await page.waitForTimeout(500);
     check(countPixel() === 1, 'streaming: exactly one request once the image is complete', `${countPixel()}`);
-    check(await page.locator('#stream img').count() === 1, 'streaming: image rendered');
-    void before;
+    check((await page.locator('#stream img').count()) === 1, 'streaming: image rendered');
     await page.close();
   }
 } finally {
   await browser.close();
-  server.close();
+  close();
 }
 
-console.log(failures === 0 ? '\nall browser checks passed' : `\n${failures} browser check(s) failed`);
-process.exit(failures === 0 ? 0 : 1);
+process.exit(finish() === 0 ? 0 : 1);

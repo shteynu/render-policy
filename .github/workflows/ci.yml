@@ -24,7 +24,7 @@ jobs:
       - run: npm run build
 
   browser:
-    name: browser proof (Chromium, Trusted Types)
+    name: browser proofs (core, Angular, Pages demo)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +33,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build -w packages/core
+      - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e

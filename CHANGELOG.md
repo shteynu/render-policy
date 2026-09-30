@@ -16,5 +16,6 @@ First release.
   with streaming.
 - `eslint-plugin-render-policy`: `no-unsafe-innerhtml` (JS/TS/JSX sinks) and `no-innerhtml-binding`
   (Angular templates).
-- Demo page and a Chromium proof covering payload execution, off-origin requests, Trusted Types
-  enforcement and streaming.
+- Demo page, deployed to GitHub Pages, and Chromium proofs for the core, the Angular adapter and
+  the static site: payload execution, off-origin requests, Trusted Types enforcement, streaming.
+- Release workflow: tarballs on every GitHub release, npm publish with provenance when a token is set.

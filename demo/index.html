@@ -19,8 +19,9 @@
   <h1>render-policy: the same markup, naive vs policy</h1>
   <p>
     Left: <code>element.innerHTML = marked(text)</code>. Right: <code>renderer.renderMarkdownInto(element, text)</code>.
-    Query parameters: <code>?mode=naive|policy|both</code>, <code>?policy=strict|balanced|permissive</code>,
-    <code>?csp=1</code> to serve the page under <code>require-trusted-types-for 'script'</code>.
+    Query parameters: <code>?mode=naive|policy|both</code>, <code>?policy=strict|balanced|permissive</code>.
+    Under Trusted Types enforcement: <a href="./trusted-types.html">trusted-types.html</a> (CSP in a meta tag) or
+    <code>?csp=1</code> when served by <code>e2e/run.mjs</code>.
   </p>
   <div class="panels">
     <section>

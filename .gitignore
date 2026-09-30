@@ -6,3 +6,5 @@ coverage/
 .DS_Store
 .vitest/
 e2e/output/
+site/
+packages/angular/e2e/dist/

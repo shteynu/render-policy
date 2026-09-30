@@ -12,9 +12,15 @@ Framework-free core with Angular and React adapters.
 | Package | What it is | Status |
 | --- | --- | --- |
 | [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 96 unit tests + a real-Chromium proof |
-| [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | typechecked, builds with ng-packagr |
+| [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | builds with ng-packagr; browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 45 rule tests |
+
+Until the packages are on npm, every [GitHub release](https://github.com/shteynu/render-policy/releases) carries their tarballs:
+
+```
+npm install https://github.com/shteynu/render-policy/releases/download/v0.1.0/render-policy-core-0.1.0.tgz
+```
 
 ## Why a policy and not "sanitize, then innerHTML"
 
@@ -187,13 +193,19 @@ Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompu
 
 The browser proof in `e2e/run.mjs` loads the demo under exactly that header and asserts zero `securitypolicyviolation` events.
 
-## Demo and browser proof
+## Demo and browser proofs
 
-`demo/index.html` renders the same hostile Markdown twice: with `innerHTML = marked(text)` and with `renderMarkdownInto()`. `npm run e2e` opens it in Chromium and checks, from outside the page, that the naive panel executes the payload and requests attacker hosts while the policy panel does neither, that the policy panel works under Trusted Types enforcement, and that a streamed image URL is requested exactly once, after it is complete.
+`demo/index.html` renders the same hostile Markdown twice: with `innerHTML = marked(text)` and with `renderMarkdownInto()`. It is deployed at [shteynu.github.io/render-policy](https://shteynu.github.io/render-policy/), with a [Trusted Types variant](https://shteynu.github.io/render-policy/trusted-types.html) where the naive panel is rejected by the browser.
+
+`npm run e2e` runs three proofs in a real Chromium, checking from outside the page:
+
+- `e2e/run.mjs`: the naive panel executes the payload and requests attacker hosts, the policy panel does neither; zero violations under `require-trusted-types-for 'script'`; a streamed image URL is requested exactly once, after it is complete.
+- `packages/angular/e2e/run.mjs`: a standalone Angular application over the ng-packagr bundle; the directive and the streaming component render through the policy, write no `innerHTML` anywhere in the application, keep settled nodes across streaming updates, and run under Trusted Types enforcement.
+- `e2e/site.mjs`: the static Pages build behaves the same without server headers.
 
 ```
 npm ci
-npm run build -w packages/core
+npm run build
 npm run e2e
 ```
 
