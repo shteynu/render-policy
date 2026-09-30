@@ -20,6 +20,9 @@ technical part. Documentation is written in English; the maintainer communicates
   and the shared harness `e2e/lib/harness.mjs`.
 - `corpus/`: evil-Markdown corpus, runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.
 - `demo/`: the naive-vs-policy demo; `demo/build.mjs` produces `site/` for GitHub Pages.
+- `census/`: MCP Apps UI census (registry snapshot, static npm census, protocol census, report). Tests with
+  `node:test` (`npm run test:census`). `census/data/` is not committed except `summary.json`; `SUMMARY.md`
+  is aggregates only and never names a server or package.
 
 ## Commands
 
@@ -31,6 +34,8 @@ npm run e2e            # needs Chromium: Playwright's own, or RP_CHROMIUM=/path/
 npm run corpus         # fails if @render-policy/core fails any corpus case
 npm run corpus:results # regenerates corpus/RESULTS.md
 npm run demo:build     # site/
+npm run test:census    # census analyzer and client tests (node:test)
+npm run census:registry | census:npm | census:remote | census:report
 npx vitest run -w packages/core   # one package
 ```
 

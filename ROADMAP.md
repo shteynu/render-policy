@@ -46,7 +46,14 @@ Measure how public MCP Apps declare CSP and allowed domains (`_meta.ui`: CSP, `c
 mismatches, side-effecting tools visible to UI by default, and data interpolation into HTML
 templates. Read-only, protocol-level data; dangerous findings go to owners privately first.
 Output: a publication with aggregates and the census script, which becomes the basis for
-scanner rules in Stage 4. Lives in its own repository.
+scanner rules in Stage 4.
+
+Status: the tooling lives in [`census/`](census) (started early; it can move to its own
+repository with `git subtree split`). Three collectors (registry snapshot, static census over
+npm packages that use a UI SDK, protocol census over remote servers), one analyzer that reuses
+the sink denylist and the ESLint rule, a report of aggregates. The registry snapshot and the
+static census run from anywhere; the protocol census needs a machine with ordinary outbound
+access. Results so far: [`census/SUMMARY.md`](census/SUMMARY.md).
 
 ## Stage 4: evil-mcp-app and rules for MCP scanners (30 Nov 2026 – 29 Jan 2027)
 

@@ -243,6 +243,10 @@ DOMPurify's defaults are not wrong: they answer the XSS question. The corpus ask
 node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
 ```
 
+## MCP Apps census
+
+[`census/`](census) measures what public MCP servers declare about the interfaces they ask hosts to render: the `_meta.ui` of `ui://` resources (CSP domain lists, permissions), tool visibility, and what the HTML of those resources does on its own (inline `innerHTML` sinks are found with this repository's own ESLint rule). Aggregates only, in [`census/SUMMARY.md`](census/SUMMARY.md).
+
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md). Next: publish the packages to npm, a strict Mermaid renderer and an ngx-markdown bridge for the Angular adapter, an evil-Markdown corpus other renderers can run.

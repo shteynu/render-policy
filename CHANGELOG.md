@@ -26,6 +26,9 @@ First release.
   (`//host` takes the page scheme, `http:path` stays on the page); verified against Chromium on
   115,810 generated strings (`e2e/url-parity.mjs`). Property tests (fast-check) for streaming,
   fence closing and DOM patching.
+- MCP Apps UI census (`census/`): registry snapshot, static census over npm packages using a UI
+  SDK, protocol census over remote servers (read-only), analyzer for `_meta.ui` CSP domain lists,
+  permissions, tool visibility and resource HTML, report of aggregates.
 - Evil-Markdown corpus (`corpus/`): 49 cases across script execution, URL schemes, exfiltration,
   UI spoofing, DOM clobbering, Markdown specifics, over-blocking guards and streaming, with a
   Chromium runner for any renderer and reference results for naive, DOMPurify-default and
