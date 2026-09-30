@@ -19,3 +19,7 @@ First release.
 - Demo page, deployed to GitHub Pages, and Chromium proofs for the core, the Angular adapter and
   the static site: payload execution, off-origin requests, Trusted Types enforcement, streaming.
 - Release workflow: tarballs on every GitHub release, npm publish with provenance when a token is set.
+- Evil-Markdown corpus (`corpus/`): 49 cases across script execution, URL schemes, exfiltration,
+  UI spoofing, DOM clobbering, Markdown specifics, over-blocking guards and streaming, with a
+  Chromium runner for any renderer and reference results for naive, DOMPurify-default and
+  render-policy adapters.

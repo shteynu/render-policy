@@ -8,3 +8,5 @@ coverage/
 e2e/output/
 site/
 packages/angular/e2e/dist/
+
+corpus/.build/

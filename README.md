@@ -209,6 +209,27 @@ npm run build
 npm run e2e
 ```
 
+## Evil-Markdown corpus
+
+[`corpus/`](corpus) holds 49 hostile-Markdown cases with the invariants a safe renderer must hold, and a runner that checks any renderer in Chromium through a ten-line adapter. Results for the three reference adapters ([`corpus/RESULTS.md`](corpus/RESULTS.md)):
+
+| Category | marked + innerHTML | DOMPurify defaults + innerHTML | @render-policy/core, balanced defaults |
+| --- | --- | --- | --- |
+| script execution | 1 / 8 | 7 / 8 | 8 / 8 |
+| URL schemes | 0 / 7 | 6 / 7 | 7 / 7 |
+| exfiltration | 0 / 15 | 4 / 15 | 15 / 15 |
+| UI spoofing | 0 / 6 | 1 / 6 | 6 / 6 |
+| DOM clobbering | 0 / 2 | 1 / 2 | 2 / 2 |
+| Markdown-specific | 3 / 3 | 3 / 3 | 3 / 3 |
+| guards against over-blocking | 4 / 5 | 5 / 5 | 5 / 5 |
+| streaming | 2 / 3 | 2 / 3 | 3 / 3 |
+
+DOMPurify's defaults are not wrong: they answer the XSS question. The corpus asks the other questions, and those are the policy's job.
+
+```
+node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
+```
+
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md). Next: publish the packages to npm, a strict Mermaid renderer and an ngx-markdown bridge for the Angular adapter, an evil-Markdown corpus other renderers can run.

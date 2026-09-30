@@ -36,7 +36,7 @@ Also planned for the core:
 
 - [x] streaming v1: keep settled blocks, replace only from the first changed node (`patchChildren`)
 - [ ] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer
-- [ ] an evil-Markdown corpus published on its own, so other renderers can run it
+- [x] an evil-Markdown corpus other renderers can run (`corpus/`, 49 cases, reference results in `corpus/RESULTS.md`)
 - [ ] image proxy guidance (SSRF-safe) for `rewriteImageUrl`
 
 ## Stage 3: census of CSP in public MCP Apps (26 Oct – 27 Nov 2026)

@@ -18,9 +18,11 @@
     "build": "npm run build -w packages/core && npm run build -w packages/eslint-plugin -w packages/react -w packages/angular",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "check": "npm run typecheck && npm test && npm run build && npm run e2e",
+    "check": "npm run typecheck && npm test && npm run build && npm run e2e && npm run corpus",
     "e2e": "node e2e/run.mjs && node packages/angular/e2e/run.mjs && node demo/build.mjs && node e2e/site.mjs",
-    "demo:build": "node demo/build.mjs"
+    "demo:build": "node demo/build.mjs",
+    "corpus": "node corpus/run.mjs --require-pass render-policy",
+    "corpus:results": "node corpus/run.mjs --results corpus/RESULTS.md --require-pass render-policy"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
