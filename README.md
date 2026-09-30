@@ -182,7 +182,7 @@ What is deliberately **not** covered:
 
 `end()` renders the final text once with nothing withheld and returns that render's decisions. Everything rendered, intermediate or final, goes through the same policy.
 
-A Markdown stream is incremental: each render converts and sanitizes only the unsettled tail of the buffer. The buffer is settled up to the last cut where the text before renders the same on its own as inside the whole document: after a blank line, never inside a fenced code block or an HTML block that spans blank lines, never before an indented line or a list item (they could continue the block above), never while raw HTML tags are unbalanced. Link reference definitions apply to the whole document, so every piece is rendered with all of them, and a new definition re-renders everything once. Settled blocks keep their DOM nodes, are never parsed again, and only the tail is patched (`patchChildren`), so nothing above the cursor flickers or loses its selection. A property test streams generated documents through both paths and checks that the incremental one produces exactly the DOM of a whole-buffer render after every push; `createStream(target, { incremental: false })` selects the whole-buffer path. Timings are in [Size and speed](#size-and-speed).
+Each intermediate render converts and sanitizes the whole buffer, but only the DOM from the first changed block is replaced (`patchChildren`): settled blocks keep their nodes, so nothing above the cursor flickers or loses its selection. The cost of a push therefore grows with the length of the reply; re-parsing only the unsettled tail is future work (streaming v2 on the [roadmap](ROADMAP.md)), held to a property test that the incremental result matches a whole-buffer render exactly. Timings are in [Size and speed](#size-and-speed).
 
 Framework adapters share one lifecycle, `createContentBinding(renderer, element, { mode, schedule, onDecisions })`: `update(content, streaming)` starts a stream on the first streaming update, feeds it while streaming stays true, ends it with a final render when streaming turns false, and renders in one shot otherwise. The React hook and both Angular directives are thin wrappers over it; an adapter for another framework is the same ten lines.
 
@@ -206,21 +206,18 @@ One-shot rendering in `balanced` mode of generated Markdown that looks like an a
 | 64 kB | 27.8 ms / 35.4 ms | 22.1 ms | 1,461 |
 | 256 kB | 118 ms / 132 ms | 100 ms | 5,829 |
 
-Streaming the same documents in 32-byte chunks, about a token each. "Incremental" is the default: only the unsettled tail is parsed and patched. "Whole buffer" re-parses everything on every push (`incremental: false`, the v0.1 preview behaviour):
+Streaming the same documents in 32-byte chunks, about a token each. Each push re-parses and re-sanitizes the whole buffer, then patches only the changed tail into the DOM:
 
 | Scenario | per push (median / p95 / max) | whole reply |
 | --- | --- | --- |
-| 8 kB, render on every push, incremental | 0.6 ms / 1.3 ms / 4.7 ms | 0.18 s |
-| 8 kB, render on every push, whole buffer | 2.3 ms / 5.7 ms / 8.8 ms | 0.7 s |
-| 64 kB, render on every push, incremental | 1.0 ms / 2.0 ms / 14.2 ms | 2.3 s |
-| 64 kB, render on every push, whole buffer | 16.3 ms / 36.4 ms / 57.6 ms | 35 s |
-| 64 kB, 4 chunks per animation frame through `frameScheduler`, incremental | render per frame 1.8 ms / 3.4 ms / 7.2 ms | paced by the frame rate |
+| 8 kB, render on every push | 2.1 ms / 5.7 ms / 7.8 ms | 0.6 s |
+| 64 kB, render on every push | 17.2 ms / 41.4 ms / 59.5 ms | 37 s |
+| 64 kB, 4 chunks per animation frame through `frameScheduler` | render per frame paced by the frame rate | 18 s |
 
 What the numbers say:
 
 - For a short reply the Markdown parse is about half of the time; for a long one the sanitize-and-insert step dominates. Neither is free, and there is no `innerHTML` shortcut to take: the policy needs the DOM.
-- With incremental streaming the cost of a push no longer grows with the length of the reply: a 64 kB reply costs about a millisecond per push, one to three milliseconds per animation frame, and the whole reply streams 15 times faster than with whole-buffer renders. The rare 14 ms push is the one that settles a long segment.
-- `patchChildren` keeps settled nodes in place: no flicker, no re-fetch of images, no lost selection.
+- A reply of the usual size, a few kB, costs single-digit milliseconds per push. Each intermediate render re-parses the whole buffer, so the cost of a push grows with the length of the reply, and a 64 kB reply is over the frame budget towards its end. `patchChildren` keeps settled nodes in place (no flicker, no re-fetch of images, no lost selection) but does not change that; re-parsing only the unsettled tail (streaming v2) is what removes the growth, and is future work gated on the equivalence property.
 
 ## Trusted Types and CSP
 

@@ -1,6 +1,4 @@
-import { patchChildren } from './dom.js';
-import type { FragmentResult, RenderOptions, RenderResult, RenderTarget } from './render.js';
-import { scanSettled } from './settle.js';
+import type { RenderOptions, RenderResult } from './render.js';
 
 export type Scheduler = (render: () => void) => void;
 
@@ -15,13 +13,6 @@ export interface StreamOptions {
   readonly closeFences?: boolean;
   /** Keep unchanged leading blocks in place and replace only from the first change. Default true. */
   readonly patch?: boolean;
-  /**
-   * Markdown only: re-parse and re-sanitize only the unsettled tail of the buffer; blocks
-   * before the last safe cut keep their nodes and are never parsed again. Off: every render
-   * re-parses the whole buffer (the v1 behaviour, kept as the reference). Default true;
-   * requires `patch`.
-   */
-  readonly incremental?: boolean;
 }
 
 export interface RenderStream {
@@ -38,67 +29,18 @@ export interface RenderStream {
 }
 
 export interface StreamRenderOps {
-  markdown(target: RenderTarget, markdown: string, options: RenderOptions): RenderResult;
-  html(target: RenderTarget, html: string, options: RenderOptions): RenderResult;
-  /** Markdown to a sanitized fragment without touching the target; the incremental path composes these. */
-  markdownFragment(markdown: string, options: RenderOptions): FragmentResult;
+  markdown(target: ParentNode, markdown: string, options: RenderOptions): RenderResult;
+  html(target: ParentNode, html: string, options: RenderOptions): RenderResult;
 }
 
-export function createRenderStream(target: RenderTarget, options: StreamOptions, ops: StreamRenderOps): RenderStream {
+export function createRenderStream(target: ParentNode, options: StreamOptions, ops: StreamRenderOps): RenderStream {
   const mode = options.mode ?? 'markdown';
   const schedule: Scheduler = options.schedule ?? ((render) => render());
   const hold = options.holdIncompleteUrls ?? true;
   const closeFences = options.closeFences ?? true;
   const patch = options.patch ?? true;
-  const incremental = mode === 'markdown' && patch && (options.incremental ?? true);
   let text = '';
   let ended = false;
-
-  // Incremental state: the settled prefix of the (held, fence-closed) source, how many of the
-  // target's leading child nodes it produced, and the definitions it was rendered with.
-  let settledText = '';
-  let settledCount = 0;
-  let settledDefinitions = '';
-
-  const forget = (): void => {
-    settledText = '';
-    settledCount = 0;
-    settledDefinitions = '';
-  };
-
-  const renderIncremental = (source: string, final: boolean, openFenceAtEnd: boolean): RenderResult => {
-    if (!source.startsWith(settledText) || target.childNodes.length < settledCount) forget();
-    let scan = scanSettled(source, settledText.length);
-    const definitions = scan.definitions.join('\n');
-    if (definitions !== settledDefinitions) {
-      // A definition appeared or changed: it can alter links anywhere, so settle from scratch.
-      forget();
-      settledDefinitions = definitions;
-      scan = scanSettled(source, 0);
-    }
-    // Definitions go in front of every piece: appended ones could be swallowed by an unclosed
-    // construct at the end of the buffer; in front, after a blank line, they change nothing.
-    const prefix = definitions === '' ? '' : `${definitions}\n\n`;
-    const decisions: RenderResult['decisions'][number][] = [];
-    let combined: DocumentFragment | null = null;
-    let newlySettled = 0;
-
-    if (scan.boundary > settledText.length) {
-      const segment = ops.markdownFragment(prefix + source.slice(settledText.length, scan.boundary), { streaming: true, final, openFenceAtEnd: false, partial: true });
-      newlySettled = segment.fragment.childNodes.length;
-      decisions.push(...segment.decisions);
-      combined = segment.fragment;
-    }
-    const tail = ops.markdownFragment(prefix + source.slice(scan.boundary), { streaming: true, final, openFenceAtEnd, partial: true });
-    decisions.push(...tail.decisions);
-    if (combined) combined.append(...Array.from(tail.fragment.childNodes));
-    else combined = tail.fragment;
-
-    patchChildren(target, combined, { from: settledCount });
-    settledText = source.slice(0, scan.boundary);
-    settledCount += newlySettled;
-    return { decisions };
-  };
 
   const render = (final: boolean): RenderResult => {
     let source = text;
@@ -110,7 +52,6 @@ export function createRenderStream(target: RenderTarget, options: StreamOptions,
         source = completed.text;
         openFenceAtEnd = completed.closed;
       }
-      if (incremental) return renderIncremental(source, final, openFenceAtEnd);
       return ops.markdown(target, source, { patch, streaming: true, final, openFenceAtEnd });
     }
     if (!final && hold) source = holdIncompleteHtml(source);
@@ -140,7 +81,6 @@ export function createRenderStream(target: RenderTarget, options: StreamOptions,
     reset() {
       text = '';
       ended = false;
-      forget();
       target.replaceChildren();
     },
     get text() {

@@ -35,7 +35,7 @@ Done when:
 Also planned for the core:
 
 - [x] streaming v1: keep settled blocks, replace only from the first changed node (`patchChildren`)
-- [x] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer (`npm run bench`: a push on a 64 kB reply went from 16 ms to 1 ms; equivalence with the whole-buffer render is a fast-check property)
+- [ ] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer. Attempted with a line-scanner that finds a safe cut, but a strict fast-check equivalence property (incremental DOM must equal a whole-buffer render after every push) kept finding non-local Markdown cases — link reference definitions, loose-list continuation across a growing last line, and more — so it was reverted pending a design that meets the property. Whole-buffer rendering with tail `patchChildren` ships for now (`npm run bench`: a push costs 2 ms at 8 kB and 17 ms at 64 kB).
 - [x] an evil-Markdown corpus other renderers can run (`corpus/`, 49 cases, reference results in `corpus/RESULTS.md`)
 - [ ] image proxy guidance (SSRF-safe) for `rewriteImageUrl`
 

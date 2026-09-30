@@ -25,12 +25,6 @@ export interface RenderContext {
   readonly final: boolean;
   /** True when the source ended inside a code fence that the stream closed for display. Default false. */
   readonly openFenceAtEnd: boolean;
-  /**
-   * True when the fragment is a piece of a streamed document (a newly settled segment or the
-   * unsettled tail), not the whole document. A transform that needs the whole document should
-   * skip such renders. Default false.
-   */
-  readonly partial: boolean;
 }
 
 export interface RenderOptions extends Partial<RenderContext> {
@@ -117,7 +111,6 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
       streaming: options?.streaming ?? false,
       final: options?.final ?? true,
       openFenceAtEnd: options?.openFenceAtEnd ?? false,
-      partial: options?.partial ?? false,
       // The fragment belongs to the sanitizer's parser document; transforms create nodes in the live one.
       document: win.document,
     };
@@ -217,7 +210,7 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
       return trustedHTML(converted.html);
     },
     createStream(target, streamOptions = {}) {
-      return createRenderStream(target, streamOptions, { markdown: renderMarkdownInto, html: renderHtmlInto, markdownFragment: markdownToFragment });
+      return createRenderStream(target, streamOptions, { markdown: renderMarkdownInto, html: renderHtmlInto });
     },
   };
 }

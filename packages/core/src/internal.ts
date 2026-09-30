@@ -9,5 +9,3 @@ export type { SanitizeOutcome, Sanitizer } from './sanitize.js';
 export { createRenderStream } from './stream.js';
 export type { StreamRenderOps } from './stream.js';
 export { checkUrlHeuristics, normalizeUrl, shannonEntropy, usableBase } from './url.js';
-export { scanSettled } from './settle.js';
-export type { SettleScan } from './settle.js';
