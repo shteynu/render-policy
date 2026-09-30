@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>render-policy demo</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "@render-policy/core": "/packages/core/dist/index.js",
+        "dompurify": "/node_modules/dompurify/dist/purify.es.mjs",
+        "marked": "/node_modules/marked/lib/marked.esm.js"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/demo/demo.css">
+</head>
+<body>
+  <h1>render-policy: the same markup, naive vs policy</h1>
+  <p>
+    Left: <code>element.innerHTML = marked(text)</code>. Right: <code>renderer.renderMarkdownInto(element, text)</code>.
+    Query parameters: <code>?mode=naive|policy|both</code>, <code>?policy=strict|balanced|permissive</code>,
+    <code>?csp=1</code> to serve the page under <code>require-trusted-types-for 'script'</code>.
+  </p>
+  <div class="panels">
+    <section>
+      <h2>Naive</h2>
+      <div id="naive" class="out"></div>
+      <pre id="naive-log" class="log"></pre>
+    </section>
+    <section>
+      <h2>render-policy</h2>
+      <div id="policy" class="out"></div>
+      <pre id="policy-log" class="log"></pre>
+    </section>
+  </div>
+  <h2>Streaming target</h2>
+  <div id="stream" class="out"></div>
+  <script type="module" src="/demo/demo.js"></script>
+</body>
+</html>

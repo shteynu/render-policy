@@ -1,0 +1,45 @@
+{
+  "name": "eslint-plugin-render-policy",
+  "version": "0.1.0",
+  "description": "ESLint rules that flag HTML injection sinks (innerHTML, outerHTML, insertAdjacentHTML, bypassSecurityTrustHtml, dangerouslySetInnerHTML) so agent content goes through a render policy instead.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.0.0"
+  },
+  "devDependencies": {
+    "@angular-eslint/template-parser": "^22.5.0",
+    "@types/estree": "^1.0.8",
+    "eslint": "^10.11.0"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "xss",
+    "innerHTML",
+    "security"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shteynu/render-policy.git",
+    "directory": "packages/eslint-plugin"
+  }
+}

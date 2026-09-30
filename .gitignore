@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.tgz
+*.log
+.DS_Store
+.vitest/
+e2e/output/

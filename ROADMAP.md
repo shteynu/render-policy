@@ -1,0 +1,61 @@
+# Roadmap
+
+The source of truth for the plan is the working document
+[План: безопасность агентного UI](https://claude.ai/artifact/DARKTXxuaYovCfDhgxdRZa)
+(private; owner: this repository's maintainer). This file mirrors the parts of it that
+concern the code in this repository. Dates are from that plan.
+
+## Stage 2: render-policy v0.1 and the Angular adapter (12 Oct – 27 Nov 2026)
+
+Publish an open-source rendering-policy engine for agent output. Core in TypeScript without a
+framework; Angular is the first adapter. MIT, so upstream projects can take the code.
+
+| Component | Plan | Status |
+| --- | --- | --- |
+| Core | Policy for `img`, `a`, media, SVG; host allowlist without wildcards by default; query-string removal or proxy; URL length and entropy heuristics; "click to load" placeholder; applied as the last step over the final HTML | done: `@render-policy/core` |
+| Sink denylist | Forms, blob storage, `workers.dev`, webhook services; data separate from code, versioned | done: `packages/core/src/data/sink-domains.ts` (starting set) |
+| Angular adapter | Renders without `innerHTML`; streaming withholds images and links until the URL is closed and checked; Trusted Types | done as source (`[rpRender]`, `<rp-markdown>`, `provideRenderPolicy`); npm build via ng-packagr pending |
+| Angular adapter: strict Mermaid | Diagram blocks rendered only by a strict renderer | not started (Mermaid stays a code block) |
+| Angular adapter: ngx-markdown bridge | A provider that routes ngx-markdown through the policy | not started (migration guide only) |
+| ESLint | Forbid `innerHTML` and `[innerHTML]` for untrusted content | done: `no-unsafe-innerhtml`, `no-innerhtml-binding` |
+| Regression tests | One per class of real advisories: sanitization order, fallback render, SVG in `data:`, Mermaid loose mode, sink through an allowed domain | done: `packages/core/test/regressions.test.ts` |
+| Modes | strict (no remote images), balanced (allowlist, no query), permissive (everything, with a journal) | done |
+| Demo | The same hostile markup rendered naively and through the policy | done: `demo/` plus a Chromium proof in `e2e/` |
+| Docs | Threat model, modes, migration from `innerHTML` and ngx-markdown | done: `README.md`, `docs/migration.md` |
+
+Done when:
+
+- [ ] core and Angular adapter published on npm as v0.1
+- [x] every advisory class in the table has a test
+- [x] the streaming render makes no request to an unclosed or unchecked URL (unit + browser)
+- [x] demo of the same hostile markup with and without the policy
+- [x] documentation: threat model, modes, migration
+- [ ] React adapter (by end of December 2026; most of the market is unreachable without it)
+
+Also planned for the core:
+
+- streaming v1: diff and patch only the tail block instead of re-rendering the buffer
+- an evil-Markdown corpus published on its own, so other renderers can run it
+- image proxy guidance (SSRF-safe) for `rewriteImageUrl`
+
+## Stage 3: census of CSP in public MCP Apps (26 Oct – 27 Nov 2026)
+
+Measure how public MCP Apps declare CSP and allowed domains (`_meta.ui`: CSP, `connectDomains`,
+`resourceDomains`) across 100+ servers; count wildcards and sink hosts, list/read policy
+mismatches, side-effecting tools visible to UI by default, and data interpolation into HTML
+templates. Read-only, protocol-level data; dangerous findings go to owners privately first.
+Output: a publication with aggregates and the census script, which becomes the basis for
+scanner rules in Stage 4. Lives in its own repository.
+
+## Stage 4: evil-mcp-app and rules for MCP scanners (30 Nov 2026 – 29 Jan 2027)
+
+A Playwright suite with a malicious MCP server that grades any MCP Apps host: isolation and
+origin, message spoofing, tool calls from UI without consent, `ui/message` as the user, links
+with dangerous schemes, data egress through forms and frame navigation, fake consent UI.
+Plus `mcp-app-lint`: SARIF rules for existing scanners. Lives in its own repository.
+
+## Ordering
+
+For a team of one to three: the private disclosure that started this work, then the core
+library, then the CSP census, then evil-mcp-app. Decision point on continuing: 5 April 2027,
+against thresholds recorded in the plan.

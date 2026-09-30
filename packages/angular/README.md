@@ -1,0 +1,28 @@
+# @render-policy/angular
+
+Angular adapter for [`@render-policy/core`](../core): render agent content without `[innerHTML]`
+or `bypassSecurityTrustHtml()`.
+
+```ts
+import { provideRenderPolicy, RpMarkdownComponent, RpRenderDirective } from '@render-policy/angular';
+
+bootstrapApplication(AppComponent, {
+  providers: [provideRenderPolicy({ mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } })],
+});
+```
+
+```html
+<div [rpRender]="message.content"></div>
+<div [rpRender]="html" rpRenderMode="html"></div>
+<rp-markdown [content]="message.content" [streaming]="message.pending" />
+```
+
+- `RpRenderDirective` renders into its host element on every change of `rpRender`.
+- `RpMarkdownComponent` adds a streaming mode: while `streaming` is true the growing text is
+  rendered at most once per animation frame with incomplete URLs withheld; when it turns false
+  the final text is rendered once.
+- `RENDERER` is the injectable renderer; `RENDER_POLICY_CONFIG` holds the options.
+- On the server (no `window`) both insert plain text.
+
+Requires Angular 19 or later (signal inputs and `effect()`). The package is published as
+source for now; building it with ng-packagr (`ng-package.json` is included) is on the roadmap.

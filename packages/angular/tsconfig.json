@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "types": [],
+    "paths": {
+      "@render-policy/core": [
+        "../core/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src"
+  ]
+}
