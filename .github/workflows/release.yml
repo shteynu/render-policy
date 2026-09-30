@@ -1,0 +1,52 @@
+name: Release
+
+# Publishes every package to npm when a version tag is pushed:
+#   git tag v0.1.0 && git push origin v0.1.0
+# Needs the NPM_TOKEN secret (an automation token for the @render-policy scope and
+# eslint-plugin-render-policy). Provenance attestations are attached through the
+# workflow's OIDC token.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Check that the tag matches the package versions
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for pkg in packages/core packages/eslint-plugin packages/react packages/angular; do
+            version="$(node -p "require('./$pkg/package.json').version")"
+            if [ "$version" != "$tag" ]; then
+              echo "$pkg is $version, tag is $tag" >&2
+              exit 1
+            fi
+          done
+      - run: npm publish --provenance --access public -w packages/core
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --provenance --access public -w packages/eslint-plugin
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish --provenance --access public -w packages/react
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: cd packages/angular/dist && npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
