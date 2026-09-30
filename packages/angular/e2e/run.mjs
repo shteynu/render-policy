@@ -92,6 +92,27 @@ try {
     await page.waitForTimeout(200);
     check((await page.locator('#component').textContent()).includes('done') && countPixel() === 1, 'component: final render after streaming ends, no extra request');
     check(await headingKept(), 'component: heading node kept through the final render');
+    const dpixel = `${base}/demo/ok.svg?ng-dstream=1`;
+    const countDirectivePixel = () => requests.filter((r) => r.includes('ng-dstream=1')).length;
+    const directiveStep = async (text) => {
+      await page.evaluate((value) => {
+        window.__app.setDirectiveStream(value);
+        window.__app.tick();
+      }, text);
+      await page.waitForTimeout(250);
+    };
+    await directiveStep(`# Live\n\n![d](${dpixel.slice(0, dpixel.length - 10)}`);
+    check((await page.locator('#directive-stream img').count()) === 0 && countDirectivePixel() === 0, 'directive streaming: incomplete image withheld', `${countDirectivePixel()}`);
+    await directiveStep(`# Live\n\n![d](${dpixel}) done`);
+    await page.waitForTimeout(300);
+    check(countDirectivePixel() === 1 && (await page.locator('#directive-stream img').count()) === 1, 'directive streaming: image requested once, after the URL closed', `${countDirectivePixel()}`);
+    await page.evaluate(() => {
+      window.__app.setDirectiveStreaming(false);
+      window.__app.tick();
+    });
+    await page.waitForTimeout(200);
+    check((await page.locator('#directive-stream').textContent()).includes('done') && countDirectivePixel() === 1, 'directive streaming: final render after streaming ends, no extra request');
+
     const writesAfter = await page.evaluate(() => window.__innerHTMLWritesInApp);
     check(writesAfter.length === 0, 'component: no innerHTML write inside the application', writesAfter.join(' '));
     const decisions = await page.evaluate(() => window.__decisions.length);

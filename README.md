@@ -46,7 +46,7 @@ import { createRenderer } from '@render-policy/core';
 const renderer = createRenderer({
   mode: 'balanced',
   policy: { imageHosts: ['cdn.example.com'] },
-  onDecision: (d) => console.debug('[render-policy]', d.kind, d.subject, d.reason),
+  onDecision: (d) => console.debug('[render-policy]', d.code, d.kind, d.subject, d.reason),
 });
 
 // One-shot
@@ -60,6 +60,8 @@ stream.end();
 
 `renderHtmlInto()`, `renderTextInto()`, `markdownToFragment()` and `sanitizeHtml()` cover the other shapes. `trustedHTML()` is the escape hatch for a string sink you cannot remove: it returns a `TrustedHTML` where the API exists (through DOMPurify's `dompurify` policy) and a string elsewhere.
 
+Every decision in the journal carries a stable `code` for programs (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …) and a `reason` for people. Application code that throws never aborts a render: a `rewriteImageUrl` that fails blocks that one image, a transform that fails is skipped, and the journal says so. Building blocks the renderer is made of (`patchChildren`, `createSanitizer`, the URL heuristics) live in `@render-policy/core/internal`, outside semver.
+
 ### Angular
 
 ```ts
@@ -70,6 +72,7 @@ bootstrapApplication(AppComponent, {
 
 ```html
 <div [rpRender]="message.content"></div>
+<div [rpRender]="message.content" [rpRenderStreaming]="message.pending"></div>
 <rp-markdown [content]="message.content" [streaming]="message.pending" />
 ```
 
@@ -177,7 +180,9 @@ What is deliberately **not** covered:
 - cuts the buffer before an inline link or image whose destination has no closing parenthesis, a bare `https://` or `www.` URL still being typed, a raw tag without its `>`, and a link reference definition on the last line;
 - closes an unfinished ```` ``` ```` or `~~~` fence so a streaming code block renders as code rather than as Markdown.
 
-`end()` renders the final text once with nothing withheld. Everything rendered, intermediate or final, goes through the same policy. Each intermediate render converts and sanitizes the whole buffer, but only the DOM from the first changed block is replaced (`patchChildren`): settled blocks keep their nodes, so nothing above the cursor flickers or loses its selection. Timings are in [Size and speed](#size-and-speed).
+`end()` renders the final text once with nothing withheld and returns that render's decisions. Everything rendered, intermediate or final, goes through the same policy. Each intermediate render converts and sanitizes the whole buffer, but only the DOM from the first changed block is replaced (`patchChildren`): settled blocks keep their nodes, so nothing above the cursor flickers or loses its selection. Timings are in [Size and speed](#size-and-speed).
+
+Framework adapters share one lifecycle, `createContentBinding(renderer, element, { mode, schedule, onDecisions })`: `update(content, streaming)` starts a stream on the first streaming update, feeds it while streaming stays true, ends it with a final render when streaming turns false, and renders in one shot otherwise. The React hook and both Angular directives are thin wrappers over it; an adapter for another framework is the same ten lines.
 
 ## Size and speed
 

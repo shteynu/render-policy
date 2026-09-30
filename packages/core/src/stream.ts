@@ -1,5 +1,4 @@
-import type { RenderDecision } from './decisions.js';
-import type { InsertOptions } from './render.js';
+import type { RenderOptions, RenderResult } from './render.js';
 
 export type Scheduler = (render: () => void) => void;
 
@@ -21,8 +20,8 @@ export interface RenderStream {
   push(chunk: string): void;
   /** Replace the whole text and (re)render; for frameworks that hold the growing string. */
   set(text: string): void;
-  /** Final render: nothing is withheld any more because nothing more is coming. */
-  end(): void;
+  /** Final render: nothing is withheld any more because nothing more is coming. Returns its decisions. */
+  end(): RenderResult;
   /** Clear the buffer and the target. */
   reset(): void;
   readonly text: string;
@@ -30,8 +29,8 @@ export interface RenderStream {
 }
 
 export interface StreamRenderOps {
-  markdown(target: ParentNode, markdown: string, options: InsertOptions): { readonly decisions: readonly RenderDecision[] };
-  html(target: ParentNode, html: string, options: InsertOptions): { readonly decisions: readonly RenderDecision[] };
+  markdown(target: ParentNode, markdown: string, options: RenderOptions): RenderResult;
+  html(target: ParentNode, html: string, options: RenderOptions): RenderResult;
 }
 
 export function createRenderStream(target: ParentNode, options: StreamOptions, ops: StreamRenderOps): RenderStream {
@@ -43,7 +42,7 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
   let text = '';
   let ended = false;
 
-  const render = (final: boolean): void => {
+  const render = (final: boolean): RenderResult => {
     let source = text;
     if (mode === 'markdown') {
       if (!final && hold) source = holdIncompleteMarkdown(source);
@@ -53,11 +52,10 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
         source = completed.text;
         openFenceAtEnd = completed.closed;
       }
-      ops.markdown(target, source, { patch, streaming: true, final, openFenceAtEnd });
-    } else {
-      if (!final && hold) source = holdIncompleteHtml(source);
-      ops.html(target, source, { patch, streaming: true, final, openFenceAtEnd: false });
+      return ops.markdown(target, source, { patch, streaming: true, final, openFenceAtEnd });
     }
+    if (!final && hold) source = holdIncompleteHtml(source);
+    return ops.html(target, source, { patch, streaming: true, final, openFenceAtEnd: false });
   };
 
   return {
@@ -76,9 +74,9 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
       });
     },
     end() {
-      if (ended) return;
+      if (ended) return { decisions: [] };
       ended = true;
-      render(true);
+      return render(true);
     },
     reset() {
       text = '';
@@ -92,6 +90,19 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
       return ended;
     },
   };
+}
+
+/**
+ * The scheduler an adapter should use unless told otherwise: one render per animation
+ * frame where the window has requestAnimationFrame, synchronous rendering elsewhere.
+ */
+export function defaultScheduler(win: { requestAnimationFrame?: (callback: () => void) => number } | null | undefined = globalWindow()): Scheduler {
+  if (win && typeof win.requestAnimationFrame === 'function') return frameScheduler(win as { requestAnimationFrame(callback: () => void): number });
+  return (render) => render();
+}
+
+function globalWindow(): { requestAnimationFrame?: (callback: () => void) => number } | undefined {
+  return typeof window === 'undefined' ? undefined : window;
 }
 
 /** Coalesce renders to one per animation frame. */
@@ -113,12 +124,7 @@ export function frameScheduler(win: { requestAnimationFrame(callback: () => void
 
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 
-/** Append the closing fence of an unfinished ``` or ~~~ block. */
-export function closeOpenFences(markdown: string): string {
-  return completeFences(markdown).text;
-}
-
-/** Like closeOpenFences, and says whether a fence had to be closed. */
+/** Append the closing fence of an unfinished ``` or ~~~ block, and say whether one had to be closed. */
 export function completeFences(markdown: string): { readonly text: string; readonly closed: boolean } {
   let open: { char: string; length: number } | null = null;
   for (const line of markdown.split('\n')) {

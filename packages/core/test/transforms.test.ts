@@ -62,3 +62,49 @@ describe('fragment transforms', () => {
     expect(target.querySelector('em')).toBeNull();
   });
 });
+
+describe('a transform that throws', () => {
+  const box = (): HTMLDivElement => document.createElement('div');
+
+  it('is skipped and journaled; the others run and the fragment is still inserted', () => {
+    const seen: string[] = [];
+    const renderer = createRenderer({
+      onDecision: (d) => seen.push(d.code),
+      transforms: [
+        () => {
+          throw new Error('highlighter exploded');
+        },
+        (fragment) => fragment.querySelector('em')?.replaceWith(fragment.ownerDocument.createElement('mark')),
+      ],
+    });
+    const target = box();
+    const { decisions } = renderer.renderMarkdownInto(target, '*x* and **y**');
+    expect(target.querySelector('mark')).not.toBeNull();
+    expect(target.querySelector('strong')?.textContent).toBe('y');
+    const failure = decisions.find((d) => d.code === 'transform-failed');
+    expect(failure).toMatchObject({ kind: 'flagged', subject: 'transform' });
+    expect(failure?.reason).toContain('highlighter exploded');
+    expect(seen).toContain('transform-failed');
+  });
+
+  it('does not break a stream: later pushes keep rendering', () => {
+    let calls = 0;
+    const renderer = createRenderer({
+      transforms: [
+        () => {
+          calls += 1;
+          if (calls === 1) throw new Error('once');
+        },
+      ],
+    });
+    const target = box();
+    const stream = renderer.createStream(target);
+    stream.push('# one');
+    stream.push('\n\ntwo');
+    const final = stream.end();
+    expect(target.querySelector('h1')?.textContent).toBe('one');
+    expect(target.textContent).toContain('two');
+    expect(final.decisions.some((d) => d.code === 'transform-failed')).toBe(false);
+    expect(calls).toBe(3);
+  });
+});

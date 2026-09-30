@@ -1,6 +1,6 @@
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, ElementRef, PLATFORM_ID, effect, inject, input } from '@angular/core';
-import { frameScheduler, type RenderStream, type Scheduler } from '@render-policy/core';
+import { createContentBinding, defaultScheduler, type ContentBinding } from '@render-policy/core';
 import { RENDERER } from './providers.js';
 
 /**
@@ -26,39 +26,19 @@ export class RpMarkdownComponent {
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
-  private readonly renderer = isPlatformBrowser(inject(PLATFORM_ID)) ? inject(RENDERER) : null;
-  private stream: RenderStream | null = null;
+  private readonly binding: ContentBinding | null = isPlatformBrowser(inject(PLATFORM_ID))
+    ? createContentBinding(inject(RENDERER), this.host.nativeElement, { mode: 'markdown', schedule: defaultScheduler(this.document.defaultView) })
+    : null;
 
   constructor() {
     effect(() => {
       const content = this.content();
       const streaming = this.streaming();
-      const element = this.host.nativeElement;
-      const renderer = this.renderer;
-      if (!renderer) {
-        element.textContent = content;
+      if (!this.binding) {
+        this.host.nativeElement.textContent = content; // server: plain text, never markup
         return;
       }
-      if (streaming) {
-        this.stream ??= renderer.createStream(element, { mode: 'markdown', schedule: this.scheduler() });
-        this.stream.set(content);
-        return;
-      }
-      if (this.stream) {
-        this.stream.set(content);
-        this.stream.end();
-        this.stream = null;
-        return;
-      }
-      renderer.renderMarkdownInto(element, content);
+      this.binding.update(content, streaming);
     });
-  }
-
-  private scheduler(): Scheduler {
-    const window = this.document.defaultView;
-    if (window && typeof window.requestAnimationFrame === 'function') {
-      return frameScheduler(window);
-    }
-    return (render) => render();
   }
 }

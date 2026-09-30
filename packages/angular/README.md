@@ -14,13 +14,15 @@ bootstrapApplication(AppComponent, {
 ```html
 <div [rpRender]="message.content"></div>
 <div [rpRender]="html" rpRenderMode="html"></div>
+<div [rpRender]="message.content" [rpRenderStreaming]="message.pending"></div>
 <rp-markdown [content]="message.content" [streaming]="message.pending" />
 ```
 
-- `RpRenderDirective` renders into its host element on every change of `rpRender`.
-- `RpMarkdownComponent` adds a streaming mode: while `streaming` is true the growing text is
-  rendered at most once per animation frame with incomplete URLs withheld; when it turns false
-  the final text is rendered once.
+- `RpRenderDirective` renders into its host element on every change of `rpRender`; with
+  `rpRenderStreaming` true the growing text is rendered at most once per animation frame with
+  incomplete URLs withheld, and when it turns false the final text is rendered once.
+- `RpMarkdownComponent` is the same for Markdown, as an element with `content` and `streaming` inputs.
+- Both are wrappers over `createContentBinding()` from the core, so they behave exactly alike.
 - `RENDERER` is the injectable renderer; `RENDER_POLICY_CONFIG` holds the options.
 - On the server (no `window`) both insert plain text.
 

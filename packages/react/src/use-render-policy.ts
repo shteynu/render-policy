@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
-import { frameScheduler, type RenderDecision, type RenderStream, type Scheduler } from '@render-policy/core';
+import { createContentBinding, defaultScheduler, type ContentBinding, type RenderDecision, type Renderer, type Scheduler } from '@render-policy/core';
 import { useRenderer } from './context.js';
 
 export interface UseRenderPolicyOptions {
@@ -7,14 +7,15 @@ export interface UseRenderPolicyOptions {
   readonly mode?: 'markdown' | 'html';
   /** While true, the content is treated as a growing stream: incomplete URLs are withheld, fences closed, settled blocks kept. */
   readonly streaming?: boolean;
-  /** Coalesces streaming renders. Default: one per animation frame. */
+  /** Coalesces streaming renders. Default: one per animation frame. Read when a stream starts. */
   readonly scheduler?: Scheduler;
-  /** Receives the decision journal of each one-shot render. Memoize it (useCallback) to avoid re-renders. */
+  /** Receives the decision journal of each one-shot render and of the final render of a stream. */
   readonly onDecisions?: (decisions: readonly RenderDecision[]) => void;
 }
 
-interface ActiveStream {
-  readonly stream: RenderStream;
+interface Active {
+  readonly binding: ContentBinding;
+  readonly renderer: Renderer;
   readonly element: Element;
   readonly mode: 'markdown' | 'html';
 }
@@ -32,52 +33,43 @@ const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : us
 export function useRenderPolicy<T extends Element = HTMLDivElement>(content: string, options: UseRenderPolicyOptions = {}): RefObject<T | null> {
   const ref = useRef<T | null>(null);
   const renderer = useRenderer();
-  const active = useRef<ActiveStream | null>(null);
-  const { mode = 'markdown', streaming = false, scheduler, onDecisions } = options;
+  const active = useRef<Active | null>(null);
+  const onDecisions = useRef(options.onDecisions);
+  const { mode = 'markdown', streaming = false, scheduler } = options;
+
+  useIsomorphicLayoutEffect(() => {
+    onDecisions.current = options.onDecisions;
+  });
 
   useIsomorphicLayoutEffect(() => {
     const element = ref.current;
     if (!element || !renderer) return;
 
     let current = active.current;
-    if (current && (current.element !== element || current.mode !== mode)) {
-      active.current = null;
-      current = null;
+    if (!current || current.element !== element || current.renderer !== renderer || current.mode !== mode) {
+      current?.binding.dispose();
+      current = {
+        binding: createContentBinding(renderer, element, {
+          mode,
+          schedule: scheduler ?? defaultScheduler(),
+          onDecisions: (decisions) => onDecisions.current?.(decisions),
+        }),
+        renderer,
+        element,
+        mode,
+      };
+      active.current = current;
     }
-
-    if (streaming) {
-      if (!current) {
-        current = { stream: renderer.createStream(element, { mode, schedule: scheduler ?? defaultScheduler() }), element, mode };
-        active.current = current;
-      }
-      current.stream.set(content);
-      return;
-    }
-
-    if (current) {
-      active.current = null;
-      current.stream.set(content);
-      current.stream.end();
-      return;
-    }
-
-    const result = mode === 'html' ? renderer.renderHtmlInto(element, content) : renderer.renderMarkdownInto(element, content);
-    onDecisions?.(result.decisions);
-  }, [renderer, content, mode, streaming, scheduler, onDecisions]);
+    current.binding.update(content, streaming);
+  }, [renderer, content, mode, streaming]);
 
   useEffect(
     () => () => {
+      active.current?.binding.dispose();
       active.current = null;
     },
     [],
   );
 
   return ref;
-}
-
-function defaultScheduler(): Scheduler {
-  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-    return frameScheduler(window);
-  }
-  return (render) => render();
 }

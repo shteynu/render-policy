@@ -24,7 +24,8 @@ function App() {
   incomplete URLs withheld, unfinished code fences closed and settled blocks kept in place; when it
   turns false the final text is rendered once.
 - `useRenderPolicy(content, { mode, streaming, scheduler, onDecisions })` returns a ref for an element
-  of your own. The element must have no React-managed children.
+  of your own. The element must have no React-managed children. `onDecisions` receives the journal of
+  every one-shot render and of the final render of a stream.
 - `useRenderer()` returns the renderer from the nearest provider, or a default balanced one.
 - Without a provider the components still work with the balanced defaults.
 - On the server the components render an empty container; content appears on the client.

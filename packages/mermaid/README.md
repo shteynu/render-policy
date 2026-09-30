@@ -29,7 +29,8 @@ What the transform guarantees, whatever the diagram source says:
 - the original code block stays as the wrapper's light DOM, so streaming keeps a finished
   diagram in place, and a block whose fence is still open is left as code until it closes;
 - a diagram that fails to parse stays a code block, and the failure is journaled through
-  `onDecision`.
+  `onDecision`, with codes `diagram-render-failed`, `diagram-element-not-allowed`,
+  `diagram-attribute-not-allowed`, `diagram-style-escapes` and `diagram-root-not-svg`.
 
 Renders are cached by source (`cacheSize`, default 50). Diagram languages other than
 `mermaid` can be mapped with `languages`.

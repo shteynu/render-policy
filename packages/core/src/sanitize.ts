@@ -1,9 +1,11 @@
-import createDOMPurify, { type Config, type WindowLike } from 'dompurify';
+import createDOMPurify, { type Config } from 'dompurify';
 import type { TrustedHTML } from 'trusted-types/lib/index.js';
-import type { RenderDecision, DecisionSubject } from './decisions.js';
+import type { CoreDecisionCode, DecisionSubject, RenderDecision } from './decisions.js';
+import { messageOf } from './errors.js';
 import type { RenderPolicy } from './policy.js';
 import { matchSink, type SinkDenylist } from './sinks.js';
 import { checkUrl, checkUrlHeuristics, hostMatches, usableBase, type ParsedUrl } from './url.js';
+import type { RenderWindow } from './window.js';
 
 export interface SanitizeOutcome<T> {
   readonly output: T;
@@ -13,13 +15,15 @@ export interface SanitizeOutcome<T> {
 export interface Sanitizer {
   /** Sanitize into an inert DocumentFragment. This is the only path the renderer uses. */
   toFragment(html: string): SanitizeOutcome<DocumentFragment>;
-  /** Sanitize to a string. Only for sinks you cannot avoid; prefer toFragment. */
-  toHtml(html: string): SanitizeOutcome<string>;
   /** Sanitize to a TrustedHTML when the Trusted Types API is present, else a string. */
   toTrustedHTML(html: string): SanitizeOutcome<TrustedHTML | string>;
 }
 
-/** Attributes whose value is fetched or navigated to. */
+/**
+ * Attributes whose value is fetched or navigated to. Some are also on the always-forbidden
+ * list below and are dropped before the URL check runs; they stay here on purpose, so that
+ * the URL check does not depend on the forbid list staying as it is.
+ */
 const URL_ATTRIBUTES = new Set([
   'href', 'src', 'xlink:href', 'action', 'formaction', 'poster', 'background', 'cite',
   'longdesc', 'usemap', 'data', 'ping', 'codebase', 'archive', 'profile', 'manifest', 'icon',
@@ -76,26 +80,32 @@ interface BlockedImage {
   readonly reason: string;
 }
 
+/** Everything one sanitize call accumulates; the hooks read it through `state`. */
 interface CallState {
   readonly decisions: RenderDecision[];
   readonly blockedImages: WeakMap<Element, BlockedImage>;
   readonly recorded: Set<string>;
 }
 
-type ImageOutcome =
-  | { readonly ok: true; readonly value: string; readonly rewritten: string | null }
-  | { readonly ok: false; readonly reason: string };
+interface Problem {
+  readonly code: CoreDecisionCode;
+  readonly reason: string;
+}
 
-export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist: SinkDenylist): Sanitizer {
+type ImageOutcome =
+  | { readonly ok: true; readonly value: string; readonly rewritten: Problem | null }
+  | ({ readonly ok: false } & Problem);
+
+export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylist: SinkDenylist): Sanitizer {
   const purify = createDOMPurify(win);
   const config = buildConfig(policy);
   let state: CallState | null = null;
 
   const pageOrigin = (): string | null => {
-    const origin = win.document?.location?.origin;
+    const origin = win.document.location?.origin;
     return origin && origin !== 'null' ? origin : null;
   };
-  const pageBase = (): string | undefined => usableBase(win.document?.location?.href);
+  const pageBase = (): string | undefined => usableBase(win.document.location?.href);
 
   const record = (s: CallState, decision: RenderDecision): void => {
     s.decisions.push(decision);
@@ -115,33 +125,39 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
       return { ok: true, value: parsed.normalized, rewritten: null };
     }
     if (policy.imageHosts === 'none') {
-      return { ok: false, reason: 'remote images are disabled by the policy' };
+      return { ok: false, code: 'remote-images-disabled', reason: 'remote images are disabled by the policy' };
     }
     if (policy.imageHosts !== 'any' && !hostMatches(url.host, policy.imageHosts, policy.allowWildcardHosts)) {
-      return { ok: false, reason: `image host "${url.host}" is not in the allowlist` };
+      return { ok: false, code: 'image-host-not-allowed', reason: `image host "${url.host}" is not in the allowlist` };
     }
-    let rewritten: string | null = null;
+    let rewritten: Problem | null = null;
     const hasQuery = url.search !== '' || url.hash !== '';
     if (hasQuery && policy.imageQuery === 'deny') {
-      return { ok: false, reason: 'image URL carries a query string or fragment' };
+      return { ok: false, code: 'image-query-denied', reason: 'image URL carries a query string or fragment' };
     }
     if (hasQuery && policy.imageQuery === 'strip') {
       url.search = '';
       url.hash = '';
-      rewritten = 'query string removed';
+      rewritten = { code: 'image-query-stripped', reason: 'query string removed' };
     }
     if (policy.urlHeuristics) {
-      const why = checkUrlHeuristics(url, policy.urlHeuristics);
-      if (why) return { ok: false, reason: why };
+      const problem = checkUrlHeuristics(url, policy.urlHeuristics);
+      if (problem) return { ok: false, ...problem };
     }
     let value = rewritten ? url.href : parsed.normalized;
     if (policy.rewriteImageUrl) {
-      const out = policy.rewriteImageUrl(url);
-      if (out === null) return { ok: false, reason: 'rejected by rewriteImageUrl' };
+      let out: string | null;
+      try {
+        out = policy.rewriteImageUrl(url);
+      } catch (error) {
+        // Application code failed: the image is blocked and the render goes on.
+        return { ok: false, code: 'image-rewrite-failed', reason: `rewriteImageUrl threw: ${messageOf(error)}` };
+      }
+      if (out === null) return { ok: false, code: 'image-rewrite-rejected', reason: 'rejected by rewriteImageUrl' };
       const check = checkUrl(out, policy, pageBase());
-      if (!check.ok) return { ok: false, reason: `rewriteImageUrl returned an invalid URL: ${check.reason}` };
+      if (!check.ok) return { ok: false, code: 'image-rewrite-invalid', reason: `rewriteImageUrl returned an invalid URL: ${check.reason}` };
       value = out;
-      rewritten = 'rewritten by rewriteImageUrl';
+      rewritten = { code: 'image-rewritten', reason: 'rewritten by rewriteImageUrl' };
     }
     return { ok: true, value, rewritten };
   };
@@ -152,13 +168,13 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
     const name = data.attrName.toLowerCase();
     const tag = node.nodeName.toLowerCase();
     const original = data.attrValue;
-    const drop = (subject: DecisionSubject, reason: string): void => {
+    const drop = (subject: DecisionSubject, code: CoreDecisionCode, reason: string): void => {
       data.keepAttr = false;
-      record(s, { kind: 'blocked', subject, reason, tag, attribute: name, value: original });
+      record(s, { kind: 'blocked', subject, code, reason, tag, attribute: name, value: original });
     };
 
     if (name.startsWith('on')) {
-      drop('attribute', 'event handler attribute');
+      drop('attribute', 'event-handler', 'event handler attribute');
       return;
     }
 
@@ -171,20 +187,20 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
         }),
       );
       if (kept.length === 0) {
-        if (tokens.length > 0) drop('class', 'class names are not in the allowlist');
+        if (tokens.length > 0) drop('class', 'class-not-allowed', 'class names are not in the allowlist');
         else data.keepAttr = false;
         return;
       }
       if (kept.length !== tokens.length) {
         data.attrValue = kept.join(' ');
-        record(s, { kind: 'rewritten', subject: 'class', reason: 'class names outside the allowlist removed', tag, attribute: name, value: original });
+        record(s, { kind: 'rewritten', subject: 'class', code: 'class-filtered', reason: 'class names outside the allowlist removed', tag, attribute: name, value: original });
       }
       return;
     }
 
     if (name === 'target') {
       if (!policy.allowTargetBlank || original.trim().toLowerCase() !== '_blank') {
-        drop('attribute', 'only target="_blank" is allowed');
+        drop('attribute', 'target-not-allowed', 'only target="_blank" is allowed');
       }
       return;
     }
@@ -195,7 +211,7 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
     const subject: DecisionSubject = isImage ? 'image' : name === 'href' ? 'link' : 'url';
     const verdict = checkUrl(original, policy, pageBase());
     if (!verdict.ok) {
-      drop(subject, verdict.reason);
+      drop(subject, verdict.code, verdict.reason);
       return;
     }
     const parsed = verdict.parsed;
@@ -207,11 +223,11 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
       if (hit) {
         const reason = `host matches the sink denylist (${hit.category}: ${hit.pattern}, list ${denylist.version})`;
         if (policy.sinkDenylist === 'block') {
-          drop(subject, reason);
+          drop(subject, 'sink-host', reason);
           if (isImage && policy.blockedImage === 'placeholder') s.blockedImages.set(node, { src: parsed.url.href, reason });
           return;
         }
-        record(s, { kind: 'flagged', subject, reason, tag, attribute: name, value: parsed.normalized });
+        record(s, { kind: 'flagged', subject, code: 'sink-host', reason, tag, attribute: name, value: parsed.normalized });
       }
     }
 
@@ -219,14 +235,14 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
 
     const outcome = applyImagePolicy(parsed);
     if (!outcome.ok) {
-      drop('image', outcome.reason);
+      drop('image', outcome.code, outcome.reason);
       if (policy.blockedImage === 'placeholder') s.blockedImages.set(node, { src: parsed.url.href, reason: outcome.reason });
       return;
     }
     if (outcome.value !== original) {
       data.attrValue = outcome.value;
       if (outcome.rewritten) {
-        record(s, { kind: 'rewritten', subject: 'image', reason: outcome.rewritten, tag, attribute: name, value: original });
+        record(s, { kind: 'rewritten', subject: 'image', code: outcome.rewritten.code, reason: outcome.rewritten.reason, tag, attribute: name, value: original });
       }
     }
   });
@@ -239,7 +255,7 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
     for (const attr of Array.from(node.attributes)) {
       if (/^on/i.test(attr.name)) {
         node.removeAttribute(attr.name);
-        record(s, { kind: 'blocked', subject: 'attribute', reason: 'event handler attribute survived sanitization', tag: node.nodeName.toLowerCase(), attribute: attr.name, value: attr.value });
+        record(s, { kind: 'blocked', subject: 'attribute', code: 'event-handler-survived', reason: 'event handler attribute survived sanitization', tag: node.nodeName.toLowerCase(), attribute: attr.name, value: attr.value });
       }
     }
 
@@ -257,7 +273,7 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
       }
       if (!node.hasAttribute('src')) {
         node.remove();
-        record(s, { kind: 'blocked', subject: 'element', reason: 'image without an allowed src removed', tag: 'img' });
+        record(s, { kind: 'blocked', subject: 'element', code: 'image-without-src', reason: 'image without an allowed src removed', tag: 'img' });
       }
     }
   });
@@ -266,53 +282,35 @@ export function createSanitizer(win: WindowLike, policy: RenderPolicy, denylist:
     for (const removed of purify.removed) {
       if ('element' in removed && removed.element) {
         const el = removed.element;
-        record(s, { kind: 'blocked', subject: 'element', reason: 'element is not allowed', tag: (el.nodeName ?? '').toLowerCase() });
+        record(s, { kind: 'blocked', subject: 'element', code: 'element-not-allowed', reason: 'element is not allowed', tag: (el.nodeName ?? '').toLowerCase() });
       } else if ('attribute' in removed && removed.attribute) {
         const attr = removed.attribute;
         const tag = (removed.from?.nodeName ?? '').toLowerCase();
         if (s.recorded.has(`${tag}|${attr.name}|${attr.value}`)) continue;
-        record(s, { kind: 'blocked', subject: 'attribute', reason: 'attribute is not allowed', tag, attribute: attr.name, value: attr.value });
+        record(s, { kind: 'blocked', subject: 'attribute', code: 'attribute-not-allowed', reason: 'attribute is not allowed', tag, attribute: attr.name, value: attr.value });
       }
     }
   };
 
-  const begin = (): CallState => {
+  /** One sanitize call: fresh state for the hooks, the journal collected, the state cleared whatever happens. */
+  const run = <T>(sanitize: () => T): SanitizeOutcome<T> => {
+    if (state !== null) {
+      throw new Error('@render-policy/core: the sanitizer was re-entered while a sanitize call was in progress');
+    }
     const s: CallState = { decisions: [], blockedImages: new WeakMap(), recorded: new Set() };
     state = s;
-    return s;
+    try {
+      const output = sanitize();
+      collectRemoved(s);
+      return { output, decisions: s.decisions };
+    } finally {
+      state = null;
+    }
   };
 
   return {
-    toFragment(html) {
-      const s = begin();
-      try {
-        const output = purify.sanitize(html, { ...config, RETURN_DOM_FRAGMENT: true });
-        collectRemoved(s);
-        return { output, decisions: s.decisions };
-      } finally {
-        state = null;
-      }
-    },
-    toHtml(html) {
-      const s = begin();
-      try {
-        const output = purify.sanitize(html, { ...config });
-        collectRemoved(s);
-        return { output, decisions: s.decisions };
-      } finally {
-        state = null;
-      }
-    },
-    toTrustedHTML(html) {
-      const s = begin();
-      try {
-        const output = purify.sanitize(html, { ...config, RETURN_TRUSTED_TYPE: true });
-        collectRemoved(s);
-        return { output, decisions: s.decisions };
-      } finally {
-        state = null;
-      }
-    },
+    toFragment: (html) => run(() => purify.sanitize(html, { ...config, RETURN_DOM_FRAGMENT: true })),
+    toTrustedHTML: (html) => run(() => purify.sanitize(html, { ...config, RETURN_TRUSTED_TYPE: true })),
   };
 }
 

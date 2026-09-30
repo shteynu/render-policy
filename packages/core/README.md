@@ -15,5 +15,9 @@ stream.push(chunk);
 stream.end();
 ```
 
+`createContentBinding(renderer, element, { mode, schedule, onDecisions })` is the lifecycle a framework
+adapter needs (`update(content, streaming)`); the building blocks the renderer is made of are in
+`@render-policy/core/internal`, outside semver.
+
 Full documentation, modes, policy reference and threat model: the
 [repository README](https://github.com/shteynu/render-policy#readme).

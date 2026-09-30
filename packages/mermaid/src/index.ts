@@ -1,5 +1,5 @@
-import createDOMPurify, { type Config, type WindowLike } from 'dompurify';
-import type { FragmentTransform, RenderDecision } from '@render-policy/core';
+import createDOMPurify, { type Config } from 'dompurify';
+import { resolveWindow, type FragmentTransform, type RenderDecision, type RenderWindow } from '@render-policy/core';
 
 /** The part of the mermaid API this package uses. Pass the real `mermaid` default export. */
 export interface MermaidLike {
@@ -11,7 +11,7 @@ export interface MermaidTransformOptions {
   /** The mermaid module (`import mermaid from 'mermaid'`). Loaded lazily by you, not by this package. */
   readonly mermaid: MermaidLike;
   /** The window to sanitize with. Defaults to the global window. */
-  readonly window?: WindowLike;
+  readonly window?: RenderWindow;
   /** Extra mermaid configuration (theme, fonts). The strict settings below always win. */
   readonly config?: Record<string, unknown>;
   /** Code block languages rendered as diagrams. Default ['mermaid']. */
@@ -75,7 +75,7 @@ export interface DiagramSanitizeResult {
  * Sanitize an SVG string produced by mermaid into a fragment that can only draw.
  * Exported for tests and for hosts that render diagrams themselves.
  */
-export function createDiagramSanitizer(win: WindowLike): (svg: string) => DiagramSanitizeResult {
+export function createDiagramSanitizer(win: RenderWindow): (svg: string) => DiagramSanitizeResult {
   const purify = createDOMPurify(win);
   return (svg) => {
     const decisions: RenderDecision[] = [];
@@ -85,9 +85,9 @@ export function createDiagramSanitizer(win: WindowLike): (svg: string) => Diagra
       if ('element' in removed && removed.element) {
         const tag = (removed.element.nodeName ?? '').toLowerCase();
         if (tag === 'body' || tag === 'html' || tag === 'head') continue; // parser scaffolding, not content
-        decisions.push({ kind: 'blocked', subject: 'element', reason: 'element is not allowed in a diagram', tag });
+        decisions.push({ kind: 'blocked', subject: 'element', code: 'diagram-element-not-allowed', reason: 'element is not allowed in a diagram', tag });
       } else if ('attribute' in removed && removed.attribute) {
-        decisions.push({ kind: 'blocked', subject: 'attribute', reason: 'attribute is not allowed in a diagram', tag: (removed.from?.nodeName ?? '').toLowerCase(), attribute: removed.attribute.name, value: removed.attribute.value });
+        decisions.push({ kind: 'blocked', subject: 'attribute', code: 'diagram-attribute-not-allowed', reason: 'attribute is not allowed in a diagram', tag: (removed.from?.nodeName ?? '').toLowerCase(), attribute: removed.attribute.name, value: removed.attribute.value });
       }
     }
 
@@ -95,14 +95,14 @@ export function createDiagramSanitizer(win: WindowLike): (svg: string) => Diagra
       const css = style.textContent ?? '';
       if (EXTERNAL_URL_RE.test(css) || DANGEROUS_CSS_RE.test(css)) {
         style.remove();
-        decisions.push({ kind: 'blocked', subject: 'element', reason: 'diagram stylesheet references external resources or escapes the diagram', tag: 'style' });
+        decisions.push({ kind: 'blocked', subject: 'element', code: 'diagram-style-escapes', reason: 'diagram stylesheet references external resources or escapes the diagram', tag: 'style' });
       }
     }
     for (const element of Array.from(fragment.querySelectorAll('[style]'))) {
       const css = element.getAttribute('style') ?? '';
       if (EXTERNAL_URL_RE.test(css) || DANGEROUS_CSS_RE.test(css)) {
         element.removeAttribute('style');
-        decisions.push({ kind: 'blocked', subject: 'attribute', reason: 'inline style references external resources or escapes the diagram', tag: element.nodeName.toLowerCase(), attribute: 'style', value: css });
+        decisions.push({ kind: 'blocked', subject: 'attribute', code: 'diagram-style-escapes', reason: 'inline style references external resources or escapes the diagram', tag: element.nodeName.toLowerCase(), attribute: 'style', value: css });
       }
     }
     for (const root of Array.from(fragment.children)) {
@@ -110,7 +110,7 @@ export function createDiagramSanitizer(win: WindowLike): (svg: string) => Diagra
         root.setAttribute('style', ROOT_SVG_STYLE);
       } else {
         root.remove();
-        decisions.push({ kind: 'blocked', subject: 'element', reason: 'only an <svg> root is allowed in a diagram', tag: root.nodeName.toLowerCase() });
+        decisions.push({ kind: 'blocked', subject: 'element', code: 'diagram-root-not-svg', reason: 'only an <svg> root is allowed in a diagram', tag: root.nodeName.toLowerCase() });
       }
     }
     return { fragment, decisions };
@@ -131,7 +131,7 @@ export function createDiagramSanitizer(win: WindowLike): (svg: string) => Diagra
  * - a diagram that fails to parse stays a code block; nothing is injected into <body>.
  */
 export function createMermaidTransform(options: MermaidTransformOptions): FragmentTransform {
-  const win = options.window ?? defaultWindow();
+  const win = resolveWindow(options.window, '@render-policy/mermaid');
   const sanitize = createDiagramSanitizer(win);
   const languages = new Set(options.languages ?? ['mermaid']);
   const cacheSize = options.cacheSize ?? 50;
@@ -160,7 +160,7 @@ export function createMermaidTransform(options: MermaidTransformOptions): Fragme
       try {
         svg = (await options.mermaid.render(`rp-mermaid-${counter}`, source)).svg;
       } catch (error) {
-        emit([{ kind: 'blocked', subject: 'markdown', reason: `Mermaid could not render the diagram: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` }]);
+        emit([{ kind: 'blocked', subject: 'markdown', code: 'diagram-render-failed', reason: `Mermaid could not render the diagram: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` }]);
         return null;
       }
       const result = sanitize(svg);
@@ -220,9 +220,4 @@ function fallback(doc: Document, source: string): Element {
   code.textContent = source;
   pre.append(code);
   return pre;
-}
-
-function defaultWindow(): WindowLike {
-  if (typeof window !== 'undefined') return window as unknown as WindowLike;
-  throw new Error('@render-policy/mermaid: no global window. Pass { window } outside a browser.');
 }

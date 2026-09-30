@@ -211,3 +211,62 @@ describe('insertion', () => {
     expect(seen).toContain('blocked:attribute:onerror');
   });
 });
+
+describe('decision codes and application-code failures', () => {
+  const box = (): HTMLDivElement => document.createElement('div');
+
+  it('every decision carries a stable code next to its reason', () => {
+    const renderer = createRenderer({ policy: { imageHosts: ['cdn.example'] } });
+    const { decisions } = renderer.renderHtmlInto(
+      box(),
+      '<a href="javascript:alert(1)" onclick="x()" class="evil">l</a><img src="https://cdn.example/a.png?token=1"><img src="https://webhook.site/x.png"><img src="https://other.example/b.png"><form></form>',
+    );
+    const codes = decisions.map((d) => d.code);
+    for (const expected of ['scheme-not-allowed', 'event-handler', 'class-not-allowed', 'image-query-stripped', 'sink-host', 'image-host-not-allowed', 'element-not-allowed']) {
+      expect(codes, expected).toContain(expected);
+    }
+    expect(decisions.every((d) => typeof d.code === 'string' && d.code.length > 0 && d.reason.length > 0)).toBe(true);
+  });
+
+  it('a rewriteImageUrl that throws blocks that image and the render goes on', () => {
+    const renderer = createRenderer({
+      policy: {
+        imageHosts: ['cdn.example'],
+        rewriteImageUrl: (url) => {
+          if (url.pathname.endsWith('boom.png')) throw new Error('proxy down');
+          return `https://proxy.example/?u=${encodeURIComponent(url.href)}`;
+        },
+      },
+    });
+    const target = box();
+    const { decisions } = renderer.renderHtmlInto(target, '<p>before</p><img src="https://cdn.example/boom.png" alt="b"><img src="https://cdn.example/ok.png"><p>after</p>');
+    expect(target.querySelectorAll('p').length).toBe(2);
+    expect(target.querySelectorAll('img').length).toBe(1);
+    expect(target.querySelector('img')?.getAttribute('src')).toBe('https://proxy.example/?u=https%3A%2F%2Fcdn.example%2Fok.png');
+    expect(target.querySelector('a.rp-blocked-image')?.textContent).toBe('[image blocked: b]');
+    const failure = decisions.find((d) => d.code === 'image-rewrite-failed');
+    expect(failure?.kind).toBe('blocked');
+    expect(failure?.reason).toContain('proxy down');
+    expect(decisions.some((d) => d.code === 'image-rewritten')).toBe(true);
+  });
+
+  it('re-entering the renderer from rewriteImageUrl is refused, not silently mixed up', () => {
+    const other = box();
+    const renderer = createRenderer({
+      policy: {
+        imageHosts: ['cdn.example'],
+        rewriteImageUrl: () => {
+          renderer.renderHtmlInto(other, '<b>nested</b>');
+          return null;
+        },
+      },
+    });
+    const { decisions } = renderer.renderHtmlInto(box(), '<img src="https://cdn.example/a.png">');
+    const failure = decisions.find((d) => d.code === 'image-rewrite-failed');
+    expect(failure?.reason).toContain('re-entered');
+    expect(other.textContent).toBe('');
+    // The sanitizer is usable again afterwards.
+    expect(renderer.renderHtmlInto(other, '<b>later</b>').decisions).toEqual([]);
+    expect(other.querySelector('b')?.textContent).toBe('later');
+  });
+});

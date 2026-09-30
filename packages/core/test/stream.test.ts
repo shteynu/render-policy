@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { closeOpenFences, createRenderer, holdIncompleteHtml, holdIncompleteMarkdown } from '../src/index.js';
+import { completeFences, createRenderer, holdIncompleteHtml, holdIncompleteMarkdown } from '../src/index.js';
+
+const closeOpenFences = (text: string): string => completeFences(text).text;
 
 const box = (): HTMLDivElement => document.createElement('div');
 
@@ -177,5 +179,17 @@ describe('streaming render', () => {
     stream.reset();
     expect(target.childNodes.length).toBe(0);
     expect(stream.text).toBe('');
+  });
+});
+
+describe('end()', () => {
+  it('returns the decisions of the final render, and nothing on a second call', () => {
+    const renderer = createRenderer();
+    const target = document.createElement('div');
+    const stream = renderer.createStream(target);
+    stream.push('<a href="javascript:x()">l</a> text');
+    const final = stream.end();
+    expect(final.decisions.some((d) => d.code === 'scheme-not-allowed')).toBe(true);
+    expect(stream.end().decisions).toEqual([]);
   });
 });

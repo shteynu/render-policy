@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { patchChildren } from '../src/index.js';
+import { patchChildren } from '../src/internal.js';
 
 const fragmentOf = (html: string): DocumentFragment => {
   const template = document.createElement('template');

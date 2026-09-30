@@ -9,7 +9,9 @@ technical part. Documentation is written in English; the maintainer communicates
 ## Layout
 
 - `packages/core`: `@render-policy/core`. Sanitize (DOMPurify) into a DocumentFragment, policy
-  (modes, image hosts, sink denylist, URL heuristics), streaming, transforms hook. Tests: vitest + jsdom.
+  (modes, image hosts, sink denylist, URL heuristics), streaming, transforms hook, `createContentBinding`
+  (the lifecycle adapters share). `src/index.ts` is the public API; building blocks go to `src/internal.ts`
+  (`@render-policy/core/internal`, not semver). Every journal entry has a stable `code`. Tests: vitest + jsdom.
 - `packages/eslint-plugin`: `eslint-plugin-render-policy`. Rules `no-unsafe-innerhtml` (JS/TS/JSX)
   and `no-innerhtml-binding` (Angular templates, needs `@angular-eslint/template-parser`).
 - `packages/react`: `@render-policy/react`. Provider, hook, `<RpMarkdown>`, `<RpHtml>`. Tests with react-dom/client + act.
@@ -57,6 +59,9 @@ Unit tests of react/mermaid alias `@render-policy/core` to core's `src`, so they
 - Library code never assigns `innerHTML`/`outerHTML`, never calls `insertAdjacentHTML` or `document.write`.
   Sanitize to a fragment, insert with `replaceChildren()`. Tests and the ESLint rule enforce it.
 - Sanitization runs last, on the final HTML. Transforms run on sanitized fragments and are trusted code.
+- Application code (`rewriteImageUrl`, transforms, Markdown renderer) may throw; the render never aborts,
+  the failure becomes a journal entry with a code. Keep it that way when adding hooks.
+- Adapters do not implement the stream lifecycle themselves; they wrap `createContentBinding`.
 - Do not name the vendor, product or advisory of the private disclosure that started this work, nor any
   unfixed third-party issue, anywhere in this repository until the fix or the agreed disclosure date.
   Ecosystem names (MCP Apps, AG-UI, A2UI) and documented defaults of public libraries are fine.

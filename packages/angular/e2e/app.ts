@@ -19,6 +19,8 @@ declare global {
       setContent(value: string): void;
       setStream(value: string): void;
       setStreaming(value: boolean): void;
+      setDirectiveStream(value: string): void;
+      setDirectiveStreaming(value: boolean): void;
       tick(): void;
     };
   }
@@ -56,6 +58,10 @@ if (descriptor?.set) {
       <h2>Component, streaming</h2>
       <rp-markdown id="component" [content]="streamText()" [streaming]="streaming()" />
     </section>
+    <section>
+      <h2>Directive, streaming</h2>
+      <div id="directive-stream" [rpRender]="directiveStreamText()" [rpRenderStreaming]="directiveStreaming()"></div>
+    </section>
   `,
 })
 class AppComponent {
@@ -64,6 +70,8 @@ class AppComponent {
   );
   readonly streamText = signal('');
   readonly streaming = signal(true);
+  readonly directiveStreamText = signal('');
+  readonly directiveStreaming = signal(true);
 }
 
 window.__decisions = [];
@@ -79,6 +87,8 @@ window.__app = {
   setContent: (value) => app.content.set(value),
   setStream: (value) => app.streamText.set(value),
   setStreaming: (value) => app.streaming.set(value),
+  setDirectiveStream: (value) => app.directiveStreamText.set(value),
+  setDirectiveStreaming: (value) => app.directiveStreaming.set(value),
   tick: () => appRef.tick(),
 };
 window.__angularReady = true;

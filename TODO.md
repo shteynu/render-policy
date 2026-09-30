@@ -49,9 +49,10 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 ## 6. Библиотека: следующие задачи
 
 - [ ] Стриминг v2: перепарсинг только незавершённого хвоста Markdown вместо всего буфера (сейчас патчится только DOM). `npm run bench`: push стоит 2 ms при 8 kB буфера и 17 ms при 64 kB, потому что каждый раз перепарсивается всё; `patchChildren` экономит DOM, не CPU.
-- [ ] React: `onDecisions` и для стримингового режима (сейчас только для one-shot).
+- [x] React: `onDecisions` и для стримингового режима (через `createContentBinding`, `end()` возвращает решения).
 - [ ] Angular: тесты на TestBed поверх существующего браузерного прогона; мост для ngx-markdown отложен (ngx-markdown пишет в `innerHTML`, мост стал бы заменой компонента).
 - [ ] Гайд по image proxy для `rewriteImageUrl` (защита от SSRF на стороне прокси).
+- [ ] Из ревью дизайна (30 сентября): конвейер атрибутных правил вместо одного хука в `sanitize.ts` (делать вместе со streaming v2); сгруппировать `RenderPolicy` (content / urls / images); хук политики для ссылок (`decideUrl`) или явно закрытая политика; разбить mermaid-трансформ на кэш и обёртку; JSDoc-типы для `mcp-app-lint`.
 - [ ] Ревизия стартового denylist стоков (`packages/core/src/data/sink-domains.ts`), версия в поле `version`.
 - [ ] Ещё раз взвесить дефолт `balanced`: пустой allowlist картинок блокирует все удалённые картинки, пока хост не перечислен (осознанный выбор, описан в README).
 - [ ] Корпус: новые кейсы → `npm run corpus:results` → коммит `corpus/RESULTS.md`.

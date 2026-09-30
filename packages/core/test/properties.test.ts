@@ -1,6 +1,9 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { checkUrl, closeOpenFences, createRenderer, holdIncompleteMarkdown, MODE_PRESETS, patchChildren } from '../src/index.js';
+import { checkUrl, completeFences, createRenderer, holdIncompleteMarkdown, MODE_PRESETS } from '../src/index.js';
+import { patchChildren } from '../src/internal.js';
+
+const closeOpenFences = (text: string): string => completeFences(text).text;
 
 const box = (): HTMLDivElement => document.createElement('div');
 const CONTROL = ['\t', '\n', '\r', '\x00', '\x01', '\x0b', '\x0c', '\x1f', ' ', '\x7f', '\xa0', ' ', '​', '﻿'];

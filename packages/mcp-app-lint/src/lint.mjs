@@ -53,17 +53,24 @@ export function lintResource({ uri, listMeta = null, readMeta = null, html = nul
 
 /** Findings about the HTML of a UI resource. */
 export function lintHtml(html, uri) {
+  return htmlFindings(withSinkHosts(analyzeHtml(html)), uri);
+}
+
+/** The HTML rules over one analysis, from a live document or a stored scan. */
+function htmlFindings(a, uri) {
   const findings = [];
-  const a = withSinkHosts(analyzeHtml(html));
-  for (const sink of a.sinks.filter((s) => s.handwritten)) {
-    findings.push(finding('MCPAPP010', sink.message, uri, { region: { startLine: sink.line, startColumn: sink.column } }));
+  if (Array.isArray(a.sinks)) {
+    for (const sink of a.sinks.filter((s) => s.handwritten)) findings.push(finding('MCPAPP010', sink.message, uri, { region: { startLine: sink.line, startColumn: sink.column } }));
+  } else if ((a.unsafeInnerHtmlHandwritten ?? 0) > 0) {
+    // A scan from before sinks carried positions: one finding per document.
+    findings.push(finding('MCPAPP010', `${a.unsafeInnerHtmlHandwritten} dynamic HTML sink(s) in hand-written script.`, uri));
   }
-  if (a.postMessageStarHandwritten > 0) findings.push(finding('MCPAPP011', `${a.postMessageStarHandwritten} hand-written postMessage(…, '*') call(s).`, uri));
-  if (a.inlineHandlers > 0) findings.push(finding('MCPAPP012', `${a.inlineHandlers} inline event handler attribute(s).`, uri));
-  if (a.evalLikeHandwritten > 0) findings.push(finding('MCPAPP013', `${a.evalLikeHandwritten} eval/new Function use(s) in hand-written script.`, uri));
-  if (a.formsWithAction > 0) findings.push(finding('MCPAPP014', `${a.formsWithAction} form(s) with an action.`, uri));
-  if (a.externalHosts.length > 0) findings.push(finding('MCPAPP015', `References external hosts: ${a.externalHosts.join(', ')}.`, uri, { properties: { hosts: a.externalHosts } }));
-  for (const host of a.sinkHosts) findings.push(finding('MCPAPP016', `References sink host ${host}.`, uri));
+  if ((a.postMessageStarHandwritten ?? 0) > 0) findings.push(finding('MCPAPP011', `${a.postMessageStarHandwritten} hand-written postMessage(…, '*') call(s).`, uri));
+  if ((a.inlineHandlers ?? 0) > 0) findings.push(finding('MCPAPP012', `${a.inlineHandlers} inline event handler attribute(s).`, uri));
+  if ((a.evalLikeHandwritten ?? 0) > 0) findings.push(finding('MCPAPP013', `${a.evalLikeHandwritten} eval/new Function use(s) in hand-written script.`, uri));
+  if ((a.formsWithAction ?? 0) > 0) findings.push(finding('MCPAPP014', `${a.formsWithAction} form(s) with an action.`, uri));
+  if ((a.externalHosts?.length ?? 0) > 0) findings.push(finding('MCPAPP015', `References external hosts: ${a.externalHosts.join(', ')}.`, uri, { properties: { hosts: a.externalHosts } }));
+  for (const host of a.sinkHosts ?? []) findings.push(finding('MCPAPP016', `References sink host ${host}.`, uri));
   return findings;
 }
 
@@ -93,19 +100,7 @@ export function lintPackageScan(scan, root = '.') {
     findings.push(...lintUiMeta(fake, root));
   }
   for (const doc of scan.html ?? []) {
-    const uri = `${root}/${doc.file}`.replace(/^\.\//, '');
-    if (Array.isArray(doc.sinks)) {
-      for (const sink of doc.sinks.filter((s) => s.handwritten)) findings.push(finding('MCPAPP010', sink.message, uri, { region: { startLine: sink.line, startColumn: sink.column } }));
-    } else if ((doc.unsafeInnerHtmlHandwritten ?? 0) > 0) {
-      // A scan from before sinks carried positions: one finding per document.
-      findings.push(finding('MCPAPP010', `${doc.unsafeInnerHtmlHandwritten} dynamic HTML sink(s) in hand-written script.`, uri));
-    }
-    if ((doc.postMessageStarHandwritten ?? 0) > 0) findings.push(finding('MCPAPP011', `${doc.postMessageStarHandwritten} hand-written postMessage(…, '*') call(s).`, uri));
-    if (doc.inlineHandlers > 0) findings.push(finding('MCPAPP012', `${doc.inlineHandlers} inline event handler attribute(s).`, uri));
-    if ((doc.evalLikeHandwritten ?? 0) > 0) findings.push(finding('MCPAPP013', `${doc.evalLikeHandwritten} eval/new Function use(s) in hand-written script.`, uri));
-    if (doc.formsWithAction > 0) findings.push(finding('MCPAPP014', `${doc.formsWithAction} form(s) with an action.`, uri));
-    if (doc.externalHosts?.length > 0) findings.push(finding('MCPAPP015', `References external hosts: ${doc.externalHosts.join(', ')}.`, uri, { properties: { hosts: doc.externalHosts } }));
-    for (const host of doc.sinkHosts ?? []) findings.push(finding('MCPAPP016', `References sink host ${host}.`, uri));
+    findings.push(...htmlFindings(doc, `${root}/${doc.file}`.replace(/^\.\//, '')));
   }
   return findings;
 }

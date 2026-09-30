@@ -29,6 +29,19 @@ First release.
 - MCP Apps UI census (`census/`): registry snapshot, static census over npm packages using a UI
   SDK, protocol census over remote servers (read-only), analyzer for `_meta.ui` CSP domain lists,
   permissions, tool visibility and resource HTML, report of aggregates.
+- Design pass before the first release. Every journal entry carries a stable `code` next to its
+  `reason` (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …).
+  Application code that throws no longer aborts a render: a failing `rewriteImageUrl` blocks that
+  image (`image-rewrite-failed`), a failing transform is skipped (`transform-failed`), both journaled.
+  The sanitizer refuses re-entry instead of mixing up two journals. `createContentBinding` holds the
+  one stream lifecycle every adapter needs; the React hook and both Angular directives are wrappers
+  over it, `[rpRender]` gains `rpRenderStreaming`, `RenderStream.end()` returns the final render's
+  decisions and React's `onDecisions` receives them. Public surface narrowed: internals moved to
+  `@render-policy/core/internal` (not covered by semver); `RenderWindow` replaces the sanitizer
+  library's window type in the options; `RenderTarget` no longer admits a `Document`;
+  `InsertOptions` became `RenderOptions` over a `RenderContext` that transforms extend;
+  `closeOpenFences` folded into `completeFences`; `Sanitizer.toHtml` removed; `defaultScheduler`
+  and `resolveWindow` exported so adapters stop duplicating them.
 - `mcp-app-lint`: the census analyzer as a package with 18 SARIF rules (MCPAPP001–018) over
   `_meta.ui` CSP domain lists, permissions, tool visibility, list/read policy differences and the
   HTML of UI resources; a CLI for a package directory, an npm package, a UI document or the JSON a

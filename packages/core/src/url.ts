@@ -1,3 +1,4 @@
+import type { CoreDecisionCode } from './decisions.js';
 import type { RenderPolicy, UrlHeuristics } from './policy.js';
 
 export interface ParsedUrl {
@@ -12,9 +13,15 @@ export interface ParsedUrl {
   readonly relative: boolean;
 }
 
+/** Why a URL was refused: a stable code for programs and a reason for people. */
+export interface UrlProblem {
+  readonly code: CoreDecisionCode;
+  readonly reason: string;
+}
+
 export type UrlVerdict =
   | { readonly ok: true; readonly parsed: ParsedUrl }
-  | { readonly ok: false; readonly reason: string; readonly normalized: string };
+  | ({ readonly ok: false; readonly normalized: string } & UrlProblem);
 
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 /** Stands in for the page when no base is known; anything that resolves elsewhere is not relative. */
@@ -42,7 +49,7 @@ export function checkUrl(raw: string, policy: Pick<RenderPolicy, 'allowedSchemes
   const normalized = normalizeUrl(raw);
   const declared = SCHEME_RE.test(normalized) ? normalized.slice(0, normalized.indexOf(':')).toLowerCase() : null;
   if (declared !== null && !policy.allowedSchemes.includes(declared)) {
-    return { ok: false, reason: `scheme "${declared}" is not allowed`, normalized };
+    return { ok: false, code: 'scheme-not-allowed', reason: `scheme "${declared}" is not allowed`, normalized };
   }
 
   const baseHref = base ?? PLACEHOLDER_BASE;
@@ -52,15 +59,15 @@ export function checkUrl(raw: string, policy: Pick<RenderPolicy, 'allowedSchemes
     baseOrigin = new URL(baseHref).origin;
     url = new URL(normalized, baseHref);
   } catch {
-    return { ok: false, reason: 'URL does not parse', normalized };
+    return { ok: false, code: 'url-unparsable', reason: 'URL does not parse', normalized };
   }
   const scheme = url.protocol.slice(0, -1).toLowerCase();
   if (!policy.allowedSchemes.includes(scheme)) {
-    return { ok: false, reason: `resolves to scheme "${scheme}", which is not allowed`, normalized };
+    return { ok: false, code: 'scheme-not-allowed', reason: `resolves to scheme "${scheme}", which is not allowed`, normalized };
   }
   const relative = declared === null && url.origin === baseOrigin;
   if (relative && !policy.allowRelativeUrls) {
-    return { ok: false, reason: 'relative URLs are not allowed', normalized };
+    return { ok: false, code: 'relative-url-not-allowed', reason: 'relative URLs are not allowed', normalized };
   }
   return { ok: true, parsed: { raw, normalized, scheme, url, relative } };
 }
@@ -99,11 +106,11 @@ const EXTENSION_RE = /\.[a-z0-9]{1,5}$/i;
 
 /**
  * Length and entropy heuristics against encoded payloads hidden in a URL
- * (`/img/<base64 of the conversation>.png`). Returns the reason to block, or null.
+ * (`/img/<base64 of the conversation>.png`). Returns the problem to block for, or null.
  */
-export function checkUrlHeuristics(url: URL, heuristics: UrlHeuristics): string | null {
+export function checkUrlHeuristics(url: URL, heuristics: UrlHeuristics): UrlProblem | null {
   if (url.href.length > heuristics.maxLength) {
-    return `URL is longer than ${heuristics.maxLength} characters`;
+    return { code: 'url-too-long', reason: `URL is longer than ${heuristics.maxLength} characters` };
   }
   const tokens: string[] = [];
   for (const segment of url.pathname.split('/')) tokens.push(segment);
@@ -113,7 +120,7 @@ export function checkUrlHeuristics(url: URL, heuristics: UrlHeuristics): string 
     const token = raw.replace(EXTENSION_RE, '');
     if (token.length <= heuristics.maxTokenLength) continue;
     if (HEX_RE.test(token) || shannonEntropy(token) >= heuristics.minEntropy) {
-      return `URL contains a ${token.length}-character token that looks like an encoded payload`;
+      return { code: 'url-encoded-payload', reason: `URL contains a ${token.length}-character token that looks like an encoded payload` };
     }
   }
   return null;
