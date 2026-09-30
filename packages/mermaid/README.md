@@ -39,3 +39,7 @@ Bring your own mermaid (peer dependency, 11 or later) and load it lazily if bund
 matters; the transform only needs `initialize` and `render`. The browser proof in
 `e2e/run.mjs` runs the real mermaid in Chromium against click handlers, label injection,
 `themeCSS` directives, positioning through `classDef`, invalid input and streaming.
+
+Works with mermaid 11 and 12. Mermaid 12 lays diagrams out with ELK by default and recolours
+them; pass `config: { layout: 'dagre', theme: 'default', look: 'classic' }` to keep the mermaid 11
+look. The strict settings win over `config` either way.

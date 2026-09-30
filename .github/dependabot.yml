@@ -15,6 +15,11 @@ updates:
         patterns: ["react", "react-dom"]
       mermaid:
         patterns: ["mermaid"]
+    ignore:
+      # packages/angular pins TypeScript 6 because Angular 22 and ng-packagr require it;
+      # the workspace root is already on the current major. Minor and patch updates still come.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 10
   - package-ecosystem: github-actions
     directory: /
