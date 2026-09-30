@@ -1,5 +1,7 @@
 # render-policy: working notes for Claude Code sessions
 
+Start with `TODO.md`: the maintainer's task list (in Russian) with the exact commands for the next steps.
+
 Safe rendering of agent-generated Markdown/HTML. Monorepo, npm workspaces, ESM only.
 The action plan lives in a private Claude Doc (link in ROADMAP.md); this repository mirrors its
 technical part. Documentation is written in English; the maintainer communicates in Russian.
