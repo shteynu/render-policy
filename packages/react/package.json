@@ -1,7 +1,7 @@
 {
-  "name": "@render-policy/core",
+  "name": "@render-policy/react",
   "version": "0.1.0",
-  "description": "Render agent-generated Markdown/HTML safely: sanitize into a DocumentFragment, insert with replaceChildren (never innerHTML), enforce a URL/host policy, stay Trusted Types compatible, handle streaming.",
+  "description": "React adapter for @render-policy/core: render agent Markdown/HTML into a ref without dangerouslySetInnerHTML, with a streaming mode.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,28 +22,33 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
-    "@types/trusted-types": "^2.0.7",
-    "dompurify": "^3.4.16",
-    "marked": "^18.0.14"
+  "peerDependencies": {
+    "@render-policy/core": "^0.1.0",
+    "react": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@render-policy/core": "^0.1.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
+    "react",
     "sanitize",
     "xss",
-    "trusted-types",
     "markdown",
     "llm",
     "agent",
-    "mcp",
-    "dompurify",
+    "streaming",
     "security"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/shteynu/render-policy.git",
-    "directory": "packages/core"
-  },
-  "publishConfig": {
-    "access": "public"
+    "directory": "packages/react"
   }
 }

@@ -11,6 +11,8 @@ export interface StreamOptions {
   readonly holdIncompleteUrls?: boolean;
   /** Close an unfinished ``` fence so a streaming code block renders as code, not as Markdown. Default true. */
   readonly closeFences?: boolean;
+  /** Keep unchanged leading blocks in place and replace only from the first change. Default true. */
+  readonly patch?: boolean;
 }
 
 export interface RenderStream {
@@ -27,8 +29,8 @@ export interface RenderStream {
 }
 
 export interface StreamRenderOps {
-  markdown(target: ParentNode, markdown: string): { readonly decisions: readonly RenderDecision[] };
-  html(target: ParentNode, html: string): { readonly decisions: readonly RenderDecision[] };
+  markdown(target: ParentNode, markdown: string, options: { readonly patch: boolean }): { readonly decisions: readonly RenderDecision[] };
+  html(target: ParentNode, html: string, options: { readonly patch: boolean }): { readonly decisions: readonly RenderDecision[] };
 }
 
 export function createRenderStream(target: ParentNode, options: StreamOptions, ops: StreamRenderOps): RenderStream {
@@ -36,6 +38,7 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
   const schedule: Scheduler = options.schedule ?? ((render) => render());
   const hold = options.holdIncompleteUrls ?? true;
   const closeFences = options.closeFences ?? true;
+  const insert = { patch: options.patch ?? true };
   let text = '';
   let ended = false;
 
@@ -44,10 +47,10 @@ export function createRenderStream(target: ParentNode, options: StreamOptions, o
     if (mode === 'markdown') {
       if (!final && hold) source = holdIncompleteMarkdown(source);
       if (closeFences) source = closeOpenFences(source);
-      ops.markdown(target, source);
+      ops.markdown(target, source, insert);
     } else {
       if (!final && hold) source = holdIncompleteHtml(source);
-      ops.html(target, source);
+      ops.html(target, source, insert);
     }
   };
 

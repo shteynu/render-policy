@@ -141,6 +141,35 @@ describe('streaming render', () => {
     expect(target.querySelector('a.rp-blocked-image')).not.toBeNull();
   });
 
+  it('keeps settled blocks in place and replaces only the tail (streaming v1)', () => {
+    const target = box();
+    const renderer = createRenderer();
+    const stream = renderer.createStream(target);
+    stream.push('# Title\n\nFirst paragraph.\n\nSecond para');
+    const heading = target.querySelector('h1');
+    const first = target.querySelectorAll('p')[0];
+    stream.push('graph continues.\n\n- item');
+    expect(target.querySelector('h1')).toBe(heading);
+    expect(target.querySelectorAll('p')[0]).toBe(first);
+    expect(target.querySelectorAll('p')[1]?.textContent).toBe('Second paragraph continues.');
+    expect(target.querySelector('li')?.textContent).toBe('item');
+    stream.end();
+    const fresh = box();
+    renderer.renderMarkdownInto(fresh, stream.text);
+    expect(target.innerHTML).toBe(fresh.innerHTML);
+    expect(target.querySelector('h1')).toBe(heading);
+  });
+
+  it('patch: false replaces every node on each push', () => {
+    const target = box();
+    const stream = createRenderer().createStream(target, { patch: false });
+    stream.push('# Title\n\nabc');
+    const heading = target.querySelector('h1');
+    stream.push('def');
+    expect(target.querySelector('h1')).not.toBe(heading);
+    expect(target.querySelector('p')?.textContent).toBe('abcdef');
+  });
+
   it('reset() clears the target and the buffer', () => {
     const target = box();
     const stream = createRenderer().createStream(target);

@@ -24,5 +24,11 @@ bootstrapApplication(AppComponent, {
 - `RENDERER` is the injectable renderer; `RENDER_POLICY_CONFIG` holds the options.
 - On the server (no `window`) both insert plain text.
 
-Requires Angular 19 or later (signal inputs and `effect()`). The package is published as
-source for now; building it with ng-packagr (`ng-package.json` is included) is on the roadmap.
+Requires Angular 19 or later (signal inputs and `effect()`).
+
+Build and publish:
+
+```
+npm run build -w packages/angular   # ng-packagr, partial compilation, output in packages/angular/dist
+cd packages/angular/dist && npm publish
+```

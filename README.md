@@ -7,12 +7,13 @@ Safe rendering for content an agent wrote: Markdown and HTML from a model or a t
 - **Streaming aware.** A half-received link or image is never turned into a request. An unfinished code fence renders as code.
 - **Lint the sinks.** An ESLint plugin flags every HTML sink in JS/TS/JSX and `[innerHTML]` bindings in Angular templates, so the safe path is the only path.
 
-Framework-free core. Angular adapter first, React next.
+Framework-free core with Angular and React adapters.
 
 | Package | What it is | Status |
 | --- | --- | --- |
 | [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 96 unit tests + a real-Chromium proof |
-| [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | source, typechecked; npm build pending |
+| [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | typechecked, builds with ng-packagr |
+| [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 45 rule tests |
 
 ## Why a policy and not "sanitize, then innerHTML"
@@ -65,6 +66,20 @@ bootstrapApplication(AppComponent, {
 ```
 
 No `[innerHTML]`, no `DomSanitizer.bypassSecurityTrustHtml()`, nothing for Trusted Types to reject. On the server the content is inserted as text.
+
+### React
+
+```tsx
+import { RenderPolicyProvider, RpMarkdown } from '@render-policy/react';
+
+const config = { mode: 'balanced', policy: { imageHosts: ['cdn.example.com'] } };
+
+<RenderPolicyProvider config={config}>
+  <RpMarkdown content={message.content} streaming={message.pending} className="message" />
+</RenderPolicyProvider>
+```
+
+`useRenderPolicy(content, { streaming })` returns a ref for any element of your own. React owns the element, the policy owns its children; there is no `dangerouslySetInnerHTML` anywhere. On the server the component renders an empty container.
 
 ### ESLint
 
@@ -154,7 +169,7 @@ What is deliberately **not** covered:
 - cuts the buffer before an inline link or image whose destination has no closing parenthesis, a bare `https://` or `www.` URL still being typed, a raw tag without its `>`, and a link reference definition on the last line;
 - closes an unfinished ```` ``` ```` or `~~~` fence so a streaming code block renders as code rather than as Markdown.
 
-`end()` renders the final text once with nothing withheld. Everything rendered, intermediate or final, goes through the same policy. v0.1 re-renders the whole buffer; patching only the tail block is on the roadmap.
+`end()` renders the final text once with nothing withheld. Everything rendered, intermediate or final, goes through the same policy. Each intermediate render converts and sanitizes the whole buffer, but only the DOM from the first changed block is replaced (`patchChildren`): settled blocks keep their nodes, so nothing above the cursor flickers or loses its selection.
 
 ## Trusted Types and CSP
 
@@ -184,7 +199,7 @@ npm run e2e
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md). Next: publish `@render-policy/core` and the Angular adapter to npm, React adapter, tail-only streaming updates, an evil-Markdown corpus other renderers can run.
+See [ROADMAP.md](ROADMAP.md). Next: publish the packages to npm, a strict Mermaid renderer and an ngx-markdown bridge for the Angular adapter, an evil-Markdown corpus other renderers can run.
 
 ## Security
 

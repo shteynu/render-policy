@@ -15,7 +15,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w packages/core && npm run build -w packages/eslint-plugin -w packages/react -w packages/angular",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "npm run typecheck && npm test && npm run build && npm run e2e",

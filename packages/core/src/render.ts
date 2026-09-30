@@ -2,6 +2,7 @@ import type { WindowLike } from 'dompurify';
 import type { TrustedHTML } from 'trusted-types/lib/index.js';
 import { SINK_DENYLIST } from './data/sink-domains.js';
 import type { RenderDecision } from './decisions.js';
+import { patchChildren } from './dom.js';
 import { createMarkdownRenderer, type MarkdownRenderer } from './markdown.js';
 import { resolvePolicy, type RenderMode, type RenderPolicy } from './policy.js';
 import { createSanitizer } from './sanitize.js';
@@ -13,6 +14,14 @@ export type RenderTarget = ParentNode;
 
 export interface RenderResult {
   readonly decisions: readonly RenderDecision[];
+}
+
+export interface InsertOptions {
+  /**
+   * Keep the leading child nodes of the target that are unchanged and replace only
+   * from the first difference. Used by streams; a one-shot render replaces everything.
+   */
+  readonly patch?: boolean;
 }
 
 export interface FragmentResult extends RenderResult {
@@ -41,9 +50,9 @@ export interface Renderer {
   /** Convert Markdown and sanitize into an inert fragment. */
   markdownToFragment(markdown: string): FragmentResult;
   /** Sanitize and insert with replaceChildren(). innerHTML is never used. */
-  renderHtmlInto(target: RenderTarget, html: string): RenderResult;
+  renderHtmlInto(target: RenderTarget, html: string, options?: InsertOptions): RenderResult;
   /** Convert Markdown, sanitize and insert with replaceChildren(). Falls back to plain text if the Markdown step throws. */
-  renderMarkdownInto(target: RenderTarget, markdown: string): RenderResult;
+  renderMarkdownInto(target: RenderTarget, markdown: string, options?: InsertOptions): RenderResult;
   /** Insert plain text. Never interpreted as markup. */
   renderTextInto(target: RenderTarget, text: string): void;
   /** Escape hatch for string sinks you cannot remove: sanitized HTML as a TrustedHTML where the API exists, else a string. */
@@ -107,20 +116,28 @@ export function createRenderer(options: RendererOptions = {}): Renderer {
     return sanitizeHtml(converted.html);
   };
 
-  const renderHtmlInto = (target: RenderTarget, html: string): RenderResult => {
+  const insert = (target: RenderTarget, fragment: DocumentFragment, options?: InsertOptions): void => {
+    if (options?.patch) {
+      patchChildren(target, fragment);
+    } else {
+      target.replaceChildren(fragment);
+    }
+  };
+
+  const renderHtmlInto = (target: RenderTarget, html: string, options?: InsertOptions): RenderResult => {
     const { fragment, decisions } = sanitizeHtml(html);
-    target.replaceChildren(fragment);
+    insert(target, fragment, options);
     return { decisions };
   };
 
-  const renderMarkdownInto = (target: RenderTarget, source: string): RenderResult => {
+  const renderMarkdownInto = (target: RenderTarget, source: string, options?: InsertOptions): RenderResult => {
     const converted = toHtml(source);
     if ('failed' in converted) {
       renderTextInto(target, source);
       emit([markdownFailed]);
       return { decisions: [markdownFailed] };
     }
-    return renderHtmlInto(target, converted.html);
+    return renderHtmlInto(target, converted.html, options);
   };
 
   const trustedHTML = (html: string): TrustedHTML | string => {

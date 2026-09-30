@@ -76,14 +76,28 @@ Styling: `<rp-markdown>` has the host class `rp-markdown`; a blocked image is
 
 ## From React `dangerouslySetInnerHTML`
 
-Until the React adapter ships, render into a ref:
+Before:
 
 ```tsx
-const ref = useRef<HTMLDivElement>(null);
-useEffect(() => {
-  if (ref.current) renderer.renderMarkdownInto(ref.current, message.content);
-}, [message.content]);
-return <div ref={ref} />;
+<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(marked.parse(message.content)) }} />
 ```
 
-For streaming, keep one `createStream(ref.current)` per message and call `set(text)` on every update.
+After:
+
+```tsx
+<RenderPolicyProvider config={config}>
+  <RpMarkdown content={message.content} streaming={message.pending} />
+</RenderPolicyProvider>
+```
+
+`RpMarkdown` renders into an element React owns but never fills, so there is no `dangerouslySetInnerHTML`
+and nothing for Trusted Types to reject. For a custom element use the hook:
+
+```tsx
+const ref = useRenderPolicy<HTMLTableCellElement>(cell.content, { streaming: cell.pending });
+return <td ref={ref} />;
+```
+
+The element must have no React-managed children. On the server both render an empty container; the
+content appears on the client in a layout effect. `no-unsafe-innerhtml` flags the
+`dangerouslySetInnerHTML` you missed.

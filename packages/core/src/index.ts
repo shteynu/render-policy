@@ -1,5 +1,7 @@
 export { createRenderer } from './render.js';
-export type { FragmentResult, RenderResult, RenderTarget, Renderer, RendererOptions } from './render.js';
+export type { FragmentResult, InsertOptions, RenderResult, RenderTarget, Renderer, RendererOptions } from './render.js';
+
+export { patchChildren } from './dom.js';
 
 export { DEFAULT_MODE, DEFAULT_URL_HEURISTICS, MODE_PRESETS, resolvePolicy } from './policy.js';
 export type { HostPattern, ImageHosts, RenderMode, RenderPolicy, UrlHeuristics } from './policy.js';

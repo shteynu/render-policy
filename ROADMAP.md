@@ -14,7 +14,7 @@ framework; Angular is the first adapter. MIT, so upstream projects can take the 
 | --- | --- | --- |
 | Core | Policy for `img`, `a`, media, SVG; host allowlist without wildcards by default; query-string removal or proxy; URL length and entropy heuristics; "click to load" placeholder; applied as the last step over the final HTML | done: `@render-policy/core` |
 | Sink denylist | Forms, blob storage, `workers.dev`, webhook services; data separate from code, versioned | done: `packages/core/src/data/sink-domains.ts` (starting set) |
-| Angular adapter | Renders without `innerHTML`; streaming withholds images and links until the URL is closed and checked; Trusted Types | done as source (`[rpRender]`, `<rp-markdown>`, `provideRenderPolicy`); npm build via ng-packagr pending |
+| Angular adapter | Renders without `innerHTML`; streaming withholds images and links until the URL is closed and checked; Trusted Types | done (`[rpRender]`, `<rp-markdown>`, `provideRenderPolicy`); builds with ng-packagr in partial compilation mode, publish from `packages/angular/dist` |
 | Angular adapter: strict Mermaid | Diagram blocks rendered only by a strict renderer | not started (Mermaid stays a code block) |
 | Angular adapter: ngx-markdown bridge | A provider that routes ngx-markdown through the policy | not started (migration guide only) |
 | ESLint | Forbid `innerHTML` and `[innerHTML]` for untrusted content | done: `no-unsafe-innerhtml`, `no-innerhtml-binding` |
@@ -30,13 +30,14 @@ Done when:
 - [x] the streaming render makes no request to an unclosed or unchecked URL (unit + browser)
 - [x] demo of the same hostile markup with and without the policy
 - [x] documentation: threat model, modes, migration
-- [ ] React adapter (by end of December 2026; most of the market is unreachable without it)
+- [x] React adapter (planned for December 2026, done early: `@render-policy/react`)
 
 Also planned for the core:
 
-- streaming v1: diff and patch only the tail block instead of re-rendering the buffer
-- an evil-Markdown corpus published on its own, so other renderers can run it
-- image proxy guidance (SSRF-safe) for `rewriteImageUrl`
+- [x] streaming v1: keep settled blocks, replace only from the first changed node (`patchChildren`)
+- [ ] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer
+- [ ] an evil-Markdown corpus published on its own, so other renderers can run it
+- [ ] image proxy guidance (SSRF-safe) for `rewriteImageUrl`
 
 ## Stage 3: census of CSP in public MCP Apps (26 Oct – 27 Nov 2026)
 
