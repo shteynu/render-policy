@@ -9,8 +9,9 @@ technical part. Documentation is written in English; the maintainer communicates
 ## Layout
 
 - `packages/core`: `@render-policy/core`. Sanitize (DOMPurify) into a DocumentFragment, policy
-  (modes, image hosts, sink denylist, URL heuristics), streaming, transforms hook, `createContentBinding`
-  (the lifecycle adapters share). `src/index.ts` is the public API; building blocks go to `src/internal.ts`
+  (modes, image hosts, sink denylist, URL heuristics), streaming (`stream.ts`; `settle.ts` finds the safe cut for
+  incremental renders, and `test/stream-incremental.test.ts` holds the v1-vs-v2 equivalence property, run longer
+  with `RP_PROPERTY_RUNS=2000`), transforms hook, `createContentBinding` (the lifecycle adapters share). `src/index.ts` is the public API; building blocks go to `src/internal.ts`
   (`@render-policy/core/internal`, not semver). Every journal entry has a stable `code`. Tests: vitest + jsdom.
 - `packages/eslint-plugin`: `eslint-plugin-render-policy`. Rules `no-unsafe-innerhtml` (JS/TS/JSX)
   and `no-innerhtml-binding` (Angular templates, needs `@angular-eslint/template-parser`).

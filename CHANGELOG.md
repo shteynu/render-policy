@@ -29,6 +29,16 @@ First release.
 - MCP Apps UI census (`census/`): registry snapshot, static census over npm packages using a UI
   SDK, protocol census over remote servers (read-only), analyzer for `_meta.ui` CSP domain lists,
   permissions, tool visibility and resource HTML, report of aggregates.
+- Streaming v2: a Markdown stream re-parses and re-sanitizes only the unsettled tail of the
+  buffer. The settled prefix ends at the last cut where the text before renders the same on
+  its own as inside the whole document (after a blank line; never inside a fence or an HTML
+  block that spans blank lines, before an indented line or a list item, or while raw tags are
+  unbalanced); link reference definitions travel with every piece and a new one re-renders
+  everything once. Settled blocks keep their nodes and are never parsed again; a push on a
+  64 kB reply drops from 16 ms to 1 ms. A fast-check property streams generated documents
+  through both paths and requires identical DOM after every push. `createStream(target,
+  { incremental: false })` keeps the whole-buffer path; transforms see `partial: true` on
+  pieces. The sanitizer now parses with `FORCE_BODY`, so a piece parses like the whole.
 - Design pass before the first release. Every journal entry carries a stable `code` next to its
   `reason` (`scheme-not-allowed`, `sink-host`, `image-host-not-allowed`, `transform-failed`, …).
   Application code that throws no longer aborts a render: a failing `rewriteImageUrl` blocks that

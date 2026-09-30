@@ -49,7 +49,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 
 ## 6. Библиотека: следующие задачи
 
-- [ ] Стриминг v2: перепарсинг только незавершённого хвоста Markdown вместо всего буфера (сейчас патчится только DOM). `npm run bench`: push стоит 2 ms при 8 kB буфера и 17 ms при 64 kB, потому что каждый раз перепарсивается всё; `patchChildren` экономит DOM, не CPU.
+- [x] Стриминг v2: перепарсинг только незавершённого хвоста (`packages/core/src/settle.ts` ищет безопасную границу, `stream.ts` рендерит сегмент и хвост). Push на 64 kB: 16 ms → 1 ms. Эквивалентность с полным рендером — property-тест на fast-check (`RP_PROPERTY_RUNS=2000` для долгого прогона).
 - [x] React: `onDecisions` и для стримингового режима (через `createContentBinding`, `end()` возвращает решения).
 - [ ] Angular: тесты на TestBed поверх существующего браузерного прогона; мост для ngx-markdown отложен (ngx-markdown пишет в `innerHTML`, мост стал бы заменой компонента).
 - [ ] Гайд по image proxy для `rewriteImageUrl` (защита от SSRF на стороне прокси).

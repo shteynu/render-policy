@@ -77,7 +77,7 @@ try {
     await page.evaluate(() => window.__bench.clear());
     const r = await page.evaluate((md) => window.__bench.streamFrames(md, 32, 4), doc.markdown);
     results.streaming.push({ document: doc.label, scheduler: 'frame', chunkSize: 32, perFrame: 4, ...r });
-    lines.push(`| ${doc.label}, 32-byte chunks, 4 per animation frame, frame scheduler | ${r.frames} frames | frame ${ms(r.median)} / ${ms(r.p95)} / ${ms(r.max)} | ${ms(r.totalMs)} | |`);
+    lines.push(`| ${doc.label}, 32-byte chunks, 4 per animation frame, frame scheduler | ${r.frames} frames | render per frame ${ms(r.median)} / ${ms(r.p95)} / ${ms(r.max)} | ${ms(r.totalMs)} | |`);
   }
   await page.close();
 } finally {

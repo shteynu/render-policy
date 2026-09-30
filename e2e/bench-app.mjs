@@ -50,20 +50,31 @@ window.__bench = {
     const endMs = performance.now() - tEnd;
     return { ...stats(samples), totalMs: performance.now() - t0, endMs };
   },
-  /** Streaming with the frame scheduler: `perFrame` chunks arrive per animation frame. */
+  /**
+   * Streaming with the frame scheduler: `perFrame` chunks arrive per animation frame and one
+   * render runs per frame. Measures the time spent rendering inside each frame, not the frame
+   * interval (headless Chromium paces frames at its own rate).
+   */
   async streamFrames(markdown, chunkSize, perFrame) {
-    const stream = renderer.createStream(target, { schedule: frameScheduler(window) });
-    const frames = [];
+    const renders = [];
+    const timed = frameScheduler(window);
+    const schedule = (render) =>
+      timed(() => {
+        const t = performance.now();
+        render();
+        renders.push(performance.now() - t);
+      });
+    const stream = renderer.createStream(target, { schedule });
     let i = 0;
+    let frames = 0;
     const t0 = performance.now();
     while (i < markdown.length) {
       for (let k = 0; k < perFrame && i < markdown.length; k += 1, i += chunkSize) stream.push(markdown.slice(i, i + chunkSize));
-      const t = performance.now();
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      frames.push(performance.now() - t);
+      frames += 1;
     }
     stream.end();
-    return { ...stats(frames), totalMs: performance.now() - t0, frames: frames.length };
+    return { ...stats(renders), totalMs: performance.now() - t0, frames };
   },
   clear() {
     target.replaceChildren();

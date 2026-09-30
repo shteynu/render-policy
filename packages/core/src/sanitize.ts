@@ -71,7 +71,10 @@ function buildConfig(policy: RenderPolicy): Config {
     SANITIZE_NAMED_PROPS: true,
     KEEP_CONTENT: true,
     WHOLE_DOCUMENT: false,
-    FORCE_BODY: false,
+    // Everything lands in the body, leading comments and whitespace included. Without this the
+    // parser drops them while in "before head" mode, and a fragment rendered on its own (the tail
+    // of an incremental stream) would differ from the same text rendered inside the whole document.
+    FORCE_BODY: true,
   };
 }
 
@@ -281,8 +284,9 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
   const collectRemoved = (s: CallState): void => {
     for (const removed of purify.removed) {
       if ('element' in removed && removed.element) {
-        const el = removed.element;
-        record(s, { kind: 'blocked', subject: 'element', code: 'element-not-allowed', reason: 'element is not allowed', tag: (el.nodeName ?? '').toLowerCase() });
+        const tag = (removed.element.nodeName ?? '').toLowerCase();
+        if (tag === 'remove') continue; // DOMPurify's own FORCE_BODY marker, not content
+        record(s, { kind: 'blocked', subject: 'element', code: 'element-not-allowed', reason: 'element is not allowed', tag });
       } else if ('attribute' in removed && removed.attribute) {
         const attr = removed.attribute;
         const tag = (removed.from?.nodeName ?? '').toLowerCase();
