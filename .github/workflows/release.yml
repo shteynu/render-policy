@@ -7,10 +7,11 @@ name: Release
 #      from the release URL without npm;
 #   3. publishes to npm with provenance when the NPM_TOKEN secret is set.
 # A dispatch run creates the tag itself, at the checked-out commit, via the release step.
+# Only full version tags (v0.1.0) trigger it; the moving major tag of the GitHub Action (v1) does not.
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*.*.*']
   workflow_dispatch:
     inputs:
       tag:
