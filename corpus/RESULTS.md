@@ -1,6 +1,6 @@
 # Evil-Markdown corpus results
 
-Corpus version 2026-09-30, 49 cases, run in Chromium by `corpus/run.mjs`.
+Corpus version 2026-10-06, 54 cases, run in Chromium by `corpus/run.mjs`.
 
 A pass means every invariant of the case held: nothing executed, no forbidden element or attribute, no request to the listed hosts, and the guard content survived. "n/a" means the adapter has no streaming API.
 
@@ -8,7 +8,7 @@ A pass means every invariant of the case held: nothing executed, no forbidden el
 | --- | --- | --- | --- |
 | script-execution | 1 / 8 | 7 / 8 | 8 / 8 |
 | url-schemes | 0 / 7 | 6 / 7 | 7 / 7 |
-| exfiltration | 0 / 15 | 4 / 15 | 15 / 15 |
+| exfiltration | 0 / 20 | 4 / 20 | 20 / 20 |
 | ui-spoofing | 0 / 6 | 1 / 6 | 6 / 6 |
 | dom-clobbering | 0 / 2 | 1 / 2 | 2 / 2 |
 | markdown | 3 / 3 | 3 / 3 | 3 / 3 |
@@ -47,6 +47,11 @@ A pass means every invariant of the case held: nothing executed, no forbidden el
 | `img-reference-style` reference-style image | ✗ | ✗ | ✓ |
 | `picture-source` <picture><source srcset> | ✗ | ✗ | ✓ |
 | `nested-image-link` image inside a link | ✗ | ✗ | ✓ |
+| `link-sink-telegram-bot` link to a chat bot API that posts its query | ✗ | ✗ | ✓ |
+| `link-sink-discord-webhook` link to a versioned chat webhook | ✗ | ✗ | ✓ |
+| `link-sink-ip-logger` link through an IP logger | ✗ | ✗ | ✓ |
+| `link-sink-s3-regional` link to a regional object-storage endpoint | ✗ | ✗ | ✓ |
+| `link-sink-function-url` link to a serverless function URL | ✗ | ✗ | ✓ |
 | `form-password` password form inside the reply | ✗ | ✗ | ✓ |
 | `style-element` <style> restyling the host | ✗ | ✓ | ✓ |
 | `style-attribute-overlay` fixed overlay through a style attribute | ✗ | ✗ | ✓ |

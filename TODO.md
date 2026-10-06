@@ -59,7 +59,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [ ] Остаток ревью дизайна: JSDoc-типы для `mcp-app-lint` (после переписи: она импортирует анализатор).
 - [x] Ревизия стартового denylist стоков (`packages/core/src/data/sink-domains.ts`), версия в поле `version`. 2026-10-06: `*` в шаблонах, региональные S3, Telegram Bot API, IP-логгеры, новые туннели; дальше ревизия раз в квартал.
 - [ ] Ещё раз взвесить дефолт `balanced`: пустой allowlist картинок блокирует все удалённые картинки, пока хост не перечислен (осознанный выбор, описан в README).
-- [ ] Корпус: новые кейсы → `npm run corpus:results` → коммит `corpus/RESULTS.md`.
+- [x] Корпус: пять кейсов «ссылка на сток» под denylist 2026-10-06 (54 кейса, `corpus/RESULTS.md` обновлён). Дальше: новые кейсы → `npm run corpus:results` → коммит `corpus/RESULTS.md`.
 - [ ] A2UI: внести раздел «Proposed: structured agent UI (A2UI)» из `ROADMAP.md` в приватный план и поставить даты. Решить открытые вопросы: отдельный пакет или вход в core, какую версию спецификации брать первой (v0.9 или v1.0), как проверять результат `formatString`. Первые шаги: `guardA2uiValue` и строгий режим для `Text`.
 
 ## 7. Этап 4 плана (с 30 ноября): evil-mcp-app и правила для сканеров

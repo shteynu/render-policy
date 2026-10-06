@@ -23,6 +23,8 @@
   places a temporary element with that id in the document.
 - Docs: [`docs/image-proxy.md`](docs/image-proxy.md), routing images through a proxy without
   opening an SSRF hole on the server.
+- Corpus `2026-10-06`: five link-to-sink cases (chat bot API, versioned chat webhook, IP logger,
+  regional object storage, serverless function URL); 54 cases. The 0.1.0 denylist fails all five.
 
 ## 0.1.0 — 2026-09-30
 

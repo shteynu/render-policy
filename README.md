@@ -278,13 +278,13 @@ const renderer = createRenderer({ transforms: [createMermaidTransform({ mermaid 
 
 ## Evil-Markdown corpus
 
-[`corpus/`](corpus) holds 49 hostile-Markdown cases with the invariants a safe renderer must hold, and a runner that checks any renderer in Chromium through a ten-line adapter. Results for the three reference adapters ([`corpus/RESULTS.md`](corpus/RESULTS.md)):
+[`corpus/`](corpus) holds 54 hostile-Markdown cases with the invariants a safe renderer must hold, and a runner that checks any renderer in Chromium through a ten-line adapter. Results for the three reference adapters ([`corpus/RESULTS.md`](corpus/RESULTS.md)):
 
 | Category | marked + innerHTML | DOMPurify defaults + innerHTML | @render-policy/core, balanced defaults |
 | --- | --- | --- | --- |
 | script execution | 1 / 8 | 7 / 8 | 8 / 8 |
 | URL schemes | 0 / 7 | 6 / 7 | 7 / 7 |
-| exfiltration | 0 / 15 | 4 / 15 | 15 / 15 |
+| exfiltration | 0 / 20 | 4 / 20 | 20 / 20 |
 | UI spoofing | 0 / 6 | 1 / 6 | 6 / 6 |
 | DOM clobbering | 0 / 2 | 1 / 2 | 2 / 2 |
 | Markdown-specific | 3 / 3 | 3 / 3 | 3 / 3 |
