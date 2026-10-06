@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { categorizeDomain, categorizeHost, classifyDomains, DOMAIN_CATEGORIES, parseDomainPattern } from '../src/index.mjs';
+import { categorizeDomain, categorizeHost, classifyDomains, DOMAIN_CATEGORIES, parseDomainPattern, sinkFor, sinkScope } from '../src/index.mjs';
 
 test('scheme-only entries: network schemes allow every host, local schemes do not', () => {
   const https = parseDomainPattern('https:');
@@ -62,4 +62,55 @@ test('categories are heuristic but stable', () => {
   assert.equal(categorizeHost('localhost'), 'development');
   const c = classifyDomains(['https:', 'https://unpkg.com', 'https://hooks.zapier.com']);
   assert.deepEqual([c.fullWildcards, c.sinks, c.categories], [1, ['webhook'], ['every-host', 'cdn', 'sink']]);
+});
+
+test('denylist entries with a * match like core: one host label', () => {
+  assert.equal(sinkFor('s3.eu-west-1.amazonaws.com')?.pattern, 's3.*.amazonaws.com');
+  assert.equal(sinkFor('s3-us-west-2.amazonaws.com')?.pattern, 's3-*.amazonaws.com');
+  assert.equal(sinkFor('s3.dualstack.us-east-1.amazonaws.com')?.pattern, 's3.dualstack.*.amazonaws.com');
+  assert.equal(sinkFor('abc123.lambda-url.us-east-1.on.aws')?.pattern, 'lambda-url.*.on.aws');
+  assert.equal(sinkFor('ec2.eu-west-1.amazonaws.com'), null);
+  assert.equal(sinkFor('s3.evil.example.com'), null);
+});
+
+test('sink scope: a host anyone can use is shared, one account on a storage or serverless service is a tenant', () => {
+  const scope = (raw) => sinkScope(raw)?.scope ?? null;
+  const cases = {
+    // The service host serves every customer's bucket by path.
+    'https://storage.googleapis.com': 'shared',
+    'https://s3.amazonaws.com': 'shared',
+    's3.eu-west-1.amazonaws.com': 'shared',
+    'nyc3.digitaloceanspaces.com': 'shared',
+    'f004.backblazeb2.com': 'shared',
+    's3.us-west-004.backblazeb2.com': 'shared',
+    's3.wasabisys.com': 'shared',
+    // A wildcard over the customers.
+    '*.blob.core.windows.net': 'shared',
+    '*.s3.amazonaws.com': 'shared',
+    '*.workers.dev': 'shared',
+    'https://pub-*.r2.dev': 'shared',
+    // Categories where every name is a sink.
+    '*.ngrok-free.dev': 'shared',
+    'abc.ngrok-free.app': 'shared',
+    'abc.webhook.site': 'shared',
+    'acme.typeform.com': 'shared',
+    'store1.gofile.io': 'shared',
+    // One account.
+    'acct.blob.core.windows.net': 'tenant',
+    '*.acct.blob.core.windows.net': 'tenant',
+    'bucket.storage.googleapis.com': 'tenant',
+    'bucket.s3.amazonaws.com': 'tenant',
+    'bucket.s3.eu-west-1.amazonaws.com': 'tenant',
+    'https://pub-0123456789abcdef.r2.dev': 'tenant',
+    'photos.sfo3.cdn.digitaloceanspaces.com': 'tenant',
+    'app.team.workers.dev': 'tenant',
+    'myapp.replit.app': 'tenant',
+    'abc123.lambda-url.us-east-1.on.aws': 'tenant',
+    'https://api.example.com': null,
+  };
+  for (const [raw, expected] of Object.entries(cases)) assert.equal(scope(raw), expected, raw);
+  assert.equal(categorizeDomain('acct.blob.core.windows.net'), 'storage');
+  assert.equal(categorizeDomain('*.blob.core.windows.net'), 'sink');
+  const c = classifyDomains(['storage.googleapis.com', 'bucket.storage.googleapis.com', 'pub-0123.r2.dev', 'https://unpkg.com']);
+  assert.deepEqual([c.sinks, c.tenantSinks], [['blob-storage'], ['blob-storage', 'blob-storage']]);
 });

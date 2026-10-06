@@ -29,7 +29,8 @@ Candidates come from npm keyword searches and the npm packages named in the regi
 | CSP with a wildcard domain | 6 (10% of declared) |
 | CSP with a full wildcard (`*`) | 5 |
 | CSP with an http: domain | 2 |
-| CSP naming a sink host (denylist) | 1 |
+| CSP naming a sink host anyone can use (denylist) | 1 |
+| CSP naming one account on a storage or serverless service from the denylist | 0 |
 | requesting sandbox permissions | clipboardWrite 3, microphone 2, camera 1 |
 | tools declared visible to the app | 48 packages |
 
@@ -89,7 +90,7 @@ The scanner's rules run over the 174 scanned packages from the stored scans (sta
 
 ## Protocol census over remote servers
 
-Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further.
+Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further. From "declaring a CSP" down, rows count UI resources unless they say servers.
 
 | Measure | Count |
 | --- | --- |
@@ -101,8 +102,9 @@ Read-only: initialize, resources/list, resources/read of UI resources, tools/lis
 | declaring a CSP | 1032 (72%) |
 | CSP with a wildcard | 87 |
 | CSP with a full wildcard | 2 |
-| CSP naming a sink host | 84 |
-| list vs read policy differs | 496 of 1074 comparable (6 where read is wider) |
+| CSP naming a sink host anyone can use | 41 on 17 servers |
+| CSP naming one account on a storage or serverless service from the denylist | 74 on 27 servers |
+| list vs read policy differs | 496 of 1074 comparable (6 where read is wider, on 2 servers) |
 | HTML with a dynamic innerHTML sink | 810 |
 | HTML with postMessage(…, '*') | 813 |
 | servers with side-effect tools visible to the app | 194 |

@@ -44,15 +44,63 @@ export function parseDomainPattern(raw) {
   };
 }
 
-/** The sink denylist entry a host pattern falls under, or null. */
-export function sinkFor(host) {
+const hostMatchers = new WeakMap();
+
+// The host part of a denylist entry as core reads it: a `*` stands for part of one label. The
+// capture is whatever precedes the service host, for example the account in acct.blob.core.windows.net.
+function hostMatcher(entry) {
+  let re = hostMatchers.get(entry);
+  if (!re) {
+    const body = entry.pattern.split('/')[0].toLowerCase().split('*').map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[^.]*');
+    re = new RegExp(`^(?:(.+)\\.)?${body}$`);
+    hostMatchers.set(entry, re);
+  }
+  return re;
+}
+
+function sinkMatch(host) {
   const candidate = String(host ?? '').toLowerCase().replace(/^\*\./, '');
   if (!candidate) return null;
   for (const entry of SINK_DENYLIST.entries) {
-    const hostPattern = entry.pattern.split('/')[0].toLowerCase();
-    if (candidate === hostPattern || candidate.endsWith(`.${hostPattern}`)) return entry;
+    const m = hostMatcher(entry).exec(candidate);
+    if (m) return { entry, prefix: m[1] ?? null };
   }
   return null;
+}
+
+/** The sink denylist entry a host pattern falls under, or null. */
+export function sinkFor(host) {
+  return sinkMatch(host)?.entry ?? null;
+}
+
+/**
+ * Sink categories where a subdomain names one customer's account (a bucket, a worker, an app).
+ * Tunnels, request catchers, OAST services and form builders are sinks whoever owns the name.
+ */
+const TENANT_CATEGORIES = new Set(['blob-storage', 'serverless']);
+/** Anonymous file drops on the blob-storage list: their subdomains are shards, not accounts. */
+const NO_TENANT_HOSTS = /(^|\.)(file\.io|transfer\.sh|0x0\.st|catbox\.moe|tmpfiles\.org|gofile\.io)$/;
+/** Path-style endpoints: one host serves every customer's buckets as `<endpoint>/<bucket>/…`. */
+const PATH_STYLE_ENDPOINTS = /^([a-z]+\d+\.digitaloceanspaces\.com|(f\d+|s3\.[a-z0-9-]+)\.backblazeb2\.com|s3(\.[a-z0-9-]+)?\.wasabisys\.com)$/;
+
+/**
+ * Whether a CSP pattern on the sink denylist reaches other people's accounts. 'shared': the
+ * service host itself (storage.googleapis.com and s3.amazonaws.com serve any bucket by path), a
+ * wildcard over the tenants (*.blob.core.windows.net, *.ngrok-free.dev), a path-style endpoint, or
+ * a category where every name is a sink. 'tenant': one account on a multi-tenant storage or
+ * serverless service (acct.blob.core.windows.net, pub-<id>.r2.dev); not a channel to a stranger
+ * while the owner keeps the name. Null when the host is not on the denylist.
+ */
+export function sinkScope(pattern) {
+  const p = typeof pattern === 'string' ? parseDomainPattern(pattern) : pattern;
+  const match = sinkMatch(p.bareHost);
+  if (!match) return null;
+  const tenant = TENANT_CATEGORIES.has(match.entry.category)
+    && match.prefix !== null
+    && !(p.wildcard && !p.leadingWildcard)
+    && !NO_TENANT_HOSTS.test(p.bareHost)
+    && !PATH_STYLE_ENDPOINTS.test(p.bareHost);
+  return { entry: match.entry, scope: tenant ? 'tenant' : 'shared' };
 }
 
 /**
@@ -77,7 +125,7 @@ export function categorizeDomain(pattern) {
   const p = typeof pattern === 'string' ? parseDomainPattern(pattern) : pattern;
   if (p.full) return 'every-host';
   if (p.development) return 'development';
-  if (sinkFor(p.bareHost)) return 'sink';
+  if (sinkScope(p)?.scope === 'shared') return 'sink';
   for (const [category, re] of HOST_RULES) if (re.test(p.bareHost)) return category;
   return 'other';
 }
@@ -89,12 +137,14 @@ export function categorizeHost(host) {
 
 export function classifyDomains(list) {
   const patterns = (Array.isArray(list) ? list : []).map(parseDomainPattern);
+  const scopes = patterns.map(sinkScope);
   return {
     count: patterns.length,
     wildcards: patterns.filter((p) => p.wildcard).length,
     fullWildcards: patterns.filter((p) => p.full).length,
     insecure: patterns.filter((p) => p.insecureScheme).length,
-    sinks: patterns.map((p) => sinkFor(p.bareHost)).filter(Boolean).map((e) => e.category),
+    sinks: scopes.filter((s) => s?.scope === 'shared').map((s) => s.entry.category),
+    tenantSinks: scopes.filter((s) => s?.scope === 'tenant').map((s) => s.entry.category),
     hosts: patterns.map((p) => p.host),
     categories: patterns.map(categorizeDomain),
   };

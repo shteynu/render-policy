@@ -2,7 +2,7 @@
  * From analysis to findings. A finding is { ruleId, level?, message, uri, region?, logical?, properties? }.
  */
 import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, uiMetaOf, withSinkHosts } from './analyze.mjs';
-import { parseDomainPattern, sinkFor } from './domains.mjs';
+import { parseDomainPattern, sinkScope } from './domains.mjs';
 import { RULES } from './rules.mjs';
 
 const DEV_HOST_RE = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/i;
@@ -25,8 +25,9 @@ export function lintUiMeta(meta, uri) {
         if (pattern.full) findings.push(finding('MCPAPP002', `${key} entry "${raw}" allows every host.`, uri, { logical }));
         else if (pattern.wildcard) findings.push(finding('MCPAPP003', `${key} entry "${raw}" allows every subdomain.`, uri, { logical }));
         if (pattern.insecureScheme) findings.push(finding('MCPAPP004', `${key} entry "${raw}" uses ${pattern.scheme}:.`, uri, { logical }));
-        const sink = sinkFor(pattern.bareHost);
-        if (sink) findings.push(finding('MCPAPP005', `${key} entry "${raw}" is on the sink denylist (${sink.category}: ${sink.pattern}).`, uri, { logical }));
+        const sink = sinkScope(pattern);
+        if (sink?.scope === 'shared') findings.push(finding('MCPAPP005', `${key} entry "${raw}" is on the sink denylist (${sink.entry.category}: ${sink.entry.pattern}).`, uri, { logical }));
+        else if (sink) findings.push(finding('MCPAPP019', `${key} entry "${raw}" names one account on a multi-tenant service (${sink.entry.category}: ${sink.entry.pattern}).`, uri, { logical }));
         if (DEV_HOST_RE.test(pattern.host) || pattern.scheme === 'blob') findings.push(finding('MCPAPP006', `${key} entry "${raw}" is a development origin.`, uri, { logical }));
       }
     }

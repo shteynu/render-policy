@@ -113,7 +113,7 @@ Plus `mcp-app-lint`: SARIF rules for existing scanners, runnable in any CI. A Gi
 action (`action.yml`) runs it and uploads the SARIF to code scanning. Lives in its own repository.
 
 Status: `mcp-app-lint` exists as a prototype in [`packages/mcp-app-lint`](packages/mcp-app-lint):
-18 SARIF rules distilled from the census analyzer and a CLI over a package, a directory or the
+19 SARIF rules distilled from the census analyzer and a CLI over a package, a directory or the
 JSON a server returned. A host conformance harness has started in [`conformance/`](conformance):
 a reference for the CSP and `allow` attribute the specification makes a host build from
 `_meta.ui`, with unit tests against the spec formula and a Chromium run that asserts the

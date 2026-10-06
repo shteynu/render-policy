@@ -61,6 +61,7 @@ if (npm.length > 0) {
   const anyFull = (p) => lists(p).some((d) => d.fullWildcards > 0);
   const anyInsecure = (p) => lists(p).some((d) => d.insecure > 0);
   const anySink = (p) => lists(p).some((d) => d.sinks.length > 0);
+  const anyTenantSink = (p) => lists(p).some((d) => (d.tenantSinks ?? []).length > 0);
   const categories = Object.fromEntries(DOMAIN_CATEGORIES.map((c) => [c, { packages: 0, entries: 0, byList: Object.fromEntries(CSP_KEYS.map((k) => [k, 0])) }]));
   let cspEntries = 0;
   const cspHosts = new Set();
@@ -101,6 +102,7 @@ if (npm.length > 0) {
     cspWithFullWildcard: count(withCsp, anyFull),
     cspWithInsecureScheme: count(withCsp, anyInsecure),
     cspWithSinkHost: count(withCsp, anySink),
+    cspWithTenantSinkHost: count(withCsp, anyTenantSink),
     cspEntries,
     cspDistinctHosts: cspHosts.size,
     cspCategories: categories,
@@ -133,7 +135,7 @@ if (npm.length > 0) {
     `| of which declare a CSP (any domain list) | ${n.cspDeclared} (${pct(n.cspDeclared, n.declaringUiResources)}) |`,
     `| CSP with a wildcard domain | ${n.cspWithWildcard} (${pct(n.cspWithWildcard, n.cspDeclared)} of declared) |`,
     `| CSP with a full wildcard (\`*\`) | ${n.cspWithFullWildcard} |`, `| CSP with an http: domain | ${n.cspWithInsecureScheme} |`,
-    `| CSP naming a sink host (denylist) | ${n.cspWithSinkHost} |`,
+    `| CSP naming a sink host anyone can use (denylist) | ${n.cspWithSinkHost} |`, `| CSP naming one account on a storage or serverless service from the denylist | ${n.cspWithTenantSinkHost} |`,
     `| requesting sandbox permissions | ${Object.entries(n.permissions).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'} |`,
     `| tools declared visible to the app | ${n.toolsVisibleToApp} packages |`, '',
     '### What the declared domains are', '',
@@ -160,6 +162,11 @@ if (remote.length > 0) {
   const withUi = reachable.filter((r) => (r.uiResourceCount ?? 0) > 0);
   const entries = withUi.flatMap((r) => r.uiResources);
   const declared = entries.filter((e) => e.list.cspDeclared || e.read?.cspDeclared);
+  // Re-classify from the hosts each scan kept, so the report follows the current classifier.
+  const sides = (e) => [e.list, e.read].filter((side) => side?.domains).flatMap((side) => Object.values(side.domains).map((d) => classifyDomains(d.hosts)));
+  const hasSink = (e) => sides(e).some((d) => d.sinks.length > 0);
+  const hasTenantSink = (e) => sides(e).some((d) => d.tenantSinks.length > 0);
+  const servers = (predicate) => count(withUi, (r) => r.uiResources.some(predicate));
   summary.remote = {
     probed: remote.length,
     reachable: reachable.length,
@@ -170,21 +177,25 @@ if (remote.length > 0) {
     cspDeclared: declared.length,
     cspWithWildcard: count(declared, (e) => e.list.anyWildcard || e.read?.anyWildcard),
     cspWithFullWildcard: count(declared, (e) => e.list.anyFullWildcard || e.read?.anyFullWildcard),
-    cspWithSinkHost: count(declared, (e) => e.list.sinks.length > 0 || (e.read?.sinks.length ?? 0) > 0),
+    cspWithSinkHost: count(declared, hasSink),
+    cspWithSinkHostServers: servers(hasSink),
+    cspWithTenantSinkHost: count(declared, hasTenantSink),
+    cspWithTenantSinkHostServers: servers(hasTenantSink),
     listReadComparable: count(entries, (e) => e.listVsRead?.comparable),
     listReadMismatch: count(entries, (e) => e.listVsRead?.mismatch),
     listReadWider: count(entries, (e) => e.listVsRead?.readWider),
+    listReadWiderServers: servers((e) => e.listVsRead?.readWider),
     htmlWithUnsafeInnerHtml: count(entries, (e) => (e.html?.unsafeInnerHtml ?? 0) > 0),
     htmlWithPostMessageStar: count(entries, (e) => (e.html?.postMessageStar ?? 0) > 0),
     toolsSideEffectsVisibleToApp: count(withUi, (r) => (r.tools?.sideEffectsVisibleToApp ?? 0) > 0),
   };
   const m = summary.remote;
-  lines.push('## Protocol census over remote servers', '', 'Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further.', '',
+  lines.push('## Protocol census over remote servers', '', 'Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further. From "declaring a CSP" down, rows count UI resources unless they say servers.', '',
     '| Measure | Count |', '| --- | --- |',
     `| servers probed | ${m.probed} |`, `| reachable and speaking MCP | ${m.reachable} |`, `| failures | ${Object.entries(m.failures).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'} |`,
     `| with UI resources | ${m.withUiResources} |`, `| UI resources read | ${m.uiResourcesSeen} (${m.mcpAppMime} with the MCP Apps MIME type) |`,
-    `| declaring a CSP | ${m.cspDeclared} (${pct(m.cspDeclared, m.uiResourcesSeen)}) |`, `| CSP with a wildcard | ${m.cspWithWildcard} |`, `| CSP with a full wildcard | ${m.cspWithFullWildcard} |`, `| CSP naming a sink host | ${m.cspWithSinkHost} |`,
-    `| list vs read policy differs | ${m.listReadMismatch} of ${m.listReadComparable} comparable (${m.listReadWider} where read is wider) |`,
+    `| declaring a CSP | ${m.cspDeclared} (${pct(m.cspDeclared, m.uiResourcesSeen)}) |`, `| CSP with a wildcard | ${m.cspWithWildcard} |`, `| CSP with a full wildcard | ${m.cspWithFullWildcard} |`, `| CSP naming a sink host anyone can use | ${m.cspWithSinkHost} on ${m.cspWithSinkHostServers} servers |`, `| CSP naming one account on a storage or serverless service from the denylist | ${m.cspWithTenantSinkHost} on ${m.cspWithTenantSinkHostServers} servers |`,
+    `| list vs read policy differs | ${m.listReadMismatch} of ${m.listReadComparable} comparable (${m.listReadWider} where read is wider, on ${m.listReadWiderServers} servers) |`,
     `| HTML with a dynamic innerHTML sink | ${m.htmlWithUnsafeInnerHtml} |`, `| HTML with postMessage(…, '*') | ${m.htmlWithPostMessageStar} |`,
     `| servers with side-effect tools visible to the app | ${m.toolsSideEffectsVisibleToApp} |`, '');
 }

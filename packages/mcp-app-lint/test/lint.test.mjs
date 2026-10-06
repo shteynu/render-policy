@@ -3,7 +3,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { lintHtml, lintResource, lintTools, lintUiMeta, RULES, run, toSarif, toText } from '../src/index.mjs';
+import { levelOf, lintHtml, lintResource, lintTools, lintUiMeta, RULES, run, toSarif, toText } from '../src/index.mjs';
 
 const ids = (findings) => findings.map((f) => f.ruleId).sort();
 
@@ -20,6 +20,12 @@ test('ui meta: missing csp, every-host entries, wildcards, http, sink hosts, dev
   );
   assert.deepEqual(ids(findings), ['MCPAPP002', 'MCPAPP003', 'MCPAPP004', 'MCPAPP004', 'MCPAPP005', 'MCPAPP006', 'MCPAPP006', 'MCPAPP007']);
   assert.equal(findings.find((f) => f.ruleId === 'MCPAPP005').logical.name, 'csp.connectDomains');
+});
+
+test('ui meta: a shared storage host is a sink, one account on it is a note', () => {
+  const findings = lintUiMeta({ ui: { csp: { resourceDomains: ['https://storage.googleapis.com', 'https://acct.blob.core.windows.net'] } } }, 'ui://a');
+  assert.deepEqual(ids(findings), ['MCPAPP005', 'MCPAPP019']);
+  assert.equal(levelOf(findings[1].ruleId), 'note');
 });
 
 test('resource: read wider than list is an error, plain mismatch a warning, html findings attached', () => {

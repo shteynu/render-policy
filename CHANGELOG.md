@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- `mcp-app-lint`: a CSP entry on the sink denylist is split by whom it reaches. MCPAPP005 (error)
+  now fires only for entries that reach accounts anyone can create: the service host itself
+  (`storage.googleapis.com` and `s3.amazonaws.com` serve any bucket by path), a wildcard over the
+  customers (`*.blob.core.windows.net`, `*.ngrok-free.dev`), path-style endpoints, and every name
+  on tunnel, request-catcher, OAST and form services. One account on a storage or serverless
+  service (`acct.blob.core.windows.net`, `pub-<id>.r2.dev`, `app.team.workers.dev`) is the new
+  MCPAPP019 `csp-sink-tenant-host` (note). `sinkScope()` is exported; `classifyDomains()` returns
+  `tenantSinks` beside `sinks`, which now holds the shared ones only, and the domain category
+  `sink` follows it (a tenant bucket is `storage`).
+- `mcp-app-lint`: denylist entries with `*` (`s3.*.amazonaws.com`, `s3-*.amazonaws.com`,
+  `lambda-url.*.on.aws`) match as in core; they were compared literally and never matched.
+- Census report: the protocol census re-classifies domain lists from the hosts kept in each
+  record, reports shared and tenant sink hosts separately, and gives server counts beside the
+  resource counts.
+
 ## 0.1.1 — 2026-10-06
 
 - `@render-policy/core` (security): `urls.decide` now sees an image only after the image host,

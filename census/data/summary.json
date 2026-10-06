@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T10:28:58.361Z",
+  "generatedAt": "2026-10-06T10:48:19.247Z",
   "registry": {
     "collectedAt": "2026-10-06T09:05:14.280Z",
     "entries": 39919,
@@ -33,6 +33,7 @@
     "cspWithFullWildcard": 5,
     "cspWithInsecureScheme": 2,
     "cspWithSinkHost": 1,
+    "cspWithTenantSinkHost": 0,
     "cspEntries": 218,
     "cspDistinctHosts": 96,
     "cspCategories": {
@@ -268,6 +269,12 @@
         "level": "error",
         "packages": 0,
         "findings": 0
+      },
+      "MCPAPP019": {
+        "name": "csp-sink-tenant-host",
+        "level": "note",
+        "packages": 0,
+        "findings": 0
       }
     },
     "permissions": {
@@ -311,10 +318,14 @@
     "cspDeclared": 1032,
     "cspWithWildcard": 87,
     "cspWithFullWildcard": 2,
-    "cspWithSinkHost": 84,
+    "cspWithSinkHost": 41,
+    "cspWithSinkHostServers": 17,
+    "cspWithTenantSinkHost": 74,
+    "cspWithTenantSinkHostServers": 27,
     "listReadComparable": 1074,
     "listReadMismatch": 496,
     "listReadWider": 6,
+    "listReadWiderServers": 2,
     "htmlWithUnsafeInnerHtml": 810,
     "htmlWithPostMessageStar": 813,
     "toolsSideEffectsVisibleToApp": 194

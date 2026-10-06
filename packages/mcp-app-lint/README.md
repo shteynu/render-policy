@@ -58,7 +58,7 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 | MCPAPP002 | csp-allows-every-host | error | `*` or a scheme-only entry (`https:`) expands to every host |
 | MCPAPP003 | csp-wildcard-host | warning | `*.example.com` allows every subdomain |
 | MCPAPP004 | csp-insecure-scheme | warning | `http:` origin |
-| MCPAPP005 | csp-sink-host | error | host on the sink denylist (request catchers, tunnels, form builders, public buckets) |
+| MCPAPP005 | csp-sink-host | error | host on the sink denylist that reaches accounts anyone can create: request catchers, tunnels, form builders, a storage service host (`storage.googleapis.com`), a wildcard over its customers (`*.blob.core.windows.net`) |
 | MCPAPP006 | csp-development-origin | note | localhost, 127.0.0.1, `blob:` in published metadata |
 | MCPAPP007 | permissions-sensitive | note | camera, microphone or geolocation requested |
 | MCPAPP008 | tool-side-effects-app-visible | warning | tool without `readOnlyHint` callable by the app |
@@ -72,6 +72,7 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 | MCPAPP016 | html-sink-host | error | a URL in the document points at a sink host |
 | MCPAPP017 | meta-list-read-mismatch | warning | `resources/read` declares a different policy than `resources/list` |
 | MCPAPP018 | meta-read-wider-than-list | error | the read-time policy adds domains or wildcards the listing did not declare |
+| MCPAPP019 | csp-sink-tenant-host | note | one bucket, worker or app on a storage or serverless service from the denylist (`acct.blob.core.windows.net`, `pub-<id>.r2.dev`); fine while the owner keeps the name |
 
 Hand-written means an inline script with short lines and not too many of them; bundles carry
 framework internals and the SDK bridge (which posts to `'*'` by design) and are not reported

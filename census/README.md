@@ -22,7 +22,8 @@ Three collectors, one analyzer:
 The analyzer lives in [`packages/mcp-app-lint`](../packages/mcp-app-lint) (`analyze.mjs`,
 `domains.mjs`, `npm.mjs`); the same code is the `mcp-app-lint` scanner. It classifies domain
 patterns (wildcards, a full `*` or a scheme-only `https:`, `http:` schemes, hosts on the
-render-policy sink denylist, and a heuristic category per host: fonts, analytics, maps, storage,
+render-policy sink denylist (split into hosts anyone can use, such as `storage.googleapis.com` or
+`*.blob.core.windows.net`, and one customer's bucket or worker), and a heuristic category per host: fonts, analytics, maps, storage,
 media, CDN, API, development leftovers), compares the policy a host sees
 in `resources/list` with the one in `resources/read` (the read result wins in the specification,
 so a server can present a stricter policy at connection time and a wider one at render time),

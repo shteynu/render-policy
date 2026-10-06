@@ -36,6 +36,7 @@ export function analyzeUiMeta(meta) {
     anyFullWildcard: CSP_KEYS.some((k) => domains[k].fullWildcards > 0),
     anyInsecure: CSP_KEYS.some((k) => domains[k].insecure > 0),
     sinks: CSP_KEYS.flatMap((k) => domains[k].sinks),
+    tenantSinks: CSP_KEYS.flatMap((k) => domains[k].tenantSinks),
     permissions,
     domain: typeof ui?.domain === 'string' ? ui.domain : null,
     prefersBorder: ui?.prefersBorder === true,
