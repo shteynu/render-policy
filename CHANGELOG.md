@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-10-06
+
+`@render-policy/core`, `@render-policy/react`, `@render-policy/mermaid` and `@render-policy/angular`
+are unchanged; they move to 0.1.2 so all six packages share one version.
 
 - `mcp-app-lint`: a CSP entry on the sink denylist is split by whom it reaches. MCPAPP005 (error)
   now fires only for entries that reach accounts anyone can create: the service host itself
