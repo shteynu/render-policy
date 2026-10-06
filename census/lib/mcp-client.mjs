@@ -6,9 +6,10 @@
 const PROTOCOL_VERSION = '2025-06-18';
 
 export class McpHttpClient {
-  constructor(url, { timeoutMs = 20000, userAgent = 'mcp-ui-census/0.1 (+https://github.com/shteynu/render-policy)' } = {}) {
+  constructor(url, { timeoutMs = 20000, userAgent = 'mcp-ui-census/0.1 (+https://github.com/shteynu/render-policy)', fetch = globalThis.fetch } = {}) {
     this.url = url;
     this.timeoutMs = timeoutMs;
+    this.fetch = fetch;
     this.userAgent = userAgent;
     this.sessionId = null;
     this.nextId = 1;
@@ -39,11 +40,11 @@ export class McpHttpClient {
         'user-agent': this.userAgent,
       };
       if (this.sessionId) headers['mcp-session-id'] = this.sessionId;
-      const response = await fetch(this.url, { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal, redirect: 'follow' });
+      const response = await this.fetch(this.url, { method: 'POST', headers, body: JSON.stringify(body), signal: controller.signal, redirect: 'follow' });
       const session = response.headers.get('mcp-session-id');
       if (session) this.sessionId = session;
       if (response.status === 401 || response.status === 403) {
-        const body = await response.text().catch(() => '');
+        const body = await readText(response, controller.signal).catch(() => '');
         const kind = /Host not in allowlist|egress/i.test(body) ? 'egress-blocked' : 'auth';
         throw Object.assign(new Error(`HTTP ${response.status}`), { kind, status: response.status });
       }
@@ -51,7 +52,7 @@ export class McpHttpClient {
       if (!response.ok && response.status !== 202) throw Object.assign(new Error(`HTTP ${response.status}`), { kind: 'http', status: response.status });
       if (!expectBody || response.status === 202 || response.status === 204) return null;
       const type = response.headers.get('content-type') ?? '';
-      const text = await response.text();
+      const text = await readText(response, controller.signal);
       if (type.includes('text/event-stream')) return firstJsonRpcFromSse(text, body.id);
       if (!text.trim()) return null;
       try {
@@ -100,6 +101,27 @@ export class McpHttpClient {
     const result = await this.request('resources/read', { uri });
     return Array.isArray(result?.contents) ? result.contents : [];
   }
+}
+
+/**
+ * response.text() that gives up when the signal aborts. The fetch abort does not always reach a
+ * body read in progress (seen with a brotli-encoded chunked answer over TLS that never sent a
+ * byte): the read then never settles, and once the timeout timer has fired nothing keeps the
+ * process alive, so the census run ended with that probe unrecorded.
+ */
+function readText(response, signal) {
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      response.body?.cancel().catch(() => {});
+      reject(signal.reason ?? Object.assign(new Error('aborted'), { name: 'AbortError' }));
+    };
+    if (signal.aborted) {
+      abort();
+      return;
+    }
+    signal.addEventListener('abort', abort, { once: true });
+    response.text().then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
 }
 
 /** The JSON-RPC message with the given id (or the first one) out of an SSE body. */

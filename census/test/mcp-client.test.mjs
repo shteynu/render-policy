@@ -83,3 +83,20 @@ test('client: 401 is auth, egress proxy 403 is egress-blocked, HTML is not-mcp',
     server.close();
   }
 });
+
+test('client: a body that never arrives times out even when the abort does not reach the read', async () => {
+  // A real server answered 200 with a brotli-encoded chunked body over TLS and never sent a byte;
+  // the fetch abort did not reject the read in progress, the timer was gone, and the census process
+  // exited with the probe unsettled. This fetch reproduces that: its body ignores the abort.
+  const hangingFetch = async () =>
+    new Response(new ReadableStream({ pull: () => new Promise(() => {}) }), { status: 200, headers: { 'content-type': 'application/json' } });
+  const client = new McpHttpClient('https://hang.example/mcp', { timeoutMs: 100, fetch: hangingFetch });
+  let guard;
+  const outcome = await Promise.race([
+    client.initialize().then(() => 'resolved', (error) => failureKind(error)),
+    // A hung read leaves nothing in the event loop, so the test keeps its own timer.
+    new Promise((resolve) => { guard = setTimeout(() => resolve('hung'), 2000); }),
+  ]);
+  clearTimeout(guard);
+  assert.equal(outcome, 'timeout');
+});
