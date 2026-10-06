@@ -16,6 +16,11 @@
   (iplogger, yip.su, grabify); requestrepo; ngrok's newer domains, Pinggy, zrok public shares,
   Tunnelmole, Microsoft dev tunnels, Codespaces forwarded ports; more form builders. A custom
   denylist that relied on `*` matching a literal asterisk now matches as a wildcard.
+- `@render-policy/mermaid`: the source cache evicts the least recently used diagram (it evicted the
+  oldest insert, so a diagram a stream re-renders on every push could be dropped and rendered
+  again); `cacheSize: 0` turns caching off (it kept one entry). Render ids are unique per page,
+  not per transform: two transforms rendering at once both used `rp-mermaid-1`, and mermaid
+  places a temporary element with that id in the document.
 - Docs: [`docs/image-proxy.md`](docs/image-proxy.md), routing images through a proxy without
   opening an SSRF hole on the server.
 

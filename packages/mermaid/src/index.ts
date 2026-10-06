@@ -18,7 +18,7 @@ export interface MermaidTransformOptions {
   readonly languages?: readonly string[];
   /** Receives a decision for every diagram that failed to render or lost content to sanitization. */
   readonly onDecision?: (decision: RenderDecision) => void;
-  /** Upper bound of the source -> SVG cache. Default 50. */
+  /** Upper bound of the source -> SVG cache; the least recently used diagram goes first. Default 50, 0 turns caching off. */
   readonly cacheSize?: number;
 }
 
@@ -117,6 +117,76 @@ export function createDiagramSanitizer(win: RenderWindow): (svg: string) => Diag
   };
 }
 
+/** A bounded map that forgets the entry used least recently. A size of 0 or less stores nothing. */
+function createLruCache<K, V>(size: number): { get(key: K): V | undefined; set(key: K, value: V): void } {
+  const entries = new Map<K, V>();
+  return {
+    get(key) {
+      const value = entries.get(key);
+      if (value !== undefined) {
+        // Map keeps insertion order: re-inserting marks the entry as the most recent.
+        entries.delete(key);
+        entries.set(key, value);
+      }
+      return value;
+    },
+    set(key, value) {
+      if (size <= 0) return;
+      entries.delete(key);
+      if (entries.size >= size) {
+        const oldest = entries.keys().next().value;
+        if (oldest !== undefined) entries.delete(oldest);
+      }
+      entries.set(key, value);
+    },
+  };
+}
+
+/** mermaid puts a temporary element with the render id into the document, so ids are unique per page, not per transform. */
+let renderCounter = 0;
+
+/**
+ * Diagram source -> sanitized SVG, cached by source. Initializes mermaid with the strict settings
+ * on first use and reports each render's decisions once, when the source is first rendered.
+ * Resolves to null when mermaid cannot render the source.
+ */
+function createDiagramRenderer(options: MermaidTransformOptions, win: RenderWindow): (source: string) => Promise<DiagramSanitizeResult | null> {
+  const sanitize = createDiagramSanitizer(win);
+  const cache = createLruCache<string, Promise<DiagramSanitizeResult | null>>(options.cacheSize ?? 50);
+  let initialized = false;
+
+  const emit = (decisions: readonly RenderDecision[]): void => {
+    if (!options.onDecision) return;
+    for (const decision of decisions) options.onDecision(decision);
+  };
+
+  const render = async (source: string): Promise<DiagramSanitizeResult | null> => {
+    if (!initialized) {
+      options.mermaid.initialize({ ...(options.config ?? {}), ...STRICT_MERMAID_CONFIG });
+      initialized = true;
+    }
+    renderCounter += 1;
+    let svg: string;
+    try {
+      svg = (await options.mermaid.render(`rp-mermaid-${renderCounter}`, source)).svg;
+    } catch (error) {
+      emit([{ kind: 'blocked', subject: 'markdown', code: 'diagram-render-failed', reason: `Mermaid could not render the diagram: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` }]);
+      return null;
+    }
+    const result = sanitize(svg);
+    emit(result.decisions);
+    return result;
+  };
+
+  return (source) => {
+    const cached = cache.get(source);
+    if (cached) return cached;
+    const promise = render(source);
+    cache.set(source, promise);
+    return promise;
+  };
+}
+
 /**
  * A fragment transform for createRenderer({ transforms }) that turns
  * ```mermaid code blocks into diagrams:
@@ -132,55 +202,14 @@ export function createDiagramSanitizer(win: RenderWindow): (svg: string) => Diag
  */
 export function createMermaidTransform(options: MermaidTransformOptions): FragmentTransform {
   const win = resolveWindow(options.window, '@render-policy/mermaid');
-  const sanitize = createDiagramSanitizer(win);
+  const renderDiagram = createDiagramRenderer(options, win);
   const languages = new Set(options.languages ?? ['mermaid']);
-  const cacheSize = options.cacheSize ?? 50;
-  const cache = new Map<string, Promise<DiagramSanitizeResult | null>>();
-  let initialized = false;
-  let counter = 0;
-
-  const emit = (decisions: readonly RenderDecision[]): void => {
-    if (!options.onDecision) return;
-    for (const decision of decisions) options.onDecision(decision);
-  };
-
-  const ensureInitialized = (): void => {
-    if (initialized) return;
-    options.mermaid.initialize({ ...(options.config ?? {}), ...STRICT_MERMAID_CONFIG });
-    initialized = true;
-  };
-
-  const renderSource = (source: string): Promise<DiagramSanitizeResult | null> => {
-    const cached = cache.get(source);
-    if (cached) return cached;
-    counter += 1;
-    const promise = (async () => {
-      ensureInitialized();
-      let svg: string;
-      try {
-        svg = (await options.mermaid.render(`rp-mermaid-${counter}`, source)).svg;
-      } catch (error) {
-        emit([{ kind: 'blocked', subject: 'markdown', code: 'diagram-render-failed', reason: `Mermaid could not render the diagram: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}` }]);
-        return null;
-      }
-      const result = sanitize(svg);
-      emit(result.decisions);
-      return result;
-    })();
-    if (cache.size >= cacheSize) {
-      const oldest = cache.keys().next().value;
-      if (oldest !== undefined) cache.delete(oldest);
-    }
-    cache.set(source, promise);
-    return promise;
-  };
 
   return (fragment, context) => {
     const blocks = Array.from(fragment.querySelectorAll('pre > code')).filter((code) => languages.has(languageOf(code)));
     if (blocks.length === 0) return;
     const allPre = fragment.querySelectorAll('pre');
     const lastPre = allPre[allPre.length - 1] ?? null;
-    const doc = context.document;
 
     for (const code of blocks) {
       const pre = code.parentElement;
@@ -188,23 +217,31 @@ export function createMermaidTransform(options: MermaidTransformOptions): Fragme
       if (context.openFenceAtEnd && pre === lastPre) continue; // still being typed
 
       const source = code.textContent ?? '';
-      const wrapper = doc.createElement('div');
-      wrapper.className = DIAGRAM_CLASS;
-      wrapper.setAttribute('style', 'display:block;contain:paint');
-      const host = doc.createElement('div');
-      host.className = DIAGRAM_HOST_CLASS;
-      pre.replaceWith(wrapper);
-      wrapper.append(host);
-      host.append(pre); // light DOM: the source, hidden by the shadow root, compared by patchChildren
-      const shadow = host.attachShadow({ mode: 'open' });
-      shadow.append(fallback(doc, source));
-
-      void renderSource(source).then((result) => {
+      const shadow = mountDiagram(context.document, pre, source);
+      void renderDiagram(source).then((result) => {
         if (!result) return;
         shadow.replaceChildren(result.fragment.cloneNode(true));
       });
     }
   };
+}
+
+/**
+ * Replace a code block with the diagram wrapper and return the shadow root the diagram goes into.
+ * Until the diagram arrives (or if it never does) the shadow root shows the source as code.
+ */
+function mountDiagram(doc: Document, pre: Element, source: string): ShadowRoot {
+  const wrapper = doc.createElement('div');
+  wrapper.className = DIAGRAM_CLASS;
+  wrapper.setAttribute('style', 'display:block;contain:paint');
+  const host = doc.createElement('div');
+  host.className = DIAGRAM_HOST_CLASS;
+  pre.replaceWith(wrapper);
+  wrapper.append(host);
+  host.append(pre); // light DOM: the source, hidden by the shadow root, compared by patchChildren
+  const shadow = host.attachShadow({ mode: 'open' });
+  shadow.append(fallback(doc, source));
+  return shadow;
 }
 
 function languageOf(code: Element): string {

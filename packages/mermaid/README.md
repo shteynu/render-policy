@@ -32,7 +32,9 @@ What the transform guarantees, whatever the diagram source says:
   `onDecision`, with codes `diagram-render-failed`, `diagram-element-not-allowed`,
   `diagram-attribute-not-allowed`, `diagram-style-escapes` and `diagram-root-not-svg`.
 
-Renders are cached by source (`cacheSize`, default 50). Diagram languages other than
+Renders are cached by source (`cacheSize`, default 50; the least recently used diagram is evicted
+first, so a diagram a stream keeps re-rendering stays cached; `0` turns the cache off). Diagram
+languages other than
 `mermaid` can be mapped with `languages`.
 
 Bring your own mermaid (peer dependency, 11 or later) and load it lazily if bundle size

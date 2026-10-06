@@ -107,6 +107,35 @@ describe('createMermaidTransform', () => {
     expect(mermaid.render).toHaveBeenCalledTimes(2);
   });
 
+  it('evicts the least recently used diagram, so one a stream keeps re-rendering stays cached', async () => {
+    const mermaid = fakeMermaid();
+    const renderer = createRenderer({ transforms: [createMermaidTransform({ mermaid, cacheSize: 2 })] });
+    const diagram = (name: string): string => `\`\`\`mermaid\ngraph TD\n${name}-->Z\n\`\`\``;
+    for (const name of ['A', 'B', 'A', 'C', 'A']) renderer.renderMarkdownInto(box(), diagram(name));
+    await settle();
+    expect(mermaid.render.mock.calls.map(([, source]) => source.trim().split('\n')[1])).toEqual(['A-->Z', 'B-->Z', 'C-->Z']);
+  });
+
+  it('cacheSize 0 turns the cache off', async () => {
+    const mermaid = fakeMermaid();
+    const renderer = createRenderer({ transforms: [createMermaidTransform({ mermaid, cacheSize: 0 })] });
+    renderer.renderMarkdownInto(box(), DIAGRAM);
+    renderer.renderMarkdownInto(box(), DIAGRAM);
+    await settle();
+    expect(mermaid.render).toHaveBeenCalledTimes(2);
+  });
+
+  it('gives every render a page-unique id, also across transforms', async () => {
+    // mermaid puts a temporary element with this id into the document while it renders.
+    const mermaid = fakeMermaid();
+    createRenderer({ transforms: [createMermaidTransform({ mermaid })] }).renderMarkdownInto(box(), DIAGRAM);
+    createRenderer({ transforms: [createMermaidTransform({ mermaid })] }).renderMarkdownInto(box(), DIAGRAM);
+    await settle();
+    const ids = mermaid.render.mock.calls.map(([id]) => id);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
   it('sanitizes what mermaid produced', async () => {
     const hostile =
       '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="position:fixed;inset:0" onload="alert(1)">' +
