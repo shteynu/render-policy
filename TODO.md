@@ -6,8 +6,8 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 
 ## 1. Настройки, по пять минут каждая (без них часть автоматики не работает)
 
-- [ ] GitHub → Settings → Pages → Source: **GitHub Actions**. После этого `pages.yml` начнёт деплоить демо на https://shteynu.github.io/render-policy/ (сейчас каждый запуск падает с «Resource not accessible by integration»).
-- [ ] GitHub → Settings → Code security → **Private vulnerability reporting: enable**. На это ссылаются `SECURITY.md` и шаблоны issue.
+- [x] GitHub → Settings → Pages → Source: **GitHub Actions** (включено 2026-10-06, первый деплой прошёл). После этого `pages.yml` начнёт деплоить демо на https://shteynu.github.io/render-policy/ (сейчас каждый запуск падает с «Resource not accessible by integration»).
+- [x] GitHub → Settings → Code security → **Private vulnerability reporting: enable** (включено 2026-10-06). На это ссылаются `SECURITY.md` и шаблоны issue.
 - [x] npm: организация `render-policy` создана 2026-10-06. Вместо `NPM_TOKEN` настроен trusted publishing: все шесть пакетов доверяют `shteynu/render-policy` + `release.yml` (`npm trust github`), токен в GitHub не нужен. Новый пакет: сначала ручная публикация, потом `npm trust github <pkg> --repo shteynu/render-policy --file release.yml --allow-publish`.
 - [ ] Проверить, что Dependabot создал первые PR (`.github/dependabot.yml`); группа `security-critical` (DOMPurify, marked) требует ручного взгляда на changelog перед merge.
 
