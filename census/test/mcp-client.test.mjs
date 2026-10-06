@@ -100,3 +100,17 @@ test('client: a body that never arrives times out even when the abort does not r
   clearTimeout(guard);
   assert.equal(outcome, 'timeout');
 });
+
+test('io: the latest record per name wins, and --retry kinds are not finished', async () => {
+  const { finishedNames, latestByName } = await import('../lib/io.mjs');
+  const records = [
+    { name: 'a', error: { kind: 'network' } },
+    { name: 'b', serverInfo: {} },
+    { name: 'c', error: { kind: 'auth' } },
+    { name: 'a', serverInfo: { name: 'a' } },
+    { name: 'd', error: { kind: 'timeout' } },
+  ];
+  assert.deepEqual(latestByName(records).map((r) => [r.name, r.error?.kind ?? 'ok']), [['b', 'ok'], ['c', 'auth'], ['a', 'ok'], ['d', 'timeout']]);
+  assert.deepEqual([...finishedNames(records)].sort(), ['a', 'b', 'c', 'd']);
+  assert.deepEqual([...finishedNames(records, new Set(['network', 'timeout']))].sort(), ['a', 'b', 'c']);
+});

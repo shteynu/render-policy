@@ -19,6 +19,24 @@ export async function readJsonl(file) {
   }
 }
 
+/**
+ * The last record per name, in file order. Collectors only append, so a server probed again
+ * (`--retry`) has several records; the latest one is the result.
+ */
+export function latestByName(records) {
+  const latest = new Map();
+  for (const record of records) {
+    latest.delete(record.name);
+    latest.set(record.name, record);
+  }
+  return [...latest.values()];
+}
+
+/** Names whose latest record is final: absent from the result are servers never probed, and those whose last probe failed with a kind listed in `retry`. */
+export function finishedNames(records, retry = new Set()) {
+  return new Set(latestByName(records).filter((r) => !retry.has(r.error?.kind)).map((r) => r.name));
+}
+
 export async function appendJsonl(file, record) {
   await appendFile(file, `${JSON.stringify(record)}\n`);
 }

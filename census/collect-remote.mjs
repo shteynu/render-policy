@@ -3,12 +3,14 @@
  * read the UI ones, list tools. Read-only; no tool is ever called; no credentials are sent.
  * Servers that answer 401/403 are counted as "auth required" and left alone.
  * Output: census/data/remote-servers.jsonl.
- *   node census/collect-remote.mjs [--limit N] [--concurrency 6] [--only name] [--max-resources 10]
+ *   node census/collect-remote.mjs [--limit N] [--concurrency 6] [--only name] [--max-resources 10] [--retry network,timeout]
+ * `--retry` probes again the servers whose latest probe failed with one of the listed kinds, for
+ * example after the local network dropped during a run; the new record is appended and wins.
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, UI_MIME, withSinkHosts } from 'mcp-app-lint';
-import { appendJsonl, argValue, dataDir, ensureDataDir, mapLimit, readJsonl } from './lib/io.mjs';
+import { appendJsonl, argValue, dataDir, ensureDataDir, finishedNames, mapLimit, readJsonl } from './lib/io.mjs';
 import { failureKind, McpHttpClient } from './lib/mcp-client.mjs';
 
 await ensureDataDir();
@@ -18,7 +20,8 @@ const concurrency = Number(argValue('--concurrency', '6'));
 const only = argValue('--only', null);
 const maxResources = Number(argValue('--max-resources', '10'));
 const registry = JSON.parse(await readFile(path.join(dataDir, 'registry.json'), 'utf8'));
-const done = new Set((await readJsonl(out)).map((r) => r.name));
+const retry = new Set(String(argValue('--retry', '')).split(',').filter(Boolean));
+const done = finishedNames(await readJsonl(out), retry);
 
 let servers = registry.servers.filter((s) => s.remotes.some((r) => r.type === 'streamable-http') && !done.has(s.name));
 if (only) servers = servers.filter((s) => s.name === only);

@@ -6,7 +6,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { categorizeHost, classifyDomains, DOMAIN_CATEGORIES, lintPackageScan, RULES } from 'mcp-app-lint';
-import { censusRoot, dataDir, readJsonl } from './lib/io.mjs';
+import { censusRoot, dataDir, latestByName, readJsonl } from './lib/io.mjs';
 
 const CSP_KEYS = ['connectDomains', 'resourceDomains', 'frameDomains', 'baseUriDomains'];
 
@@ -154,7 +154,7 @@ if (npm.length > 0) {
     ...Object.entries(n.lintFindings).filter(([, r]) => r.findings > 0).map(([id, r]) => `| ${id} ${r.name} | ${r.level} | ${r.packages} | ${r.findings} |`), '');
 }
 
-const remote = await readJsonl(path.join(dataDir, 'remote-servers.jsonl'));
+const remote = latestByName(await readJsonl(path.join(dataDir, 'remote-servers.jsonl')));
 if (remote.length > 0) {
   const reachable = remote.filter((r) => !r.error);
   const withUi = reachable.filter((r) => (r.uiResourceCount ?? 0) > 0);
