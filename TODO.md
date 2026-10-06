@@ -26,6 +26,7 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 - [x] `git tag v0.1.0 && git push origin v0.1.0` → `release.yml`: проверки, сверка версий с тегом, тарболы на GitHub Release. `NPM_TOKEN` не было, поэтому 0.1.0 опубликован на npm 2026-10-06 вручную с локальной машины (без provenance; 2FA ключом безопасности через браузер). Следующие версии: через `release.yml` (trusted publishing, provenance ставит npm). Первый такой релиз проверить: если OIDC не сработает, `npm publish` упадёт с 401/404.
 - [x] После публикации: в `README.md` убран блок «install from release tarballs», `npm install @render-policy/core` в чистом проекте работает.
 - [x] Релиз 0.1.1 (2026-10-06): исправление `urls.decide` для картинок, denylist 2026-10-06, исправления mermaid. Первый релиз через trusted publishing: все шесть пакетов на npm с provenance. Тег ставить только после пуша релизного коммита (тег на коммите со старыми версиями роняет сверку версий, его приходится пересоздавать).
+- [x] Релиз 0.1.2 (2026-10-06): `mcp-app-lint` (ложные срабатывания по переписи, декларации типов, версия в SARIF) и `escapeFunctions` в eslint-plugin; остальные пакеты без изменений. Все шесть на npm с provenance. Предупреждение npm про `bin` у `mcp-app-lint` при публикации было и в 0.1.1, `bin` в опубликованном манифесте на месте.
 
 ## 3. Перепись CSP: протокольный обход (нужна обычная сеть, из облачной сессии не работает)
 
