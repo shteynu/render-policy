@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T10:48:19.247Z",
+  "generatedAt": "2026-10-06T11:22:47.225Z",
   "registry": {
     "collectedAt": "2026-10-06T09:05:14.280Z",
     "entries": 39919,
@@ -27,15 +27,17 @@
       "@mcp-ui/client": 1
     },
     "scanned": 174,
-    "declaringUiResources": 158,
-    "cspDeclared": 63,
-    "cspWithWildcard": 6,
+    "mentioningUiResources": 158,
+    "declaringUiResources": 146,
+    "cspBuiltAtRuntime": 2,
+    "cspDeclared": 74,
+    "cspWithWildcard": 10,
     "cspWithFullWildcard": 5,
     "cspWithInsecureScheme": 2,
-    "cspWithSinkHost": 1,
+    "cspWithSinkHost": 2,
     "cspWithTenantSinkHost": 0,
-    "cspEntries": 218,
-    "cspDistinctHosts": 96,
+    "cspEntries": 324,
+    "cspDistinctHosts": 133,
     "cspCategories": {
       "every-host": {
         "packages": 5,
@@ -49,30 +51,40 @@
       },
       "development": {
         "packages": 2,
-        "entries": 12,
+        "entries": 7,
         "byList": {
           "connectDomains": 2,
-          "resourceDomains": 4,
-          "frameDomains": 6,
+          "resourceDomains": 2,
+          "frameDomains": 3,
+          "baseUriDomains": 0
+        }
+      },
+      "local-scheme": {
+        "packages": 3,
+        "entries": 6,
+        "byList": {
+          "connectDomains": 0,
+          "resourceDomains": 3,
+          "frameDomains": 3,
           "baseUriDomains": 0
         }
       },
       "sink": {
-        "packages": 1,
-        "entries": 1,
+        "packages": 2,
+        "entries": 3,
         "byList": {
-          "connectDomains": 0,
-          "resourceDomains": 1,
+          "connectDomains": 1,
+          "resourceDomains": 2,
           "frameDomains": 0,
           "baseUriDomains": 0
         }
       },
       "fonts": {
-        "packages": 3,
-        "entries": 12,
+        "packages": 4,
+        "entries": 16,
         "byList": {
           "connectDomains": 4,
-          "resourceDomains": 8,
+          "resourceDomains": 12,
           "frameDomains": 0,
           "baseUriDomains": 0
         }
@@ -98,52 +110,52 @@
         }
       },
       "storage": {
-        "packages": 2,
-        "entries": 2,
+        "packages": 3,
+        "entries": 4,
         "byList": {
           "connectDomains": 0,
-          "resourceDomains": 2,
+          "resourceDomains": 4,
           "frameDomains": 0,
           "baseUriDomains": 0
         }
       },
       "media": {
-        "packages": 7,
-        "entries": 33,
+        "packages": 10,
+        "entries": 46,
         "byList": {
           "connectDomains": 0,
-          "resourceDomains": 33,
+          "resourceDomains": 46,
           "frameDomains": 0,
           "baseUriDomains": 0
         }
       },
       "cdn": {
-        "packages": 11,
-        "entries": 38,
+        "packages": 14,
+        "entries": 46,
         "byList": {
-          "connectDomains": 14,
-          "resourceDomains": 24,
-          "frameDomains": 0,
+          "connectDomains": 16,
+          "resourceDomains": 29,
+          "frameDomains": 1,
           "baseUriDomains": 0
         }
       },
       "api": {
-        "packages": 5,
-        "entries": 39,
+        "packages": 6,
+        "entries": 41,
         "byList": {
-          "connectDomains": 39,
+          "connectDomains": 40,
           "resourceDomains": 0,
-          "frameDomains": 0,
+          "frameDomains": 1,
           "baseUriDomains": 0
         }
       },
       "other": {
-        "packages": 7,
-        "entries": 23,
+        "packages": 13,
+        "entries": 97,
         "byList": {
-          "connectDomains": 10,
-          "resourceDomains": 13,
-          "frameDomains": 0,
+          "connectDomains": 24,
+          "resourceDomains": 71,
+          "frameDomains": 2,
           "baseUriDomains": 0
         }
       }
@@ -151,6 +163,7 @@
     "htmlExternalHostCategories": {
       "every-host": 0,
       "development": 0,
+      "local-scheme": 0,
       "sink": 0,
       "fonts": 28,
       "analytics": 0,
@@ -165,8 +178,8 @@
       "MCPAPP001": {
         "name": "csp-missing",
         "level": "warning",
-        "packages": 95,
-        "findings": 95
+        "packages": 72,
+        "findings": 72
       },
       "MCPAPP002": {
         "name": "csp-allows-every-host",
@@ -177,26 +190,26 @@
       "MCPAPP003": {
         "name": "csp-wildcard-host",
         "level": "warning",
-        "packages": 5,
-        "findings": 35
+        "packages": 9,
+        "findings": 73
       },
       "MCPAPP004": {
         "name": "csp-insecure-scheme",
         "level": "warning",
-        "packages": 2,
-        "findings": 7
+        "packages": 0,
+        "findings": 0
       },
       "MCPAPP005": {
         "name": "csp-sink-host",
         "level": "error",
-        "packages": 1,
-        "findings": 1
+        "packages": 2,
+        "findings": 3
       },
       "MCPAPP006": {
         "name": "csp-development-origin",
         "level": "note",
         "packages": 2,
-        "findings": 10
+        "findings": 7
       },
       "MCPAPP007": {
         "name": "permissions-sensitive",
@@ -220,13 +233,13 @@
         "name": "html-dynamic-innerhtml",
         "level": "warning",
         "packages": 9,
-        "findings": 26
+        "findings": 22
       },
       "MCPAPP011": {
         "name": "html-postmessage-wildcard",
         "level": "warning",
-        "packages": 19,
-        "findings": 33
+        "packages": 7,
+        "findings": 22
       },
       "MCPAPP012": {
         "name": "html-inline-handlers",
@@ -282,14 +295,16 @@
       "microphone": 2,
       "camera": 1
     },
-    "toolsVisibleToApp": 48,
+    "toolsVisibleToApp": 46,
     "htmlDocuments": 576,
     "htmlWithInlineScripts": 357,
     "htmlWithHandwrittenScripts": 124,
     "htmlWithUnsafeInnerHtml": 193,
     "htmlWithUnsafeInnerHtmlHandwritten": 12,
+    "htmlWithUnsafeInnerHtmlHandwrittenUnescaped": 12,
     "htmlWithPostMessageStar": 191,
     "htmlWithPostMessageStarHandwritten": 33,
+    "htmlWithPostMessageStarHandwrittenNonProtocol": 11,
     "htmlWithInlineHandlers": 59,
     "htmlWithEval": 76,
     "htmlWithEvalHandwritten": 0,
@@ -313,21 +328,190 @@
       "timeout": 21
     },
     "withUiResources": 654,
-    "uiResourcesSeen": 1440,
-    "mcpAppMime": 1115,
-    "cspDeclared": 1032,
-    "cspWithWildcard": 87,
-    "cspWithFullWildcard": 2,
-    "cspWithSinkHost": 41,
-    "cspWithSinkHostServers": 17,
-    "cspWithTenantSinkHost": 74,
-    "cspWithTenantSinkHostServers": 27,
-    "listReadComparable": 1074,
-    "listReadMismatch": 496,
-    "listReadWider": 6,
-    "listReadWiderServers": 2,
-    "htmlWithUnsafeInnerHtml": 810,
-    "htmlWithPostMessageStar": 813,
-    "toolsSideEffectsVisibleToApp": 194
+    "measures": {
+      "uiResources": {
+        "resources": 1440,
+        "servers": 654
+      },
+      "mcpAppMime": {
+        "resources": 1115,
+        "servers": 540
+      },
+      "readFailed": {
+        "resources": 60,
+        "servers": 22
+      },
+      "cspDeclared": {
+        "resources": 1032,
+        "servers": 474
+      },
+      "cspDeclaredEmpty": {
+        "resources": 280,
+        "servers": 162
+      },
+      "cspWithWildcard": {
+        "resources": 87,
+        "servers": 35
+      },
+      "cspWithFullWildcard": {
+        "resources": 2,
+        "servers": 1
+      },
+      "cspWithInsecureScheme": {
+        "resources": 1,
+        "servers": 1
+      },
+      "cspWithSinkHost": {
+        "resources": 43,
+        "servers": 18
+      },
+      "cspWithTenantSinkHost": {
+        "resources": 74,
+        "servers": 27
+      },
+      "listReadComparable": {
+        "resources": 1074,
+        "servers": 503
+      },
+      "listReadMismatch": {
+        "resources": 496,
+        "servers": 227
+      },
+      "listReadReadOnly": {
+        "resources": 436,
+        "servers": 203
+      },
+      "listReadListOnly": {
+        "resources": 32,
+        "servers": 17
+      },
+      "listReadBothDiffer": {
+        "resources": 28,
+        "servers": 11
+      },
+      "listReadWider": {
+        "resources": 6,
+        "servers": 2
+      },
+      "html": {
+        "resources": 1380,
+        "servers": 633
+      },
+      "htmlHandwritten": {
+        "resources": 833,
+        "servers": 412
+      },
+      "htmlUnsafeInnerHtml": {
+        "resources": 810,
+        "servers": 336
+      },
+      "htmlUnsafeInnerHtmlHandwritten": {
+        "resources": 466,
+        "servers": 211
+      },
+      "htmlPostMessageStarHandwritten": {
+        "resources": 468,
+        "servers": 238
+      },
+      "htmlInlineHandlers": {
+        "resources": 144,
+        "servers": 58
+      },
+      "htmlEvalHandwritten": {
+        "resources": 0,
+        "servers": 0
+      },
+      "htmlFormsWithAction": {
+        "resources": 1,
+        "servers": 1
+      },
+      "htmlMetaCsp": {
+        "resources": 153,
+        "servers": 75
+      },
+      "htmlExternalHosts": {
+        "resources": 389,
+        "servers": 180
+      },
+      "htmlSinkHosts": {
+        "resources": 1,
+        "servers": 1
+      }
+    },
+    "readFailures": {
+      "auth": 38,
+      "protocol": 18,
+      "http": 4
+    },
+    "effectiveCspCategories": {
+      "every-host": {
+        "resources": 2,
+        "servers": 1,
+        "entries": 3
+      },
+      "development": {
+        "resources": 0,
+        "servers": 0,
+        "entries": 0
+      },
+      "local-scheme": {
+        "resources": 0,
+        "servers": 0,
+        "entries": 0
+      },
+      "sink": {
+        "resources": 43,
+        "servers": 18,
+        "entries": 47
+      },
+      "fonts": {
+        "resources": 57,
+        "servers": 23,
+        "entries": 112
+      },
+      "analytics": {
+        "resources": 13,
+        "servers": 2,
+        "entries": 13
+      },
+      "maps": {
+        "resources": 41,
+        "servers": 13,
+        "entries": 112
+      },
+      "storage": {
+        "resources": 106,
+        "servers": 49,
+        "entries": 125
+      },
+      "media": {
+        "resources": 150,
+        "servers": 59,
+        "entries": 227
+      },
+      "cdn": {
+        "resources": 276,
+        "servers": 91,
+        "entries": 451
+      },
+      "api": {
+        "resources": 94,
+        "servers": 30,
+        "entries": 217
+      },
+      "other": {
+        "resources": 624,
+        "servers": 266,
+        "entries": 1803
+      }
+    },
+    "tools": {
+      "total": 10716,
+      "withUi": 2132,
+      "visibleToApp": 2267,
+      "appOnly": 110,
+      "sideEffectsVisibleToApp": 603,
+      "serversWithSideEffectsVisibleToApp": 194
+    }
   }
 }

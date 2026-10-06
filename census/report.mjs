@@ -46,12 +46,14 @@ if (registry) {
     `| package registries | ${Object.entries(r.packageRegistries).map(([k, v]) => `${k} ${v}`).join(', ')} |`, '');
 }
 
-const npm = await readJsonl(path.join(dataDir, 'npm-packages.jsonl'));
+const npm = latestByName(await readJsonl(path.join(dataDir, 'npm-packages.jsonl')));
 if (npm.length > 0) {
   const meta = npm.filter((p) => !p.error);
   const sdk = meta.filter((p) => p.uiSdks?.length > 0);
   const scanned = sdk.filter((p) => p.scan?.ok);
-  const declaring = scanned.filter((p) => p.scan.declaresUi);
+  const mentioning = scanned.filter((p) => p.scan.declaresUi);
+  // Scans from before servesUi only knew that a package mentions a UI resource.
+  const declaring = scanned.filter((p) => p.scan.servesUi ?? p.scan.declaresUi);
   const withCsp = declaring.filter((p) => p.scan.cspDeclared);
   // Classify from the raw domain lists when the scan kept them, so the report follows the
   // current classifier without a rescan; older scans only carry the classification.
@@ -96,7 +98,9 @@ if (npm.length > 0) {
     usingUiSdk: sdk.length,
     bySdk: tally(sdk, (p) => p.uiSdks),
     scanned: scanned.length,
+    mentioningUiResources: mentioning.length,
     declaringUiResources: declaring.length,
+    cspBuiltAtRuntime: count(withCsp, (p) => (p.scan.cspDynamic ?? 0) > 0 && (p.scan.cspArrays ?? 0) === 0),
     cspDeclared: withCsp.length,
     cspWithWildcard: count(withCsp, anyWild),
     cspWithFullWildcard: count(withCsp, anyFull),
@@ -115,8 +119,10 @@ if (npm.length > 0) {
     htmlWithHandwrittenScripts: count(htmlDocs, (h) => (h.handwrittenScripts ?? 0) > 0),
     htmlWithUnsafeInnerHtml: count(htmlDocs, (h) => h.unsafeInnerHtml > 0),
     htmlWithUnsafeInnerHtmlHandwritten: count(htmlDocs, (h) => (h.unsafeInnerHtmlHandwritten ?? 0) > 0),
+    htmlWithUnsafeInnerHtmlHandwrittenUnescaped: count(htmlDocs, (h) => (h.unsafeInnerHtmlHandwrittenUnescaped ?? h.unsafeInnerHtmlHandwritten ?? 0) > 0),
     htmlWithPostMessageStar: count(htmlDocs, (h) => h.postMessageStar > 0),
     htmlWithPostMessageStarHandwritten: count(htmlDocs, (h) => (h.postMessageStarHandwritten ?? 0) > 0),
+    htmlWithPostMessageStarHandwrittenNonProtocol: count(htmlDocs, (h) => (h.postMessageStarHandwrittenNonProtocol ?? h.postMessageStarHandwritten ?? 0) > 0),
     htmlWithInlineHandlers: count(htmlDocs, (h) => h.inlineHandlers > 0),
     htmlWithEval: count(htmlDocs, (h) => h.evalLike > 0),
     htmlWithEvalHandwritten: count(htmlDocs, (h) => (h.evalLikeHandwritten ?? 0) > 0),
@@ -128,11 +134,11 @@ if (npm.length > 0) {
   };
   const n = summary.npm;
   lines.push('## Static census over npm packages', '',
-    `Candidates come from npm keyword searches and the npm packages named in the registry. Tarballs were downloaded and scanned only for packages that depend on a UI SDK (${Object.keys(n.bySdk).join(', ') || 'none found'}). "Declaring UI resources" means the source registers an app resource, mentions the \`text/html;profile=mcp-app\` MIME type or a \`ui://\` URI.`, '',
+    `Candidates come from npm keyword searches and the npm packages named in the registry. Tarballs were downloaded and scanned only for packages that depend on a UI SDK (${Object.keys(n.bySdk).join(', ') || 'none found'}). "Mentioning UI resources" means the source mentions the \`text/html;profile=mcp-app\` MIME type or a \`ui://\` URI, which hosts, renderers and SDKs do too; "serving UI resources" means it registers an app resource, sets that MIME type or a \`ui://\` URI on a resource, or writes a CSP domain list.`, '',
     '| Measure | Count |', '| --- | --- |',
     `| candidate packages | ${n.candidates} |`, `| depending on a UI SDK | ${n.usingUiSdk} (${Object.entries(n.bySdk).map(([k, v]) => `${k} ${v}`).join(', ')}) |`,
-    `| scanned (tarball downloaded) | ${n.scanned} |`, `| declaring UI resources | ${n.declaringUiResources} |`,
-    `| of which declare a CSP (any domain list) | ${n.cspDeclared} (${pct(n.cspDeclared, n.declaringUiResources)}) |`,
+    `| scanned (tarball downloaded) | ${n.scanned} |`, `| mentioning UI resources | ${n.mentioningUiResources} |`, `| serving UI resources | ${n.declaringUiResources} |`,
+    `| of which declare a CSP (any domain list) | ${n.cspDeclared} (${pct(n.cspDeclared, n.declaringUiResources)}); ${n.cspBuiltAtRuntime} only through lists built at runtime |`,
     `| CSP with a wildcard domain | ${n.cspWithWildcard} (${pct(n.cspWithWildcard, n.cspDeclared)} of declared) |`,
     `| CSP with a full wildcard (\`*\`) | ${n.cspWithFullWildcard} |`, `| CSP with an http: domain | ${n.cspWithInsecureScheme} |`,
     `| CSP naming a sink host anyone can use (denylist) | ${n.cspWithSinkHost} |`, `| CSP naming one account on a storage or serverless service from the denylist | ${n.cspWithTenantSinkHost} |`,
@@ -144,8 +150,8 @@ if (npm.length > 0) {
     ...DOMAIN_CATEGORIES.filter((c) => n.cspCategories[c].entries > 0).map((c) => `| ${c} | ${n.cspCategories[c].packages} | ${n.cspCategories[c].entries} | ${CSP_KEYS.map((k) => n.cspCategories[c].byList[k] ?? 0).join(' | ')} |`), '',
     '### The HTML of the UI resources', '', '| Measure | Count |', '| --- | --- |',
     `| HTML documents found (files and embedded) | ${n.htmlDocuments} |`, `| with inline scripts | ${n.htmlWithInlineScripts} (${n.htmlWithHandwrittenScripts} with a handwritten script, the rest bundles) |`,
-    `| with a dynamic innerHTML/insertAdjacentHTML/document.write sink (render-policy lint) | ${n.htmlWithUnsafeInnerHtml} in any script; ${n.htmlWithUnsafeInnerHtmlHandwritten} in handwritten scripts (${pct(n.htmlWithUnsafeInnerHtmlHandwritten, n.htmlWithHandwrittenScripts)} of those) |`,
-    `| with postMessage(…, '*') | ${n.htmlWithPostMessageStar} in any script (the MCP Apps SDK bridge posts to '*' by design, so bundles count the SDK); ${n.htmlWithPostMessageStarHandwritten} in handwritten scripts |`,
+    `| with a dynamic innerHTML/insertAdjacentHTML/document.write sink (render-policy lint) | ${n.htmlWithUnsafeInnerHtml} in any script; ${n.htmlWithUnsafeInnerHtmlHandwritten} in handwritten scripts (${pct(n.htmlWithUnsafeInnerHtmlHandwritten, n.htmlWithHandwrittenScripts)} of those); ${n.htmlWithUnsafeInnerHtmlHandwrittenUnescaped} in handwritten scripts with a value not passed through an escaping helper |`,
+    `| with postMessage(…, '*') | ${n.htmlWithPostMessageStar} in any script (the MCP Apps SDK bridge posts to '*' by design, so bundles count the SDK); ${n.htmlWithPostMessageStarHandwritten} in handwritten scripts; ${n.htmlWithPostMessageStarHandwrittenNonProtocol} outside the app protocol (JSON-RPC or mcp-ui messages to parent) |`,
     `| with inline event handlers | ${n.htmlWithInlineHandlers} |`, `| with eval or new Function | ${n.htmlWithEval} in any script; ${n.htmlWithEvalHandwritten} in handwritten scripts |`,
     `| loading from external hosts | ${n.htmlWithExternalHosts} (${DOMAIN_CATEGORIES.filter((c) => n.htmlExternalHostCategories[c] > 0).map((c) => `${c} ${n.htmlExternalHostCategories[c]}`).join(', ') || 'none'}) |`, `| referencing a sink host | ${n.htmlWithSinkHosts} |`, `| with a form that posts somewhere | ${n.htmlWithFormsAction} |`,
     `| with a CSP meta tag of its own | ${n.htmlWithMetaCsp} |`, '',
@@ -161,43 +167,97 @@ if (remote.length > 0) {
   const reachable = remote.filter((r) => !r.error);
   const withUi = reachable.filter((r) => (r.uiResourceCount ?? 0) > 0);
   const entries = withUi.flatMap((r) => r.uiResources);
-  const declared = entries.filter((e) => e.list.cspDeclared || e.read?.cspDeclared);
+  const declared = (e) => e.list.cspDeclared || e.read?.cspDeclared;
+  // The policy a host enforces: read wins over list when it carries one.
+  const effective = (e) => (e.read?.cspDeclared ? e.read : e.list);
   // Re-classify from the hosts each scan kept, so the report follows the current classifier.
-  const sides = (e) => [e.list, e.read].filter((side) => side?.domains).flatMap((side) => Object.values(side.domains).map((d) => classifyDomains(d.hosts)));
-  const hasSink = (e) => sides(e).some((d) => d.sinks.length > 0);
-  const hasTenantSink = (e) => sides(e).some((d) => d.tenantSinks.length > 0);
-  const servers = (predicate) => count(withUi, (r) => r.uiResources.some(predicate));
+  const lists = (side) => (side?.domains ? Object.entries(side.domains).map(([key, d]) => [key, classifyDomains(d.hosts)]) : []);
+  const sides = (e) => [e.list, e.read].flatMap((side) => lists(side).map(([, d]) => d));
+  const any = (e, flag) => e.list[flag] || e.read?.[flag];
+  const html = (e, key) => (e.html?.[key] ?? 0) > 0;
+  // Every measure over UI resources is also given as the number of servers with at least one.
+  const both = (predicate) => ({ resources: count(entries, predicate), servers: count(withUi, (r) => r.uiResources.some(predicate)) });
+  const measures = {
+    uiResources: both(() => true),
+    mcpAppMime: both((e) => e.isMcpApp),
+    readFailed: both((e) => !!e.readError),
+    cspDeclared: both(declared),
+    cspDeclaredEmpty: both((e) => declared(e) && [e.list, e.read].filter((side) => side?.cspDeclared).every((side) => side.cspEmpty)),
+    cspWithWildcard: both((e) => any(e, 'anyWildcard')),
+    cspWithFullWildcard: both((e) => any(e, 'anyFullWildcard')),
+    cspWithInsecureScheme: both((e) => any(e, 'anyInsecure')),
+    cspWithSinkHost: both((e) => sides(e).some((d) => d.sinks.length > 0)),
+    cspWithTenantSinkHost: both((e) => sides(e).some((d) => d.tenantSinks.length > 0)),
+    listReadComparable: both((e) => e.listVsRead?.comparable),
+    listReadMismatch: both((e) => e.listVsRead?.mismatch),
+    listReadReadOnly: both((e) => e.listVsRead?.readOnly),
+    listReadListOnly: both((e) => e.listVsRead?.listOnly),
+    listReadBothDiffer: both((e) => e.listVsRead?.mismatch && !e.listVsRead.readOnly && !e.listVsRead.listOnly),
+    listReadWider: both((e) => e.listVsRead?.readWider),
+    html: both((e) => !!e.html),
+    htmlHandwritten: both((e) => html(e, 'handwrittenScripts')),
+    htmlUnsafeInnerHtml: both((e) => html(e, 'unsafeInnerHtml')),
+    htmlUnsafeInnerHtmlHandwritten: both((e) => html(e, 'unsafeInnerHtmlHandwritten')),
+    htmlPostMessageStarHandwritten: both((e) => html(e, 'postMessageStarHandwritten')),
+    htmlInlineHandlers: both((e) => html(e, 'inlineHandlers')),
+    htmlEvalHandwritten: both((e) => html(e, 'evalLikeHandwritten')),
+    htmlFormsWithAction: both((e) => html(e, 'formsWithAction')),
+    htmlMetaCsp: both((e) => e.html?.metaCsp === true),
+    htmlExternalHosts: both((e) => (e.html?.externalHosts ?? []).length > 0),
+    htmlSinkHosts: both((e) => (e.html?.sinkHosts ?? []).length > 0),
+  };
+  const categories = Object.fromEntries(DOMAIN_CATEGORIES.map((c) => [c, { resources: 0, servers: 0, entries: 0 }]));
+  for (const r of withUi) {
+    const serverSeen = new Set();
+    for (const e of r.uiResources.filter(declared)) {
+      const seen = new Set();
+      for (const [, d] of lists(effective(e))) for (const c of d.categories) {
+        categories[c].entries += 1;
+        seen.add(c);
+      }
+      for (const c of seen) { categories[c].resources += 1; serverSeen.add(c); }
+    }
+    for (const c of serverSeen) categories[c].servers += 1;
+  }
+  const tools = withUi.map((r) => r.tools).filter(Boolean);
+  const sum = (key) => tools.reduce((n, t) => n + (t[key] ?? 0), 0);
   summary.remote = {
     probed: remote.length,
     reachable: reachable.length,
     failures: tally(remote.filter((r) => r.error), (r) => [r.error.kind]),
     withUiResources: withUi.length,
-    uiResourcesSeen: entries.length,
-    mcpAppMime: count(entries, (e) => e.isMcpApp),
-    cspDeclared: declared.length,
-    cspWithWildcard: count(declared, (e) => e.list.anyWildcard || e.read?.anyWildcard),
-    cspWithFullWildcard: count(declared, (e) => e.list.anyFullWildcard || e.read?.anyFullWildcard),
-    cspWithSinkHost: count(declared, hasSink),
-    cspWithSinkHostServers: servers(hasSink),
-    cspWithTenantSinkHost: count(declared, hasTenantSink),
-    cspWithTenantSinkHostServers: servers(hasTenantSink),
-    listReadComparable: count(entries, (e) => e.listVsRead?.comparable),
-    listReadMismatch: count(entries, (e) => e.listVsRead?.mismatch),
-    listReadWider: count(entries, (e) => e.listVsRead?.readWider),
-    listReadWiderServers: servers((e) => e.listVsRead?.readWider),
-    htmlWithUnsafeInnerHtml: count(entries, (e) => (e.html?.unsafeInnerHtml ?? 0) > 0),
-    htmlWithPostMessageStar: count(entries, (e) => (e.html?.postMessageStar ?? 0) > 0),
-    toolsSideEffectsVisibleToApp: count(withUi, (r) => (r.tools?.sideEffectsVisibleToApp ?? 0) > 0),
+    measures,
+    readFailures: tally(entries.filter((e) => e.readError), (e) => [e.readError]),
+    effectiveCspCategories: categories,
+    tools: { total: sum('total'), withUi: sum('withUi'), visibleToApp: sum('visibleToApp'), appOnly: sum('appOnly'), sideEffectsVisibleToApp: sum('sideEffectsVisibleToApp'), serversWithSideEffectsVisibleToApp: count(tools, (t) => (t.sideEffectsVisibleToApp ?? 0) > 0) },
   };
   const m = summary.remote;
-  lines.push('## Protocol census over remote servers', '', 'Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further. From "declaring a CSP" down, rows count UI resources unless they say servers.', '',
+  const row = (label, key) => `| ${label} | ${m.measures[key].resources} | ${m.measures[key].servers} |`;
+  const t = m.tools;
+  lines.push('## Protocol census over remote servers', '', 'Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further.', '',
     '| Measure | Count |', '| --- | --- |',
     `| servers probed | ${m.probed} |`, `| reachable and speaking MCP | ${m.reachable} |`, `| failures | ${Object.entries(m.failures).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'} |`,
-    `| with UI resources | ${m.withUiResources} |`, `| UI resources read | ${m.uiResourcesSeen} (${m.mcpAppMime} with the MCP Apps MIME type) |`,
-    `| declaring a CSP | ${m.cspDeclared} (${pct(m.cspDeclared, m.uiResourcesSeen)}) |`, `| CSP with a wildcard | ${m.cspWithWildcard} |`, `| CSP with a full wildcard | ${m.cspWithFullWildcard} |`, `| CSP naming a sink host anyone can use | ${m.cspWithSinkHost} on ${m.cspWithSinkHostServers} servers |`, `| CSP naming one account on a storage or serverless service from the denylist | ${m.cspWithTenantSinkHost} on ${m.cspWithTenantSinkHostServers} servers |`,
-    `| list vs read policy differs | ${m.listReadMismatch} of ${m.listReadComparable} comparable (${m.listReadWider} where read is wider, on ${m.listReadWiderServers} servers) |`,
-    `| HTML with a dynamic innerHTML sink | ${m.htmlWithUnsafeInnerHtml} |`, `| HTML with postMessage(…, '*') | ${m.htmlWithPostMessageStar} |`,
-    `| servers with side-effect tools visible to the app | ${m.toolsSideEffectsVisibleToApp} |`, '');
+    `| with UI resources | ${m.withUiResources} |`, '',
+    '### Declared policies and HTML, as served', '',
+    'Each measure counts UI resources and the servers with at least one such resource. A policy counts as declared when either `resources/list` or `resources/read` carries `ui.csp`.', '',
+    '| Measure | UI resources | Servers |', '| --- | --- | --- |',
+    row('UI resources read', 'uiResources'), row('with the MCP Apps MIME type', 'mcpAppMime'), row(`resources/read failed (${Object.entries(m.readFailures).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'})`, 'readFailed'),
+    row('declaring a CSP', 'cspDeclared'), row('of which every list is empty', 'cspDeclaredEmpty'),
+    row('CSP with a wildcard host', 'cspWithWildcard'), row('CSP allowing every host (`*` or scheme-only)', 'cspWithFullWildcard'), row('CSP with an http: origin', 'cspWithInsecureScheme'),
+    row('CSP naming a sink host anyone can use', 'cspWithSinkHost'), row('CSP naming one account on a storage or serverless service from the denylist', 'cspWithTenantSinkHost'),
+    row('`_meta.ui` comparable between list and read', 'listReadComparable'), row('list and read differ', 'listReadMismatch'), row('only read carries `_meta.ui`', 'listReadReadOnly'), row('only list carries `_meta.ui`', 'listReadListOnly'), row('both carry it, with different values', 'listReadBothDiffer'), row('read is wider than list', 'listReadWider'),
+    row('HTML documents', 'html'), row('with a handwritten inline script', 'htmlHandwritten'), row('with a dynamic innerHTML-class sink, any script', 'htmlUnsafeInnerHtml'), row('with a dynamic innerHTML-class sink, handwritten script', 'htmlUnsafeInnerHtmlHandwritten'),
+    row("with postMessage(…, '*') in a handwritten script", 'htmlPostMessageStarHandwritten'), row('with inline event handlers', 'htmlInlineHandlers'), row('with eval or new Function in a handwritten script', 'htmlEvalHandwritten'),
+    row('with a form that posts somewhere', 'htmlFormsWithAction'), row('with a CSP meta tag of its own', 'htmlMetaCsp'), row('loading from external hosts', 'htmlExternalHosts'), row('referencing a sink host', 'htmlSinkHosts'), '',
+    '### What the enforced policies allow', '',
+    'Hosts in the policy a host enforces (read when it carries `ui.csp`, otherwise list), by the heuristic category of `categorizeDomain` in mcp-app-lint. A resource or server counts once per category.', '',
+    '| Category | UI resources | Servers | Entries |', '| --- | --- | --- | --- |',
+    ...DOMAIN_CATEGORIES.map((c) => `| ${c} | ${categories[c].resources} | ${categories[c].servers} | ${categories[c].entries} |`), '',
+    '### Tools on servers with UI resources', '',
+    'Only tools that carry `_meta.ui` are classified; the others are counted in the total alone, so the app-visible figures are a lower bound.', '',
+    '| Measure | Count |', '| --- | --- |',
+    `| tools | ${t.total} |`, `| with a UI resource (\`_meta.ui.resourceUri\`) | ${t.withUi} |`, `| with \`_meta.ui\` and visible to the app (explicitly or by default) | ${t.visibleToApp} |`, `| of those, app-only | ${t.appOnly} |`,
+    `| of those, without readOnlyHint | ${t.sideEffectsVisibleToApp}, on ${t.serversWithSideEffectsVisibleToApp} servers |`, '');
 }
 
 await writeFile(path.join(censusRoot, 'SUMMARY.md'), lines.join('\n'));
