@@ -156,7 +156,7 @@ The policy has three groups: `content` (which elements, attributes and classes a
 | `hosts` | `[]` | `'none'`, `'any'`, or exact host patterns (`host[:port]`). Same-origin images are always allowed. |
 | `allowWildcardHosts` | `false` | Honour `*.example.com`. A wildcard allows every subdomain, including user-controlled ones, so it is an explicit choice; a wildcard without it throws at startup. |
 | `query` | `'strip'` | Keep, strip or reject query strings on remote images. Stripping breaks signed URLs and defeats `?data=` exfiltration; choose per host with `rewriteUrl`. |
-| `rewriteUrl` | `null` | Rewrite allowed remote images, for example through an image proxy. `null` blocks the image. |
+| `rewriteUrl` | `null` | Rewrite allowed remote images, for example through an image proxy. `null` blocks the image. Runs after every other image check; route images here, not through `urls.decide`. Building the proxy itself without opening an SSRF hole: [docs/image-proxy.md](docs/image-proxy.md). |
 | `blocked` | `'placeholder'` | Replace a blocked image with `<a class="rp-blocked-image" href="…" target="_blank" rel="noopener noreferrer">[image blocked: alt]</a>` (the "click to open" pattern), or remove it. The placeholder goes through the same policy: a sink host gets no link either. |
 
 Always removed, in every mode: `script`, `style`, `template`, `iframe`, `object`, `embed`, `base`, `meta`, `link`, `math`, `dialog`, `marquee`; the attributes `srcset`, `sizes`, `ping`, `background`, `formaction`, `action`, `usemap`, `is`, `slot`, `part`, `popover*`, `contenteditable`, `autofocus`, and every `on*` handler. `id` and `name` are prefixed (`user-content-`) against DOM clobbering.

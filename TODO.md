@@ -52,7 +52,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [ ] Стриминг v2: перепарсинг только незавершённого хвоста. Попытка (сканер границ в `settle.ts`) откачена: строгий property-тест на эквивалентность с полным рендером находил нелокальные случаи Markdown (ссылочные определения, «рыхлые» списки, растущая последняя строка). Пока рендерится весь буфер с патчем хвоста (`patchChildren`); property-тест — планка приёмки для будущей версии. Push: 2 ms при 8 kB, 17 ms при 64 kB.
 - [x] React: `onDecisions` и для стримингового режима (через `createContentBinding`, `end()` возвращает решения).
 - [ ] Angular: тесты на TestBed поверх существующего браузерного прогона; мост для ngx-markdown отложен (ngx-markdown пишет в `innerHTML`, мост стал бы заменой компонента).
-- [ ] Гайд по image proxy для `rewriteImageUrl` (защита от SSRF на стороне прокси).
+- [x] Гайд по image proxy для `images.rewriteUrl` (защита от SSRF на стороне прокси): `docs/image-proxy.md`, эталонный прокси проверен на таблице атак из гайда.
 - [x] Из ревью дизайна: `RenderPolicy` сгруппирован в `content / urls / images` с послойным merge; хук политики URL `urls.decide(url, context)` (allow / deny / rewrite для ссылок и картинок). Сделано до релиза, пока нет пользователей.
 - [ ] Остаток ревью дизайна (не ломает API, можно после релиза): конвейер атрибутных правил вместо одного хука в `sanitize.ts`; разбить mermaid-трансформ на кэш и обёртку; JSDoc-типы для `mcp-app-lint`.
 - [ ] Ревизия стартового denylist стоков (`packages/core/src/data/sink-domains.ts`), версия в поле `version`.
