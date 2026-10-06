@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 — 2026-10-06
+
+`@render-policy/core`, `@render-policy/react`, `@render-policy/mermaid`, `@render-policy/angular`
+and `eslint-plugin-render-policy` are unchanged; they move to 0.1.3 so all six packages share one
+version.
 
 - `mcp-app-lint`: MCPAPP001 (`csp-missing`) fires only when the UI references an external host:
   an attribute such as `src` or `href`, or an absolute URL in `fetch`, `WebSocket`,
