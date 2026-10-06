@@ -79,6 +79,8 @@ Unit tests of react/mermaid alias `@render-policy/core` to core's `src`, so they
 ## Publishing
 
 `git tag v0.1.0 && git push origin v0.1.0` runs `.github/workflows/release.yml`: checks, version/tag
-match, tarballs attached to the GitHub release, npm publish with provenance only when `NPM_TOKEN` is set.
-The Angular package publishes from `packages/angular/dist`. Scoped packages need the `render-policy`
-npm organisation. GitHub Pages must be enabled with source "GitHub Actions" for `pages.yml` to deploy.
+match, tarballs attached to the GitHub release, npm publish through trusted publishing (OIDC, no token
+secret, provenance added by npm). Every package trusts `shteynu/render-policy` + `release.yml` on npmjs.com;
+a new package needs `npm trust github <pkg> --repo shteynu/render-policy --file release.yml --allow-publish`
+(npm 11.10+) after its first manual publish. The Angular package publishes from `packages/angular/dist`.
+Scoped packages live in the `render-policy` npm organisation. GitHub Pages must be enabled with source "GitHub Actions" for `pages.yml` to deploy.

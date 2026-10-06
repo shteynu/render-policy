@@ -25,7 +25,7 @@ framework; Angular is the first adapter. MIT, so upstream projects can take the 
 
 Done when:
 
-- [ ] core, Angular and React adapters and the ESLint plugin published on npm as v0.1 (`.github/workflows/release.yml` attaches the tarballs to a GitHub release on every `v*` tag and publishes to npm once `NPM_TOKEN` is set)
+- [x] core, Angular and React adapters and the ESLint plugin published on npm as v0.1 (0.1.0 published by hand on 2026-10-06; from then on `.github/workflows/release.yml` attaches the tarballs to a GitHub release on every `vX.Y.Z` tag and publishes to npm through trusted publishing)
 - [x] every advisory class in the table has a test
 - [x] the streaming render makes no request to an unclosed or unchecked URL (unit + browser)
 - [x] demo of the same hostile markup with and without the policy

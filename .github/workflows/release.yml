@@ -5,7 +5,10 @@ name: Release
 #   1. runs the checks and builds every package;
 #   2. attaches the npm tarballs to a GitHub Release, so the packages can be installed
 #      from the release URL without npm;
-#   3. publishes to npm with provenance when the NPM_TOKEN secret is set.
+#   3. publishes to npm through trusted publishing (OIDC, no token secret); npm adds
+#      provenance itself. Each package on npmjs.com trusts this repository and this file
+#      (`npm trust github <pkg> --repo shteynu/render-policy --file release.yml --allow-publish`),
+#      so renaming the file breaks publishing until the trust is updated.
 # A dispatch run creates the tag itself, at the checked-out commit, via the release step.
 # Only full version tags (v0.1.0) trigger it; the moving major tag of the GitHub Action (v1) does not.
 
@@ -26,8 +29,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    env:
-      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - name: Resolve the release tag
         id: tag
@@ -78,29 +79,11 @@ jobs:
           tag_name: ${{ steps.tag.outputs.name }}
           files: artifacts/*.tgz
           generate_release_notes: true
-      - if: env.HAS_NPM_TOKEN == 'true'
-        run: npm publish --provenance --access public -w packages/core
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - if: env.HAS_NPM_TOKEN == 'true'
-        run: npm publish --provenance --access public -w packages/eslint-plugin
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - if: env.HAS_NPM_TOKEN == 'true'
-        run: npm publish --provenance --access public -w packages/react
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - if: env.HAS_NPM_TOKEN == 'true'
-        run: npm publish --provenance --access public -w packages/mermaid
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - if: env.HAS_NPM_TOKEN == 'true'
-        run: npm publish --provenance --access public -w packages/mcp-app-lint
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - if: env.HAS_NPM_TOKEN == 'true'
-        run: cd packages/angular/dist && npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - if: env.HAS_NPM_TOKEN != 'true'
-        run: echo "NPM_TOKEN is not set; tarballs are on the GitHub release, npm publish skipped."
+      # Trusted publishing needs npm 11.5.1 or later; Node 22 ships npm 10.
+      - run: npm install -g npm@11
+      - run: npm publish --access public -w packages/core
+      - run: npm publish --access public -w packages/eslint-plugin
+      - run: npm publish --access public -w packages/react
+      - run: npm publish --access public -w packages/mermaid
+      - run: npm publish --access public -w packages/mcp-app-lint
+      - run: cd packages/angular/dist && npm publish --access public
