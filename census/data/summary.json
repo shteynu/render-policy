@@ -1,47 +1,47 @@
 {
-  "generatedAt": "2026-09-30T19:07:38.854Z",
+  "generatedAt": "2026-10-06T10:28:58.361Z",
   "registry": {
-    "collectedAt": "2026-09-30T18:18:31.436Z",
-    "entries": 37759,
-    "servers": 37759,
-    "withRemotes": 23358,
-    "withStreamableHttp": 22618,
-    "withSse": 1077,
-    "withPackages": 15795,
+    "collectedAt": "2026-10-06T09:05:14.280Z",
+    "entries": 39919,
+    "servers": 39919,
+    "withRemotes": 25060,
+    "withStreamableHttp": 24321,
+    "withSse": 1078,
+    "withPackages": 16349,
     "packageRegistries": {
-      "npm": 10462,
-      "oci": 1027,
-      "pypi": 4101,
-      "mcpb": 1377,
-      "cargo": 64,
-      "nuget": 135
+      "npm": 10811,
+      "oci": 1069,
+      "pypi": 4235,
+      "mcpb": 1461,
+      "cargo": 70,
+      "nuget": 138
     }
   },
   "npm": {
-    "candidates": 10077,
-    "metadataOk": 9995,
-    "usingUiSdk": 168,
+    "candidates": 10419,
+    "metadataOk": 10336,
+    "usingUiSdk": 174,
     "bySdk": {
-      "@modelcontextprotocol/ext-apps": 159,
+      "@modelcontextprotocol/ext-apps": 165,
       "@mcp-ui/server": 13,
       "@mcp-ui/client": 1
     },
-    "scanned": 168,
-    "declaringUiResources": 153,
-    "cspDeclared": 60,
+    "scanned": 174,
+    "declaringUiResources": 158,
+    "cspDeclared": 63,
     "cspWithWildcard": 6,
-    "cspWithFullWildcard": 4,
+    "cspWithFullWildcard": 5,
     "cspWithInsecureScheme": 2,
     "cspWithSinkHost": 1,
-    "cspEntries": 211,
-    "cspDistinctHosts": 93,
+    "cspEntries": 218,
+    "cspDistinctHosts": 96,
     "cspCategories": {
       "every-host": {
-        "packages": 4,
-        "entries": 8,
+        "packages": 5,
+        "entries": 9,
         "byList": {
           "connectDomains": 3,
-          "resourceDomains": 5,
+          "resourceDomains": 6,
           "frameDomains": 0,
           "baseUriDomains": 0
         }
@@ -117,20 +117,20 @@
         }
       },
       "cdn": {
-        "packages": 10,
-        "entries": 34,
+        "packages": 11,
+        "entries": 38,
         "byList": {
           "connectDomains": 14,
-          "resourceDomains": 20,
+          "resourceDomains": 24,
           "frameDomains": 0,
           "baseUriDomains": 0
         }
       },
       "api": {
-        "packages": 4,
-        "entries": 38,
+        "packages": 5,
+        "entries": 39,
         "byList": {
-          "connectDomains": 38,
+          "connectDomains": 39,
           "resourceDomains": 0,
           "frameDomains": 0,
           "baseUriDomains": 0
@@ -138,9 +138,9 @@
       },
       "other": {
         "packages": 7,
-        "entries": 22,
+        "entries": 23,
         "byList": {
-          "connectDomains": 9,
+          "connectDomains": 10,
           "resourceDomains": 13,
           "frameDomains": 0,
           "baseUriDomains": 0
@@ -164,14 +164,14 @@
       "MCPAPP001": {
         "name": "csp-missing",
         "level": "warning",
-        "packages": 93,
-        "findings": 93
+        "packages": 95,
+        "findings": 95
       },
       "MCPAPP002": {
         "name": "csp-allows-every-host",
         "level": "error",
-        "packages": 4,
-        "findings": 8
+        "packages": 5,
+        "findings": 9
       },
       "MCPAPP003": {
         "name": "csp-wildcard-host",
@@ -200,8 +200,8 @@
       "MCPAPP007": {
         "name": "permissions-sensitive",
         "level": "note",
-        "packages": 1,
-        "findings": 1
+        "packages": 3,
+        "findings": 3
       },
       "MCPAPP008": {
         "name": "tool-side-effects-app-visible",
@@ -218,14 +218,14 @@
       "MCPAPP010": {
         "name": "html-dynamic-innerhtml",
         "level": "warning",
-        "packages": 10,
-        "findings": 24
+        "packages": 9,
+        "findings": 26
       },
       "MCPAPP011": {
         "name": "html-postmessage-wildcard",
         "level": "warning",
-        "packages": 18,
-        "findings": 32
+        "packages": 19,
+        "findings": 33
       },
       "MCPAPP012": {
         "name": "html-inline-handlers",
@@ -272,16 +272,17 @@
     },
     "permissions": {
       "clipboardWrite": 3,
-      "microphone": 1
+      "microphone": 2,
+      "camera": 1
     },
-    "toolsVisibleToApp": 46,
-    "htmlDocuments": 596,
-    "htmlWithInlineScripts": 373,
-    "htmlWithHandwrittenScripts": 144,
-    "htmlWithUnsafeInnerHtml": 205,
-    "htmlWithUnsafeInnerHtmlHandwritten": 24,
-    "htmlWithPostMessageStar": 189,
-    "htmlWithPostMessageStarHandwritten": 32,
+    "toolsVisibleToApp": 48,
+    "htmlDocuments": 576,
+    "htmlWithInlineScripts": 357,
+    "htmlWithHandwrittenScripts": 124,
+    "htmlWithUnsafeInnerHtml": 193,
+    "htmlWithUnsafeInnerHtmlHandwritten": 12,
+    "htmlWithPostMessageStar": 191,
+    "htmlWithPostMessageStarHandwritten": 33,
     "htmlWithInlineHandlers": 59,
     "htmlWithEval": 76,
     "htmlWithEvalHandwritten": 0,
@@ -290,7 +291,32 @@
     "htmlWithFormsAction": 7,
     "htmlWithMetaCsp": 15,
     "errors": {
-      "http-404": 82
+      "http-404": 83
     }
+  },
+  "remote": {
+    "probed": 24321,
+    "reachable": 15120,
+    "failures": {
+      "auth": 6126,
+      "http": 1148,
+      "network": 989,
+      "not-mcp": 869,
+      "protocol": 48,
+      "timeout": 21
+    },
+    "withUiResources": 654,
+    "uiResourcesSeen": 1440,
+    "mcpAppMime": 1115,
+    "cspDeclared": 1032,
+    "cspWithWildcard": 87,
+    "cspWithFullWildcard": 2,
+    "cspWithSinkHost": 84,
+    "listReadComparable": 1074,
+    "listReadMismatch": 496,
+    "listReadWider": 6,
+    "htmlWithUnsafeInnerHtml": 810,
+    "htmlWithPostMessageStar": 813,
+    "toolsSideEffectsVisibleToApp": 194
   }
 }
