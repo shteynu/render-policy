@@ -70,17 +70,30 @@ function cspEntryFindings(key, raw, uri, extra) {
 }
 
 /**
+ * The hosts a UI document loads from or calls, sorted and without duplicates.
+ * @param {Iterable<{ externalHosts?: string[], networkHosts?: string[] }>} docs
+ */
+function referencedHosts(docs) {
+  const hosts = new Set();
+  for (const doc of docs) for (const host of [...(doc.externalHosts ?? []), ...(doc.networkHosts ?? [])]) hosts.add(host);
+  return [...hosts].sort();
+}
+
+/**
  * Findings about one `_meta` object of a UI resource (the resolved one: read, falling back to list).
+ * `hosts` are the hosts the UI references (see lintResource); without a CSP the host blocks them,
+ * and that is MCPAPP001. A UI that references none needs no CSP: the restrictive default fits it.
  * @param {unknown} meta
  * @param {string} uri
+ * @param {readonly string[]} [hosts]
  */
-export function lintUiMeta(meta, uri) {
+export function lintUiMeta(meta, uri, hosts = []) {
   /** @type {Finding[]} */
   const findings = [];
   const ui = uiMetaOf(meta);
   const analysis = analyzeUiMeta(meta);
   if (!analysis.cspDeclared) {
-    findings.push(finding('MCPAPP001', 'No ui.csp declared; a compliant host applies default-src \'none\'.', uri));
+    if (hosts.length > 0) findings.push(cspMissing(hosts, uri));
   } else {
     for (const key of CSP_KEYS) {
       for (const raw of ui?.csp?.[key] ?? []) findings.push(...cspEntryFindings(key, raw, uri, { logical: { name: `csp.${key}`, kind: 'member' } }));
@@ -93,6 +106,13 @@ export function lintUiMeta(meta, uri) {
 }
 
 /**
+ * @param {readonly string[]} hosts
+ * @param {string} uri
+ */
+const cspMissing = (hosts, uri) =>
+  finding('MCPAPP001', `No ui.csp declared, but the UI references ${hosts.join(', ')}; a compliant host applies default-src 'none' and blocks them.`, uri, { properties: { hosts: [...hosts] } });
+
+/**
  * Findings about a UI resource as served: listing entry, read result content item, HTML.
  * @param {ResourceInput} resource
  */
@@ -100,13 +120,14 @@ export function lintResource({ uri, listMeta = null, readMeta = null, html = nul
   /** @type {Finding[]} */
   const findings = [];
   const effective = readMeta ?? listMeta;
-  findings.push(...lintUiMeta(effective, uri));
+  const analysis = typeof html === 'string' ? withSinkHosts(analyzeHtml(html)) : null;
+  findings.push(...lintUiMeta(effective, uri, analysis ? referencedHosts([analysis]) : []));
   if (listMeta && readMeta) {
     const compared = compareListRead(listMeta, readMeta);
     if (compared.readWider) findings.push(finding('MCPAPP018', 'resources/read declares a wider policy than resources/list.', uri));
     else if (compared.mismatch) findings.push(finding('MCPAPP017', 'resources/read and resources/list declare different policies.', uri));
   }
-  if (typeof html === 'string') findings.push(...lintHtml(html, uri));
+  if (analysis) findings.push(...htmlFindings(analysis, uri));
   return findings;
 }
 
@@ -187,11 +208,12 @@ export function lintPackageScan(scan, root = '.') {
     if (!scan.cspDeclared) delete fake.ui.csp;
     if (Array.isArray(scan.domainSites)) {
       // Each entry where it is written, so code scanning can point at the line.
-      if (!scan.cspDeclared && servesUi) findings.push(...lintUiMeta({ ui: {} }, root));
+      const hosts = referencedHosts(scan.html ?? []);
+      if (!scan.cspDeclared && servesUi && hosts.length > 0) findings.push(cspMissing(hosts, root));
       for (const site of scan.domainSites) findings.push(...cspEntryFindings(site.key, site.raw, `${root}/${site.file}`.replace(/^\.\//, ''), { region: { startLine: site.line } }));
       findings.push(...lintUiMeta({ ui: { csp: {}, permissions: fake.ui.permissions } }, root).filter((f) => f.ruleId === 'MCPAPP007'));
     } else {
-      findings.push(...lintUiMeta(fake, root));
+      findings.push(...lintUiMeta(fake, root, servesUi ? referencedHosts(scan.html ?? []) : []));
     }
   }
   for (const doc of scan.html ?? []) {

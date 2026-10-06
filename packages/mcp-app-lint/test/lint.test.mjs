@@ -13,7 +13,7 @@ test('rules have unique ids and names', () => {
 });
 
 test('ui meta: missing csp, every-host entries, wildcards, http, sink hosts, dev origins, permissions', () => {
-  assert.deepEqual(ids(lintUiMeta({ ui: { prefersBorder: true } }, 'ui://a')), ['MCPAPP001']);
+  assert.deepEqual(ids(lintUiMeta({ ui: { prefersBorder: true } }, 'ui://a', ['api.example.com'])), ['MCPAPP001']);
   const findings = lintUiMeta(
     { ui: { csp: { connectDomains: ['https:', '*.example.com', 'http://api.example.com', 'https://hooks.zapier.com'], frameDomains: ['blob:', 'http://127.0.0.1:*'] }, permissions: { camera: {}, clipboardWrite: {} } } },
     'ui://a',
@@ -21,6 +21,22 @@ test('ui meta: missing csp, every-host entries, wildcards, http, sink hosts, dev
   // blob: never reaches the network; the loopback origin is a development origin, not an insecure transport.
   assert.deepEqual(ids(findings), ['MCPAPP002', 'MCPAPP003', 'MCPAPP004', 'MCPAPP005', 'MCPAPP006', 'MCPAPP007']);
   assert.equal(findings.find((f) => f.ruleId === 'MCPAPP005').logical.name, 'csp.connectDomains');
+});
+
+test('missing csp: reported only when the UI references a host, by attribute or by an absolute URL in a network call', () => {
+  assert.deepEqual(lintUiMeta({ ui: { prefersBorder: true } }, 'ui://a'), []);
+  const html = (body) => `<!doctype html><html><body>${body}</body></html>`;
+  // Self-contained: inline script and style, relative and data: URLs, a namespace string. The restrictive default fits.
+  const selfContained = html('<img src="data:image/png;base64,AA"><script src="./app.js"></script><script>\nconst ns = "http://www.w3.org/2000/svg";\nfetch(`${base}/x`);\n</script>');
+  assert.deepEqual(lintResource({ uri: 'ui://a', html: selfContained }), []);
+  const byAttribute = lintResource({ uri: 'ui://a', html: html('<link rel="stylesheet" href="https://fonts.example.com/a.css">') });
+  assert.deepEqual(ids(byAttribute), ['MCPAPP001', 'MCPAPP015']);
+  assert.deepEqual(byAttribute.find((f) => f.ruleId === 'MCPAPP001').properties.hosts, ['fonts.example.com']);
+  const byCall = lintResource({ uri: 'ui://a', html: html("<script>\nfetch('https://api.example.com/v1/items');\nnew WebSocket(`wss://live.example.com/${id}`);\nxhr.open('GET', \"http://localhost:3001/data\");\n</script>") });
+  assert.deepEqual(byCall.find((f) => f.ruleId === 'MCPAPP001').properties.hosts, ['api.example.com', 'live.example.com', 'localhost']);
+  // With a CSP the hosts are the CSP's business (MCPAPP015 and the entry rules), not MCPAPP001.
+  const declared = lintResource({ uri: 'ui://a', readMeta: { ui: { csp: { connectDomains: ['https://api.example.com'] } } }, html: html("<script>fetch('https://api.example.com/v1');</script>") });
+  assert.ok(!ids(declared).includes('MCPAPP001'));
 });
 
 test('ui meta: a shared storage host is a sink, one account on it is a note', () => {
@@ -92,6 +108,7 @@ test('sarif: valid 2.1.0 shape with rule indexes and locations', () => {
   assert.equal(result.level, 'error');
   assert.equal(result.locations[0].physicalLocation.artifactLocation.uri, 'ui://a');
   assert.match(toText(findings), /error +MCPAPP002 ui:\/\/a/);
+  assert.equal(toText([{ ruleId: 'MCPAPP003', message: 'm', uri: 'server.ts', region: { startLine: 4 } }]), 'warning MCPAPP003 server.ts:4  m\n');
 });
 
 test('sarif: the driver version is the package version', async () => {

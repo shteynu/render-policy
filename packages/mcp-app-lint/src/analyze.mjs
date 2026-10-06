@@ -211,6 +211,24 @@ export function postMessageStarCalls(code) {
   return calls;
 }
 const URL_ATTR_RE = /\b(?:src|href|action|poster|data)\s*=\s*["']([^"']+)["']/gi;
+// A network call with an absolute URL literal: fetch, sendBeacon, import(), WebSocket, EventSource, XHR open.
+const NETWORK_CALL_RE = /(?:\b(?:fetch|sendBeacon|import)\s*\(|\bnew\s+(?:WebSocket|EventSource)\s*\(|\.open\s*\(\s*["'`][A-Za-z]+["'`]\s*,)\s*["'`]((?:https?|wss?):\/\/[^"'`\s]+)/g;
+
+/**
+ * Hostnames of URLs, skipping the ones that do not parse.
+ * @param {Iterable<string>} urls
+ */
+function hostnames(urls) {
+  const hosts = new Set();
+  for (const url of urls) {
+    try {
+      hosts.add(new URL(url.startsWith('//') ? `https:${url}` : url).hostname.toLowerCase());
+    } catch {
+      /* ignore */
+    }
+  }
+  return [...hosts].sort();
+}
 
 /**
  * Static signals in a UI resource's HTML. Heuristic by design; the report says so.
@@ -240,19 +258,12 @@ export function analyzeHtml(html) {
     formsWithAction: (text.match(/<form\b[^>]*\baction\s*=/gi) ?? []).length,
     metaCsp: /<meta\b[^>]*http-equiv\s*=\s*["']content-security-policy["']/i.test(text),
     externalHosts: /** @type {string[]} */ ([]),
+    // Hosts that script calls with an absolute URL (fetch, WebSocket, …), bundles included.
+    networkHosts: /** @type {string[]} */ ([]),
     sinkHosts: /** @type {string[]} */ ([]),
   };
-  const hosts = new Set();
-  for (const match of text.matchAll(URL_ATTR_RE)) {
-    const value = match[1] ?? '';
-    if (!/^(https?:)?\/\//i.test(value)) continue;
-    try {
-      hosts.add(new URL(value.startsWith('//') ? `https:${value}` : value).hostname.toLowerCase());
-    } catch {
-      /* ignore */
-    }
-  }
-  result.externalHosts = [...hosts].sort();
+  result.externalHosts = hostnames([...text.matchAll(URL_ATTR_RE)].map((m) => m[1] ?? '').filter((v) => /^(https?:)?\/\//i.test(v)));
+  result.networkHosts = hostnames([...text.matchAll(NETWORK_CALL_RE)].map((m) => m[1] ?? ''));
   for (const match of text.matchAll(SCRIPT_RE)) {
     const attrs = match[1] ?? '';
     const body = match[2] ?? '';

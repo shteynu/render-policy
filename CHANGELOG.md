@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- `mcp-app-lint`: MCPAPP001 (`csp-missing`) fires only when the UI references an external host:
+  an attribute such as `src` or `href`, or an absolute URL in `fetch`, `WebSocket`,
+  `EventSource`, XHR `open`, `sendBeacon` or `import()`. Without a CSP a compliant host applies
+  `default-src 'none'`, so a self-contained UI was being told to declare a policy it does not
+  need (19 of the 25 examples in the MCP Apps SDK repository; 72 of the 146 census packages that
+  serve a UI, now 15). The finding lists the hosts (`properties.hosts`). In a package scan the
+  hosts come from its HTML documents, not from server code. `lintUiMeta()` takes the hosts as a
+  third argument and reports nothing for a missing CSP without them; `analyzeHtml()` returns
+  `networkHosts` beside `externalHosts`.
+- `mcp-app-lint`: text output no longer prints `:undefined` for a finding with a line and no
+  column (CSP entries in a package scan).
+
 ## 0.1.2 — 2026-10-06
 
 `@render-policy/core`, `@render-policy/react`, `@render-policy/mermaid` and `@render-policy/angular`

@@ -33,7 +33,7 @@ Candidates come from npm keyword searches and the npm packages named in the regi
 | CSP naming a sink host anyone can use (denylist) | 2 |
 | CSP naming one account on a storage or serverless service from the denylist | 0 |
 | requesting sandbox permissions | clipboardWrite 3, microphone 2, camera 1 |
-| tools declared visible to the app | 46 packages |
+| tools declared visible to the app | 47 packages |
 
 ### What the declared domains are
 
@@ -58,10 +58,10 @@ Candidates come from npm keyword searches and the npm packages named in the regi
 
 | Measure | Count |
 | --- | --- |
-| HTML documents found (files and embedded) | 576 |
-| with inline scripts | 357 (124 with a handwritten script, the rest bundles) |
-| with a dynamic innerHTML/insertAdjacentHTML/document.write sink (render-policy lint) | 193 in any script; 12 in handwritten scripts (10% of those); 12 in handwritten scripts with a value not passed through an escaping helper |
-| with postMessage(…, '*') | 191 in any script (the MCP Apps SDK bridge posts to '*' by design, so bundles count the SDK); 33 in handwritten scripts; 11 outside the app protocol (JSON-RPC or mcp-ui messages to parent) |
+| HTML documents found (files and embedded) | 577 |
+| with inline scripts | 358 (124 with a handwritten script, the rest bundles) |
+| with a dynamic innerHTML/insertAdjacentHTML/document.write sink (render-policy lint) | 194 in any script; 12 in handwritten scripts (10% of those); 12 in handwritten scripts with a value not passed through an escaping helper |
+| with postMessage(…, '*') | 192 in any script (the MCP Apps SDK bridge posts to '*' by design, so bundles count the SDK); 33 in handwritten scripts; 11 outside the app protocol (JSON-RPC or mcp-ui messages to parent) |
 | with inline event handlers | 59 |
 | with eval or new Function | 76 in any script; 0 in handwritten scripts |
 | loading from external hosts | 88 (fonts 28, maps 8, cdn 31, api 2, other 32) |
@@ -77,7 +77,7 @@ The scanner's rules run over the 174 scanned packages from the stored scans (sta
 
 | Rule | Level | Packages | Findings |
 | --- | --- | --- | --- |
-| MCPAPP001 csp-missing | warning | 72 | 72 |
+| MCPAPP001 csp-missing | warning | 15 | 15 |
 | MCPAPP002 csp-allows-every-host | error | 5 | 9 |
 | MCPAPP003 csp-wildcard-host | warning | 9 | 73 |
 | MCPAPP005 csp-sink-host | error | 2 | 3 |

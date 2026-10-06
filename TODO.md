@@ -8,7 +8,7 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 
 1. Приватные находки владельцам (раздел 3): список и черновики писем собраны 2026-10-06 в `.agent-tasks/` (вне git). Уточнение: 84 — это UI-ресурсы на 32 серверах, 6 — ресурсы на 2 серверах. У 18 из 32 в CSP конкретный бакет владельца (не сток для постороннего), оба случая «read шире list» добавляют собственный origin; писать стоит 8 серверам (wildcard по арендаторам или общий хост хранилища + динамический `innerHTML`), ещё 5 по желанию. Отправляет мейнтейнер; у части контакт не найден.
 2. Вычитать статью `docs/writeup-mcp-apps-census.md` (раздел 4): раздел «Live policies» написан, все цифры от 2026-10-06 и пересчитаны после разбора `mcp-app-lint` (npm: 146 пакетов отдают UI, CSP у 51%; общий сток у 43 ресурсов на 18 серверах).
-3. PR хотя бы в один MCP-сканер с `mcp-app-lint` (раздел 7). JSDoc-типы сделаны 2026-10-06.
+3. Распространение `mcp-app-lint` (раздел 7), по порядку: статья и письма владельцам (строка «проверить: `npx mcp-app-lint`»), затем `modelcontextprotocol/ext-apps` (абзац о проверке CSP в `docs/csp-cors.md` и skills), затем Cisco mcp-scanner (черновик issue в `.agent-tasks/`, код только после их ответа). Перед ext-apps MCPAPP001 исправлен: только при внешних хостах (на 19 из 25 их примеров был шум).
 4. Dependabot alert #4 (katex, low, только dev): dismiss как «risk is tolerable» — https://github.com/shteynu/render-policy/security/dependabot/4
 
 ## 1. Настройки, по пять минут каждая (без них часть автоматики не работает)
@@ -78,7 +78,8 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [ ] Табели для open-source и встраиваемых хостов из плана; закрытые хосты только вручную по правилам их баунти-программ.
 - [x] `mcp-app-lint`: прототип в `packages/mcp-app-lint` (18 SARIF-правил из анализатора переписи, CLI: `--dir`, `--package`, `--read/--list/--tools`, `--html`).
 - [x] `mcp-app-lint`: прогон по 174 пакетам с UI SDK из переписи (2026-10-06). Исправлено: MCPAPP004 не для loopback, MCPAPP006 без `blob:`, MCPAPP005 для wildcard над сервисом из denylist (`*.amazonaws.com`), CSP через константу в том же файле и списки, собранные в рантайме, файл и строка у CSP-находок и MCPAPP011, «отдаёт UI» отдельно от «упоминает UI» (хосты и SDK больше не дают MCPAPP001), MCPAPP010 без экранированных значений (опция `escapeFunctions` в `no-unsafe-innerhtml`), MCPAPP011 без сообщений протокола. Перепись npm перескана (`collect-npm.mjs --rescan-ui`), статья пересчитана.
-- [ ] PR хотя бы в один MCP-сканер с `mcp-app-lint`.
+- [ ] PR хотя бы в один MCP-сканер с `mcp-app-lint`. Обзор сканеров 2026-10-06: выбран Cisco mcp-scanner (встроенный анализатор на Python, сначала issue); запасные — ZAP MCP add-on, Tencent AI-Infra-Guard.
+- [x] MCPAPP001 только при внешних хостах в UI (атрибуты или абсолютный URL в `fetch`/`WebSocket`/…), 2026-10-06: по переписи 72 → 15 пакетов, на примерах ext-apps 19 → 0. В релиз не вышло.
 - [x] GitHub Action для `mcp-app-lint` (`action.yml`, composite): запуск сканера и загрузка SARIF в code scanning; SARIF-пути сделаны репо-относительными. Готово к использованию как `uses: shteynu/render-policy@v1` после публикации тега.
 - [ ] Предложить набор в ext-apps как проверку соответствия хостов.
 

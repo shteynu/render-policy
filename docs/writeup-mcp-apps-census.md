@@ -82,7 +82,7 @@ The 324 declared entries (133 distinct hosts) fall into these categories. The cl
 
 Three readings of the 51%:
 
-- **The default is doing the work.** Under the specification, the 72 packages that declare nothing get `connect-src 'none'` and `img-src 'self' data:`. Their interfaces cannot fetch anything. That is consistent with what the HTML shows: only 88 of 576 documents reference an external host, and those hosts are mostly fonts (28 documents) and script or asset CDNs (31), then map tiles (8) and an API host (2); the rest (32) are the vendor's own sites. A large share of the packaged MCP Apps are self-contained, and the restrictive default costs them nothing.
+- **The default is doing the work.** Under the specification, the 72 packages that declare nothing get `connect-src 'none'` and `img-src 'self' data:`. Their interfaces cannot fetch anything. That is consistent with what the HTML shows: only 88 of 577 documents reference an external host, and those hosts are mostly fonts (28 documents) and script or asset CDNs (31), then map tiles (8) and an API host (2); the rest (32) are the vendor's own sites. A large share of the packaged MCP Apps are self-contained, and the restrictive default costs them nothing.
 - **The pressure is on hosts to relax it.** An app that needs an API and forgot to declare it breaks on a compliant host and works on a lenient one. The census cannot see which hosts are lenient; the evil-mcp-app test suite in the roadmap will. Until then, "declares nothing" is safe only as long as hosts keep the default.
 - **The declared lists are where the surface is.** Wildcards are rare, which is good news. The entries that allow every host are the ones to watch: a bare `*` in one package and a scheme-only `https:` in four others. `https:` is syntactically a valid CSP source and it allows every host on the web, including request catchers and tunnels. A host that expands declared entries into its CSP verbatim will honour it. Loopback origins also reach published packages: `http://localhost:*` and `http://127.0.0.1:*` appear in `connectDomains`, `resourceDomains` and `frameDomains`. For a tool that runs on the user's machine that can be intended; in a hosted server it is a development leftover. The two packages with a sink host both name `storage.googleapis.com`, which serves any bucket by path.
 
@@ -90,11 +90,11 @@ Three readings of the 51%:
 
 | | |
 | --- | --- |
-| HTML documents found | 576 (files and documents embedded in source) |
-| with inline scripts | 357; 124 with a hand-written script, the rest bundles |
+| HTML documents found | 577 (files and documents embedded in source) |
+| with inline scripts | 358; 124 with a hand-written script, the rest bundles |
 | hand-written scripts with a dynamic `innerHTML`-class sink | 12 of 124 documents (10%), in 9 packages; all 12 also have a value that does not go through an escaping helper |
-| any script with such a sink, bundles included | 193 |
-| `postMessage(…, '*')` in hand-written scripts | 33 (191 including bundles; the SDK bridge posts to `'*'` by design); 11 outside the app protocol |
+| any script with such a sink, bundles included | 194 |
+| `postMessage(…, '*')` in hand-written scripts | 33 (192 including bundles; the SDK bridge posts to `'*'` by design); 11 outside the app protocol |
 | inline event handlers | 59 |
 | `eval` or `new Function` in hand-written scripts | 0 (76 in bundles) |
 | forms that post somewhere | 7 |

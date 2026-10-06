@@ -46,6 +46,7 @@ test('scan: a list built at runtime counts as declared; the bundled schema and t
   const noise = await fixture({
     'server.js': "registerAppResource(s, 'a', 'ui://a', {}, () => ({}));\nconst Csp = z.object({ connectDomains: z.array(z.string()).optional(), resourceDomains: string[] });",
     'types.d.ts': 'interface Csp { connectDomains: Domains; }',
+    'ui/app.html': '<script src="https://cdn.example.com/app.js"></script>',
   });
   try {
     const d = await scanPackageDir(dynamic);
@@ -67,6 +68,7 @@ test('scan: a host that only mentions the MIME type does not serve UI; a server 
   const server = await fixture({
     'dist/mime.js': "export const APP_MIME = 'text/html;profile=mcp-app';",
     'dist/server.js': "server.registerResource('app', APP_URI, {}, async () => ({ contents: [{ uri: APP_URI, mimeType: APP_MIME, text: html }] }));",
+    'dist/app.html': "<script>fetch('https://api.example.com/items')</script>",
   });
   try {
     const h = await scanPackageDir(host);
@@ -75,6 +77,7 @@ test('scan: a host that only mentions the MIME type does not serve UI; a server 
     const s = await scanPackageDir(server);
     assert.equal(s.servesUi, true);
     assert.deepEqual(lintPackageScan(s, 'pkg').map((f) => f.ruleId), ['MCPAPP001']);
+    assert.deepEqual(lintPackageScan({ ...s, html: [] }, 'pkg'), []);
   } finally {
     await rm(host, { recursive: true, force: true });
     await rm(server, { recursive: true, force: true });

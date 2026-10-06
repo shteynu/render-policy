@@ -54,7 +54,7 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 
 | Id | Name | Level | What it means |
 | --- | --- | --- | --- |
-| MCPAPP001 | csp-missing | warning | no `ui.csp`; a compliant host applies `default-src 'none'`, `connect-src 'none'`. For a package: it serves a UI resource and no domain list is found, literal or built at runtime |
+| MCPAPP001 | csp-missing | warning | no `ui.csp`, but the UI loads from or calls an external host (an attribute such as `src`/`href`, or an absolute URL in `fetch`, `WebSocket`, `EventSource`, XHR, `sendBeacon`, `import()`); a compliant host applies `default-src 'none'`, `connect-src 'none'` and blocks it. A self-contained UI needs no CSP and is not reported. For a package: it serves a UI resource, no domain list is found (literal or built at runtime), and one of its HTML documents references a host |
 | MCPAPP002 | csp-allows-every-host | error | `*` or a scheme-only entry (`https:`) expands to every host |
 | MCPAPP003 | csp-wildcard-host | warning | `*.example.com` allows every subdomain |
 | MCPAPP004 | csp-insecure-scheme | warning | `http:` origin other than loopback |
@@ -82,7 +82,9 @@ In a package scan, domain lists are read where they are written: as a literal ar
 constant or shorthand defined in the same file (`resourceDomains: DOMAINS`, `{ connectDomains }`).
 Each CSP finding points at that file and line. A list built at runtime counts as declared, so it
 does not raise MCPAPP001, but its entries cannot be checked. Packages that only mention the MCP
-Apps MIME type or `ui://` (hosts, renderers, SDKs) are not treated as serving a UI resource.
+Apps MIME type or `ui://` (hosts, renderers, SDKs) are not treated as serving a UI resource. Hosts are
+looked for in the package's HTML documents only: a `fetch` in server code is not bound by the CSP,
+so it does not count.
 
 The rules come out of the [MCP Apps UI census](../../census) in this repository; the analyzer is
 shared. The HTML sink detection is `eslint-plugin-render-policy`'s `no-unsafe-innerhtml`. The sink

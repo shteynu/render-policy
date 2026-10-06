@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-06T11:22:47.225Z",
+  "generatedAt": "2026-10-06T14:03:33.205Z",
   "registry": {
     "collectedAt": "2026-10-06T09:05:14.280Z",
     "entries": 39919,
@@ -178,8 +178,8 @@
       "MCPAPP001": {
         "name": "csp-missing",
         "level": "warning",
-        "packages": 72,
-        "findings": 72
+        "packages": 15,
+        "findings": 15
       },
       "MCPAPP002": {
         "name": "csp-allows-every-host",
@@ -295,14 +295,14 @@
       "microphone": 2,
       "camera": 1
     },
-    "toolsVisibleToApp": 46,
-    "htmlDocuments": 576,
-    "htmlWithInlineScripts": 357,
+    "toolsVisibleToApp": 47,
+    "htmlDocuments": 577,
+    "htmlWithInlineScripts": 358,
     "htmlWithHandwrittenScripts": 124,
-    "htmlWithUnsafeInnerHtml": 193,
+    "htmlWithUnsafeInnerHtml": 194,
     "htmlWithUnsafeInnerHtmlHandwritten": 12,
     "htmlWithUnsafeInnerHtmlHandwrittenUnescaped": 12,
-    "htmlWithPostMessageStar": 191,
+    "htmlWithPostMessageStar": 192,
     "htmlWithPostMessageStarHandwritten": 33,
     "htmlWithPostMessageStarHandwrittenNonProtocol": 11,
     "htmlWithInlineHandlers": 59,

@@ -68,6 +68,6 @@ export function toSarif(findings, { invocation = {} } = {}) {
 export function toText(findings) {
   if (findings.length === 0) return 'no findings\n';
   return `${findings
-    .map((f) => `${(f.level ?? levelOf(f.ruleId)).padEnd(7)} ${f.ruleId} ${f.uri}${f.region ? `:${f.region.startLine}:${f.region.startColumn}` : ''}  ${f.message}`)
+    .map((f) => `${(f.level ?? levelOf(f.ruleId)).padEnd(7)} ${f.ruleId} ${f.uri}${f.region ? `:${f.region.startLine}${f.region.startColumn ? `:${f.region.startColumn}` : ''}` : ''}  ${f.message}`)
     .join('\n')}\n`;
 }
