@@ -9,13 +9,13 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 - [x] GitHub → Settings → Pages → Source: **GitHub Actions** (включено 2026-10-06, первый деплой прошёл). После этого `pages.yml` начнёт деплоить демо на https://shteynu.github.io/render-policy/ (сейчас каждый запуск падает с «Resource not accessible by integration»).
 - [x] GitHub → Settings → Code security → **Private vulnerability reporting: enable** (включено 2026-10-06). На это ссылаются `SECURITY.md` и шаблоны issue.
 - [x] npm: организация `render-policy` создана 2026-10-06. Вместо `NPM_TOKEN` настроен trusted publishing: все шесть пакетов доверяют `shteynu/render-policy` + `release.yml` (`npm trust github`), токен в GitHub не нужен. Новый пакет: сначала ручная публикация, потом `npm trust github <pkg> --repo shteynu/render-policy --file release.yml --allow-publish`.
-- [ ] Проверить, что Dependabot создал первые PR (`.github/dependabot.yml`); группа `security-critical` (DOMPurify, marked) требует ручного взгляда на changelog перед merge.
+- [x] Проверить, что Dependabot создал первые PR (`.github/dependabot.yml`); группа `security-critical` (DOMPurify, marked) требует ручного взгляда на changelog перед merge. 2026-10-06: PR приходят, #7/#8 влиты; Dependabot alerts и security updates включены.
 
 ## 2. Релиз v0.1.0
 
 - [x] Версии всех шести пакетов (включая `mcp-app-lint`) `0.1.0`; в `CHANGELOG.md` дата 2026-09-30.
 - [x] Проверка тарболов перед публикацией: `npm pack` всех шести, publint и arethetypeswrong чистые (ESM-only предупреждение ожидаемо), установка в чистый проект: ESM-импорт, `require()`, типы под `node16` и `bundler`, `@render-policy/core/internal` через `typesVersions`; LICENSE лежит в каждом пакете.
-- [ ] `npm ci && npm run check` локально (нужен Chromium: `npx playwright install chromium`).
+- [x] `npm ci && npm run check` локально (нужен Chromium: `npx playwright install chromium`). 2026-10-06: зелёный, корпус 49/49.
 - [x] `git tag v0.1.0 && git push origin v0.1.0` → `release.yml`: проверки, сверка версий с тегом, тарболы на GitHub Release. `NPM_TOKEN` не было, поэтому 0.1.0 опубликован на npm 2026-10-06 вручную с локальной машины (без provenance; 2FA ключом безопасности через браузер). Следующие версии: через `release.yml` (trusted publishing, provenance ставит npm). Первый такой релиз проверить: если OIDC не сработает, `npm publish` упадёт с 401/404.
 - [x] После публикации: в `README.md` убран блок «install from release tarballs», `npm install @render-policy/core` в чистом проекте работает.
 
