@@ -1,9 +1,15 @@
 import { RULES, RULE_INDEX } from './rules.mjs';
 import { levelOf } from './lint.mjs';
 
+/** @import { Finding } from './lint.mjs' */
+
 export const TOOL_VERSION = '0.1.0';
 
-/** A SARIF 2.1.0 log with one run. */
+/**
+ * A SARIF 2.1.0 log with one run.
+ * @param {readonly Finding[]} findings
+ * @param {{ invocation?: Record<string, unknown> }} [options] extra fields for the run's invocation, such as `commandLine`
+ */
 export function toSarif(findings, { invocation = {} } = {}) {
   const results = findings.map((f) => ({
     ruleId: f.ruleId,
@@ -49,6 +55,10 @@ export function toSarif(findings, { invocation = {} } = {}) {
   };
 }
 
+/**
+ * One line per finding: level, rule, location, message.
+ * @param {readonly Finding[]} findings
+ */
 export function toText(findings) {
   if (findings.length === 0) return 'no findings\n';
   return `${findings

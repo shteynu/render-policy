@@ -1,17 +1,60 @@
 /**
- * From analysis to findings. A finding is { ruleId, level?, message, uri, region?, logical?, properties? }.
+ * From analysis to findings (see Finding below).
  */
 import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, uiMetaOf, withSinkHosts } from './analyze.mjs';
 import { parseDomainPattern, sinkScope } from './domains.mjs';
 import { RULES } from './rules.mjs';
 
+/**
+ * @import { HtmlAnalysis } from './analyze.mjs'
+ * @import { PackageScan } from './npm.mjs'
+ * @import { Level } from './rules.mjs'
+ */
+
+/**
+ * One result. `uri` is the SARIF artifact location: a file, a `ui://` resource, `npm:name@version`,
+ * or `tools/list`. `region` points into a file, `logical` names a member of the metadata or a tool.
+ * @typedef {object} Finding
+ * @property {string} ruleId
+ * @property {Level} [level] the rule's level when absent
+ * @property {string} message
+ * @property {string} uri
+ * @property {{ startLine: number, startColumn?: number }} [region]
+ * @property {{ name: string, kind: string }} [logical]
+ * @property {Record<string, unknown>} [properties]
+ */
+/** @typedef {Omit<Finding, 'ruleId' | 'message' | 'uri'>} FindingExtra */
+/**
+ * A UI resource as a server serves it: the `_meta` of its `resources/list` entry and of its
+ * `resources/read` content item, and the HTML text when there is one.
+ * @typedef {object} ResourceInput
+ * @property {string} uri
+ * @property {unknown} [listMeta]
+ * @property {unknown} [readMeta]
+ * @property {string | null} [html]
+ */
+
 const DEV_HOST_RE = /^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])$/i;
 const CSP_KEYS = ['connectDomains', 'resourceDomains', 'frameDomains', 'baseUriDomains'];
 
+/**
+ * @param {string} ruleId
+ * @param {string} message
+ * @param {string} uri
+ * @param {FindingExtra} [extra]
+ * @returns {Finding}
+ */
 const finding = (ruleId, message, uri, extra = {}) => ({ ruleId, message, uri, ...extra });
 
-/** Findings about one CSP domain entry. `extra` carries the location (logical name, or file region). */
+/**
+ * Findings about one CSP domain entry. `extra` carries the location (logical name, or file region).
+ * @param {string} key
+ * @param {string} raw
+ * @param {string} uri
+ * @param {FindingExtra} extra
+ */
 function cspEntryFindings(key, raw, uri, extra) {
+  /** @type {Finding[]} */
   const findings = [];
   const pattern = parseDomainPattern(raw);
   const development = DEV_HOST_RE.test(pattern.host);
@@ -26,8 +69,13 @@ function cspEntryFindings(key, raw, uri, extra) {
   return findings;
 }
 
-/** Findings about one `_meta.ui` object (the resolved one: read, falling back to list). */
+/**
+ * Findings about one `_meta` object of a UI resource (the resolved one: read, falling back to list).
+ * @param {unknown} meta
+ * @param {string} uri
+ */
 export function lintUiMeta(meta, uri) {
+  /** @type {Finding[]} */
   const findings = [];
   const ui = uiMetaOf(meta);
   const analysis = analyzeUiMeta(meta);
@@ -44,8 +92,12 @@ export function lintUiMeta(meta, uri) {
   return findings;
 }
 
-/** Findings about a UI resource as served: listing entry, read result content item, HTML. */
+/**
+ * Findings about a UI resource as served: listing entry, read result content item, HTML.
+ * @param {ResourceInput} resource
+ */
 export function lintResource({ uri, listMeta = null, readMeta = null, html = null }) {
+  /** @type {Finding[]} */
   const findings = [];
   const effective = readMeta ?? listMeta;
   findings.push(...lintUiMeta(effective, uri));
@@ -58,13 +110,23 @@ export function lintResource({ uri, listMeta = null, readMeta = null, html = nul
   return findings;
 }
 
-/** Findings about the HTML of a UI resource. */
+/**
+ * Findings about the HTML of a UI resource.
+ * @param {string} html
+ * @param {string} uri
+ */
 export function lintHtml(html, uri) {
   return htmlFindings(withSinkHosts(analyzeHtml(html)), uri);
 }
 
-/** The HTML rules over one analysis, from a live document or a stored scan. */
+/**
+ * The HTML rules over one analysis, from a live document or a stored scan (older scans lack
+ * positions, so every field is optional).
+ * @param {Partial<HtmlAnalysis>} a
+ * @param {string} uri
+ */
 function htmlFindings(a, uri) {
+  /** @type {Finding[]} */
   const findings = [];
   if (Array.isArray(a.sinks)) {
     // Sinks whose every dynamic part goes through an escaping helper are left out (ESCAPE_FUNCTIONS in analyze.mjs).
@@ -82,13 +144,19 @@ function htmlFindings(a, uri) {
   if ((a.inlineHandlers ?? 0) > 0) findings.push(finding('MCPAPP012', `${a.inlineHandlers} inline event handler attribute(s).`, uri));
   if ((a.evalLikeHandwritten ?? 0) > 0) findings.push(finding('MCPAPP013', `${a.evalLikeHandwritten} eval/new Function use(s) in hand-written script.`, uri));
   if ((a.formsWithAction ?? 0) > 0) findings.push(finding('MCPAPP014', `${a.formsWithAction} form(s) with an action.`, uri));
-  if ((a.externalHosts?.length ?? 0) > 0) findings.push(finding('MCPAPP015', `References external hosts: ${a.externalHosts.join(', ')}.`, uri, { properties: { hosts: a.externalHosts } }));
+  const hosts = a.externalHosts ?? [];
+  if (hosts.length > 0) findings.push(finding('MCPAPP015', `References external hosts: ${hosts.join(', ')}.`, uri, { properties: { hosts } }));
   for (const host of a.sinkHosts ?? []) findings.push(finding('MCPAPP016', `References sink host ${host}.`, uri));
   return findings;
 }
 
-/** Findings about a tools/list result. */
+/**
+ * Findings about the tools of a tools/list result.
+ * @param {unknown} tools
+ * @param {string} [uri]
+ */
 export function lintTools(tools, uri = 'tools/list') {
+  /** @type {Finding[]} */
   const findings = [];
   for (const tool of Array.isArray(tools) ? tools : []) {
     const ui = uiMetaOf(tool?._meta);
@@ -104,8 +172,13 @@ export function lintTools(tools, uri = 'tools/list') {
   return findings;
 }
 
-/** Findings about a scanned package directory (see scanPackageDir). */
+/**
+ * Findings about a scanned package directory (see scanPackageDir). `root` prefixes file locations.
+ * @param {PackageScan} scan
+ * @param {string} [root]
+ */
 export function lintPackageScan(scan, root = '.') {
+  /** @type {Finding[]} */
   const findings = [];
   // Scans that know whether the package serves a UI resource use that; older ones only knew it mentions one.
   const servesUi = scan.servesUi ?? scan.declaresUi;
@@ -127,6 +200,11 @@ export function lintPackageScan(scan, root = '.') {
   return findings;
 }
 
+/**
+ * The level a rule reports at; unknown ids count as warnings.
+ * @param {string} ruleId
+ * @returns {Level}
+ */
 export function levelOf(ruleId) {
   return RULES.find((r) => r.id === ruleId)?.level ?? 'warning';
 }

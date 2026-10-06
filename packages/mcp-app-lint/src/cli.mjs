@@ -16,13 +16,38 @@ import { lintHtml, lintPackageScan, lintResource, lintTools, levelOf } from './l
 import { packageMeta, scanPackage, scanPackageDir } from './npm.mjs';
 import { toSarif, toText } from './sarif.mjs';
 
+/**
+ * @import { Writable } from 'node:stream'
+ * @import { Finding } from './lint.mjs'
+ */
+/**
+ * @typedef {object} CliOptions
+ * @property {string} format
+ * @property {string} failOn
+ * @property {string} [dir]
+ * @property {string} [package]
+ * @property {string} [read]
+ * @property {string} [list]
+ * @property {string} [tools]
+ * @property {string} [html]
+ * @property {string} [out]
+ * @property {boolean} [help]
+ */
+
+/** @type {Record<string, number>} */
 const LEVEL_RANK = { error: 3, warning: 2, note: 1, none: 0 };
 
+/** @param {readonly string[]} argv */
 function parseArgs(argv) {
+  /** @type {CliOptions} */
   const options = { format: 'sarif', failOn: 'error' };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    const next = () => argv[++i];
+    const next = () => {
+      const value = argv[++i];
+      if (value === undefined) throw new Error(`${arg} needs a value`);
+      return value;
+    };
     if (arg === '--dir') options.dir = next();
     else if (arg === '--package') options.package = next();
     else if (arg === '--read') options.read = next();
@@ -38,22 +63,35 @@ function parseArgs(argv) {
   return options;
 }
 
+/** @type {(file: string) => Promise<any>} */
 const readJson = async (file) => JSON.parse(await readFile(file, 'utf8'));
+/** @type {(r: any) => boolean} */
 const isUiResource = (r) => (r?.mimeType ?? '').startsWith('text/html') || String(r?.uri ?? '').startsWith('ui://');
 
-/** A filesystem path under the working directory becomes a forward-slash repo-relative uri; anything else is unchanged. */
+/**
+ * A filesystem path under the working directory becomes a forward-slash repo-relative uri; anything else is unchanged.
+ * @param {string} uri
+ */
 function relativeUri(uri) {
   if (typeof uri !== 'string' || !path.isAbsolute(uri)) return uri;
   const rel = path.relative(process.cwd(), uri);
   return rel && !rel.startsWith('..') ? rel.split(path.sep).join('/') : uri;
 }
 
+/**
+ * The command line, without the process exit: resolves to the exit code (0 clean, 1 findings at or
+ * above --fail-on, 2 usage error). Throws on unreadable input or a failed download.
+ * @param {readonly string[]} argv arguments after the program name
+ * @param {{ stdout?: Pick<Writable, 'write'>, stderr?: Pick<Writable, 'write'> }} [io]
+ * @returns {Promise<number>}
+ */
 export async function run(argv, { stdout = process.stdout, stderr = process.stderr } = {}) {
   const options = parseArgs(argv);
   if (options.help || (!options.dir && !options.package && !options.read && !options.html && !options.tools)) {
     stderr.write('usage: mcp-app-lint (--dir <path> | --package <name> | --read <read.json> [--list <list.json>] | --html <file>) [--tools <tools.json>] [--out file] [--format sarif|text] [--fail-on error|warning|note|none]\n');
     return 2;
   }
+  /** @type {Finding[]} */
   const findings = [];
 
   if (options.dir) {
@@ -78,7 +116,7 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
     const listEntries = Array.isArray(listing?.resources) ? listing.resources : Array.isArray(listing) ? listing : listing ? [listing] : [];
     for (const item of contents) {
       if (!isUiResource(item) && item.mimeType !== UI_MIME) continue;
-      const entry = listEntries.find((r) => r.uri === item.uri) ?? null;
+      const entry = listEntries.find((/** @type {any} */ r) => r.uri === item.uri) ?? null;
       findings.push(...lintResource({ uri: item.uri ?? options.read, listMeta: entry?._meta ?? null, readMeta: item._meta ?? null, html: typeof item.text === 'string' ? item.text : null }));
     }
   }

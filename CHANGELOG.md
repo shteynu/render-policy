@@ -29,6 +29,12 @@
     `parent`/`top`) and reports each remaining call with its line. The analysis keeps the old
     totals and adds `unsafeInnerHtmlHandwrittenUnescaped`, `postMessageStarHandwrittenNonProtocol`
     and `postMessages`.
+- `mcp-app-lint` ships TypeScript declarations (`dist/*.d.mts`, generated from JSDoc in the
+  sources at build time), including the shapes it returns and takes: `Finding`, `Rule`,
+  `DomainPattern`, `HtmlAnalysis`, `PackageScan`, `PackageMeta`, `ScanOptions` and others. The
+  sources are type-checked with `checkJs`. Two inputs that used to fail late now fail early: an
+  option given without its value (`--dir` at the end of the command line) is a usage error, and
+  `scanPackage()` rejects a package without a tarball before downloading.
 - `eslint-plugin-render-policy`: `no-unsafe-innerhtml` takes `escapeFunctions`, names of functions
   whose result counts as static (default none, so library code is checked as before).
 - Census report: the protocol census re-classifies domain lists from the hosts kept in each

@@ -12,11 +12,46 @@ import { promisify } from 'node:util';
 import { analyzeHtml, withSinkHosts } from './analyze.mjs';
 import { classifyDomains } from './domains.mjs';
 
+/**
+ * @import { ReadableStream as NodeReadableStream } from 'node:stream/web'
+ * @import { CspKey, HtmlAnalysis } from './analyze.mjs'
+ * @import { ClassifiedDomains } from './domains.mjs'
+ */
+/**
+ * What the latest version of a package says about itself.
+ * @typedef {object} PackageMeta
+ * @property {string} name
+ * @property {string} version
+ * @property {string} description
+ * @property {string | null} repository
+ * @property {string | null} tarball
+ * @property {number | null} unpackedSize
+ * @property {string[]} uiSdks the UI SDKs among its dependencies (see UI_SDKS)
+ * @property {boolean} dependsOnMcpSdk
+ */
+/**
+ * Limits for a download and a scan.
+ * @typedef {object} ScanOptions
+ * @property {number} [maxBytes] tarball size cap, 25 MiB by default
+ * @property {number} [timeoutMs] download timeout, 60 s by default
+ * @property {number} [maxFiles] files walked, 4000 by default
+ * @property {number} [maxFileBytes] larger files are skipped, 2 MiB by default
+ */
+/**
+ * A CSP domain entry where it is written in the package: key, entry, file relative to the package root, line.
+ * @typedef {{ key: CspKey, raw: string, file: string, line: number }} DomainSite
+ */
+/** @typedef {HtmlAnalysis & { file: string }} HtmlDocumentScan */
+
 const execFileAsync = promisify(execFile);
 const REGISTRY = 'https://registry.npmjs.org';
 const UA = 'mcp-ui-census/0.1 (+https://github.com/shteynu/render-policy)';
 export const UI_SDKS = ['@modelcontextprotocol/ext-apps', '@mcp-ui/server', '@mcp-ui/client'];
 
+/**
+ * @param {string} url
+ * @returns {Promise<any>}
+ */
 async function getJson(url, timeoutMs = 30000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -29,8 +64,14 @@ async function getJson(url, timeoutMs = 30000) {
   }
 }
 
-/** All packages a search query returns (the API pages by `from`, 250 per page). */
+/**
+ * All packages a search query returns (the API pages by `from`, 250 per page).
+ * @param {string} text
+ * @param {{ max?: number }} [options]
+ * @returns {Promise<string[]>}
+ */
 export async function searchPackages(text, { max = 2000 } = {}) {
+  /** @type {Array<string | undefined>} */
   const names = [];
   for (let from = 0; from < max; from += 250) {
     const data = await getJson(`${REGISTRY}/-/v1/search?text=${encodeURIComponent(text)}&size=250&from=${from}`);
@@ -38,10 +79,14 @@ export async function searchPackages(text, { max = 2000 } = {}) {
     for (const object of objects) names.push(object.package?.name);
     if (objects.length < 250) break;
   }
-  return names.filter(Boolean);
+  return names.flatMap((name) => (typeof name === 'string' && name !== '' ? [name] : []));
 }
 
-/** Latest version manifest (small): dependencies, tarball, size. */
+/**
+ * Latest version manifest (small): dependencies, tarball, size.
+ * @param {string} name
+ * @returns {Promise<PackageMeta>}
+ */
 export async function packageMeta(name) {
   const manifest = await getJson(`${REGISTRY}/${encodeURIComponent(name).replace('%40', '@')}/latest`);
   if (!manifest?.version) throw new Error(`${name}: no latest version`);
@@ -58,6 +103,12 @@ export async function packageMeta(name) {
   };
 }
 
+/**
+ * Streams a tarball to `dest`, aborting over the size cap or the timeout. Resolves to the bytes received.
+ * @param {string} url
+ * @param {string} dest
+ * @param {ScanOptions} [options]
+ */
 export async function downloadTarball(url, dest, { maxBytes = 25 * 1024 * 1024, timeoutMs = 60000 } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -67,7 +118,7 @@ export async function downloadTarball(url, dest, { maxBytes = 25 * 1024 * 1024, 
     const length = Number(response.headers.get('content-length') ?? 0);
     if (length > maxBytes) throw Object.assign(new Error(`tarball is ${length} bytes, over the cap`), { kind: 'too-large' });
     let received = 0;
-    const capped = Readable.fromWeb(response.body);
+    const capped = Readable.fromWeb(/** @type {NodeReadableStream} */ (response.body));
     capped.on('data', (chunk) => {
       received += chunk.length;
       if (received > maxBytes) capped.destroy(Object.assign(new Error('tarball exceeded the cap while streaming'), { kind: 'too-large' }));
@@ -79,6 +130,11 @@ export async function downloadTarball(url, dest, { maxBytes = 25 * 1024 * 1024, 
   }
 }
 
+/**
+ * Unpacks a .tgz into `dir` with the system tar.
+ * @param {string} file
+ * @param {string} dir
+ */
 export async function extractTarball(file, dir) {
   await mkdir(dir, { recursive: true });
   await execFileAsync('tar', ['-xzf', file, '-C', dir], { maxBuffer: 1024 * 1024 });
@@ -96,11 +152,16 @@ const SERVES_UI_RE = /\b(registerAppResource|createUIResource)\s*\(|\bmimeType\s
 // `mimeType: APP_MIME` where some file of the package sets APP_MIME to the MCP Apps MIME type.
 const MIME_CONSTANT_RE = /\b([A-Za-z_$][\w$]*)\s*=\s*["'`]text\/html;profile=mcp-app["'`]/g;
 const MIME_IDENT_RE = /\bmimeType\s*:\s*([A-Za-z_$][\w$]*)\s*(?=[,}\r\n])/g;
+/** @type {(text: string, index: number) => number} */
 const lineAt = (text, index) => text.slice(0, index).split('\n').length;
 const PERMISSIONS_RE = /\bpermissions\s*:\s*\{([^}]*)\}/g;
 const VISIBILITY_RE = /\bvisibility\s*:\s*\[([^\]]*)\]/g;
 const EMBEDDED_HTML_RE = /<!doctype html>[\s\S]*?<\/html>/gi;
 
+/**
+ * @param {string} dir
+ * @returns {AsyncGenerator<string>}
+ */
 async function* walk(dir, depth = 0) {
   if (depth > 12) return;
   let entries;
@@ -117,9 +178,14 @@ async function* walk(dir, depth = 0) {
   }
 }
 
-const stringLiterals = (text) => [...text.matchAll(/["'`]([^"'`]*)["'`]/g)].map((m) => m[1]).filter(Boolean);
+/** @type {(text: string) => string[]} */
+const stringLiterals = (text) => [...text.matchAll(/["'`]([^"'`]*)["'`]/g)].flatMap((m) => (m[1] ? [m[1]] : []));
 
-/** What an unpacked package says about its UI resources. Regex-based on purpose: a census, not a compiler. */
+/**
+ * What an unpacked package says about its UI resources. Regex-based on purpose: a census, not a compiler.
+ * @param {string} dir
+ * @param {ScanOptions} [options]
+ */
 export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 1024 * 1024 } = {}) {
   const result = {
     files: 0,
@@ -130,15 +196,18 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
     cspArrays: 0,
     cspDynamic: 0,
     servesUi: false,
-    domainSites: [],
+    domainSites: /** @type {DomainSite[]} */ ([]),
+    /** @type {Record<CspKey, string[]>} */
     domains: { connectDomains: [], resourceDomains: [], frameDomains: [], baseUriDomains: [] },
-    permissions: new Set(),
+    permissions: /** @type {Set<string>} */ (new Set()),
     toolVisibility: { app: 0, model: 0 },
     readOnlyHints: 0,
-    html: [],
+    html: /** @type {HtmlDocumentScan[]} */ ([]),
     embeddedHtml: 0,
   };
+  /** @type {Set<string>} */
   const mimeConstants = new Set();
+  /** @type {Set<string>} */
   const mimeIdents = new Set();
   for await (const file of walk(dir)) {
     result.files += 1;
@@ -162,9 +231,10 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
     const declaration = !/\.d\.[cm]?ts$/.test(file);
     if (declaration) {
       if (SERVES_UI_RE.test(text)) result.servesUi = true;
-      for (const m of text.matchAll(MIME_CONSTANT_RE)) mimeConstants.add(m[1]);
-      for (const m of text.matchAll(MIME_IDENT_RE)) mimeIdents.add(m[1]);
+      for (const m of text.matchAll(MIME_CONSTANT_RE)) if (m[1]) mimeConstants.add(m[1]);
+      for (const m of text.matchAll(MIME_IDENT_RE)) if (m[1]) mimeIdents.add(m[1]);
     }
+    /** @type {(key: CspKey, body: string, index: number) => void} */
     const addList = (key, body, index) => {
       result.cspArrays += 1;
       const line = lineAt(text, index);
@@ -174,20 +244,21 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
         if (!result.domainSites.some((site) => site.key === key && site.raw === raw && site.file === relative && site.line === line)) result.domainSites.push({ key, raw, file: relative, line });
       }
     };
-    for (const match of text.matchAll(CSP_ARRAY_RE)) addList(match[1], match[2], match.index);
-    const named = [...text.matchAll(CSP_IDENT_RE)].map((m) => [m[1], m[2]]).concat([...text.matchAll(CSP_SHORTHAND_RE)].map((m) => [m[1], m[1]]));
+    for (const match of text.matchAll(CSP_ARRAY_RE)) addList(/** @type {CspKey} */ (match[1]), match[2] ?? '', match.index);
+    /** @type {Array<[CspKey, string]>} */
+    const named = [...text.matchAll(CSP_IDENT_RE)].map((m) => /** @type {[CspKey, string]} */ ([m[1], m[2]])).concat([...text.matchAll(CSP_SHORTHAND_RE)].map((m) => /** @type {[CspKey, string]} */ ([m[1], m[1]])));
     for (const [key, name] of declaration ? named : []) {
       if (NOT_A_LIST.has(name)) continue;
       const list = new RegExp(`\\b(?:const|let|var)\\s+${name.replace(/\$/g, '\\$')}\\s*(?::[^=]+)?=\\s*\\[([^\\]]*)\\]`).exec(text);
-      if (list) addList(key, list[1], list.index);
+      if (list) addList(key, list[1] ?? '', list.index);
       else result.cspDynamic += 1;
     }
     for (const match of text.matchAll(PERMISSIONS_RE)) {
-      for (const key of ['camera', 'microphone', 'geolocation', 'clipboardWrite']) if (new RegExp(`\\b${key}\\b`).test(match[1])) result.permissions.add(key);
+      for (const key of ['camera', 'microphone', 'geolocation', 'clipboardWrite']) if (new RegExp(`\\b${key}\\b`).test(match[1] ?? '')) result.permissions.add(key);
     }
     for (const match of text.matchAll(VISIBILITY_RE)) {
-      if (/['"]app['"]/.test(match[1])) result.toolVisibility.app += 1;
-      if (/['"]model['"]/.test(match[1])) result.toolVisibility.model += 1;
+      if (/['"]app['"]/.test(match[1] ?? '')) result.toolVisibility.app += 1;
+      if (/['"]model['"]/.test(match[1] ?? '')) result.toolVisibility.model += 1;
     }
     result.readOnlyHints += (text.match(/readOnlyHint\s*:\s*true/g) ?? []).length;
     for (const match of text.matchAll(EMBEDDED_HTML_RE)) {
@@ -195,8 +266,8 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
       if (result.html.length < 40) result.html.push({ file: `${path.relative(dir, file)}#embedded`, ...withSinkHosts(analyzeHtml(match[0])) });
     }
   }
-  const classified = {};
-  for (const key of Object.keys(result.domains)) classified[key] = classifyDomains(result.domains[key]);
+  const classified = /** @type {Record<CspKey, ClassifiedDomains>} */ ({});
+  for (const key of /** @type {CspKey[]} */ (Object.keys(result.domains))) classified[key] = classifyDomains(result.domains[key]);
   return {
     ...result,
     permissions: [...result.permissions],
@@ -208,8 +279,16 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
   };
 }
 
-/** Download, extract, scan, clean up. */
+/** @typedef {Awaited<ReturnType<typeof scanPackageDir>>} PackageScan */
+
+/**
+ * Download, extract, scan, clean up.
+ * @param {Pick<PackageMeta, 'name' | 'tarball'>} meta
+ * @param {string} workDir a directory the download and the unpacked files go to; both are removed
+ * @param {ScanOptions} [options]
+ */
 export async function scanPackage(meta, workDir, options = {}) {
+  if (!meta.tarball) throw new Error(`${meta.name}: no tarball`);
   const safe = meta.name.replace(/[^a-z0-9]+/gi, '_');
   const tgz = path.join(workDir, `${safe}.tgz`);
   const dir = path.join(workDir, safe);

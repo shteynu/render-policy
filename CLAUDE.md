@@ -23,7 +23,8 @@ technical part. Documentation is written in English; the maintainer communicates
   Runtime proof in `packages/angular/e2e` (JIT app over the FESM, Playwright).
 - `packages/mermaid`: `@render-policy/mermaid`. Strict Mermaid as a fragment transform; unit tests with a fake
   mermaid, browser proof with the real one in `packages/mermaid/e2e`.
-- `packages/mcp-app-lint`: `mcp-app-lint`. Plain ESM, no build. The census analyzer (`analyze.mjs`, `domains.mjs`,
+- `packages/mcp-app-lint`: `mcp-app-lint`. Plain ESM with JSDoc types, checked by `tsc` (`checkJs`); its `build` only
+  emits declarations to `dist/` and compiles `test/types/consumer.ts` against them. The census analyzer (`analyze.mjs`, `domains.mjs`,
   `npm.mjs`) plus SARIF rules (`rules.mjs`, `lint.mjs`, `sarif.mjs`) and a CLI (`cli.mjs`, SARIF paths are made
   repo-relative for code scanning). It `require`s the built `dist` of core and eslint-plugin, so build before its
   tests. Tests with `node:test` (`test/*.test.mjs`, run by root `npm test`). The repo-root `action.yml` is a

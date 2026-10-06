@@ -7,15 +7,22 @@
   "bin": {
     "mcp-app-lint": "./bin/mcp-app-lint.mjs"
   },
+  "types": "./dist/index.d.mts",
   "exports": {
-    ".": "./src/index.mjs"
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./src/index.mjs"
+    }
   },
   "files": [
     "bin",
     "src",
+    "dist",
     "README.md"
   ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json && tsc -p test/types/tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json",
     "test": "node --test test/*.test.mjs"
   },
   "engines": {

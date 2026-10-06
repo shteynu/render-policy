@@ -1,4 +1,13 @@
-/** The rules, in SARIF terms. Ids are stable; names are what a scanner shows. */
+/** @typedef {'error' | 'warning' | 'note'} Level */
+/**
+ * A rule in SARIF terms: `short` and `full` become its short and full description.
+ * @typedef {{ id: string, name: string, level: Level, short: string, full: string }} Rule
+ */
+
+/**
+ * The rules, in SARIF terms. Ids are stable; names are what a scanner shows.
+ * @type {readonly Rule[]}
+ */
 export const RULES = [
   { id: 'MCPAPP001', name: 'csp-missing', level: 'warning', short: 'UI resource declares no CSP domain list', full: "A compliant host applies default-src 'none' and connect-src 'none' to a resource without ui.csp. Declare the domains the app uses, or confirm it needs none. For a package, reported when it serves a UI resource (registers one, or sets the MCP Apps MIME type or a ui:// URI on a resource) and no domain list is found, literal or built at runtime." },
   { id: 'MCPAPP002', name: 'csp-allows-every-host', level: 'error', short: 'CSP entry allows every host', full: "A bare '*' or a scheme-only entry such as 'https:' is expanded by hosts into a CSP source that allows every host, including request catchers and tunnels. Name the hosts." },
@@ -22,4 +31,5 @@ export const RULES = [
 ];
 
 export const RULE_INDEX = new Map(RULES.map((rule, index) => [rule.id, index]));
+/** @param {string} name */
 export const ruleByName = (name) => RULES.find((r) => r.name === name);

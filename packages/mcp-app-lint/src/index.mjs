@@ -5,3 +5,23 @@ export { downloadTarball, extractTarball, packageMeta, scanPackage, scanPackageD
 export { RULES, RULE_INDEX, ruleByName } from './rules.mjs';
 export { toSarif, toText, TOOL_VERSION } from './sarif.mjs';
 export { run } from './cli.mjs';
+
+/**
+ * @typedef {import('./analyze.mjs').UiMeta} UiMeta
+ * @typedef {import('./analyze.mjs').CspKey} CspKey
+ * @typedef {import('./analyze.mjs').HtmlAnalysis} HtmlAnalysis
+ * @typedef {import('./analyze.mjs').HtmlSink} HtmlSink
+ * @typedef {import('./analyze.mjs').PostMessageCall} PostMessageCall
+ * @typedef {import('./domains.mjs').DomainPattern} DomainPattern
+ * @typedef {import('./domains.mjs').DomainCategory} DomainCategory
+ * @typedef {import('./domains.mjs').ClassifiedDomains} ClassifiedDomains
+ * @typedef {import('./domains.mjs').SinkScope} SinkScope
+ * @typedef {import('./lint.mjs').Finding} Finding
+ * @typedef {import('./lint.mjs').ResourceInput} ResourceInput
+ * @typedef {import('./npm.mjs').PackageMeta} PackageMeta
+ * @typedef {import('./npm.mjs').PackageScan} PackageScan
+ * @typedef {import('./npm.mjs').ScanOptions} ScanOptions
+ * @typedef {import('./npm.mjs').DomainSite} DomainSite
+ * @typedef {import('./rules.mjs').Rule} Rule
+ * @typedef {import('./rules.mjs').Level} Level
+ */

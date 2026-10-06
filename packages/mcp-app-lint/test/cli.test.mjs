@@ -98,6 +98,11 @@ test('no target prints usage and exits 2', async () => {
   assert.match(io.err(), /usage: mcp-app-lint/);
 });
 
+test('an option without its value is a usage error, not a missing target', async () => {
+  await assert.rejects(run(['--dir'], capture()), /--dir needs a value/);
+  await assert.rejects(run(['--html', 'a.html', '--format'], capture()), /--format needs a value/);
+});
+
 test('--fail-on ranks levels: a warning-only scan passes under error but fails under warning', async () => {
   const dir = await mkdtemp(path.join(process.cwd(), '.cli-fixture-'));
   try {

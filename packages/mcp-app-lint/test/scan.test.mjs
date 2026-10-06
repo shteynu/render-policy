@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { analyzeHtml, lintPackageScan, postMessageStarCalls, scanPackageDir } from '../src/index.mjs';
+import { analyzeHtml, lintPackageScan, postMessageStarCalls, scanPackage, scanPackageDir } from '../src/index.mjs';
 
 async function fixture(files) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'mcp-app-lint-scan-'));
@@ -99,4 +99,8 @@ test('html analysis: escaped sinks and protocol messages are counted apart, the 
 test('postMessage calls: only a "*" target origin counts, nested arguments and strings are skipped over', () => {
   const calls = postMessageStarCalls("w.postMessage({ a: f(1, ')'), b: [1, 2] }, \"*\", [port]);\nw.postMessage(x, origin);\ntop.postMessage({ method: 'ui/x' }, `*`);");
   assert.deepEqual(calls.map((c) => [c.line, c.protocol]), [[1, false], [3, true]]);
+});
+
+test('scanPackage refuses a package without a tarball before touching the network', async () => {
+  await assert.rejects(scanPackage({ name: 'no-tarball', tarball: null }, os.tmpdir()), /no-tarball: no tarball/);
 });

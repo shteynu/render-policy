@@ -90,3 +90,8 @@ denylist is `@render-policy/core`'s. The package also exports the analysis funct
 `analyzeUiMeta`, `compareListRead`, `scanPackageDir`, …) and `categorizeDomain`, the heuristic host
 category (fonts, analytics, maps, storage, media, cdn, api, …) the census report tabulates; it is
 data for aggregates, not a rule.
+
+The sources are plain JavaScript with JSDoc types; the package ships TypeScript declarations for
+the functions and the shapes they take and return (`Finding`, `Rule`, `DomainPattern`,
+`HtmlAnalysis`, `PackageScan`, …), so `import { lintResource, type Finding } from 'mcp-app-lint'`
+is typed.
