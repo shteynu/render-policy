@@ -8,6 +8,14 @@
   policy: an unlisted host was let through and a query string such as `?q=secret` travelled to the
   image host inside the proxy URL. `images.rewriteUrl` was not affected. A `decide` hook no longer
   sees images the image policy blocks.
+- `@render-policy/core`: sink denylist `2026-10-06`. Patterns may use `*` for part of one host
+  label or path segment. New entries: regional, dual-stack, website, access-point and legacy S3
+  endpoints (before, only `s3.amazonaws.com` and its subdomains matched); Lambda function URLs;
+  Azure `dfs`/`web` storage; Telegram Bot API (`sendMessage` works as a GET), versioned Discord
+  webhook paths, Microsoft Teams and Google Chat incoming webhooks, smee.io; IP loggers
+  (iplogger, yip.su, grabify); requestrepo; ngrok's newer domains, Pinggy, zrok public shares,
+  Tunnelmole, Microsoft dev tunnels, Codespaces forwarded ports; more form builders. A custom
+  denylist that relied on `*` matching a literal asterisk now matches as a wildcard.
 - Docs: [`docs/image-proxy.md`](docs/image-proxy.md), routing images through a proxy without
   opening an SSRF hole on the server.
 

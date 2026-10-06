@@ -12,7 +12,7 @@ import type { SinkDenylist, SinkEntry } from '../sinks.js';
  * allowlist and a CSP `img-src`.
  */
 export const SINK_DENYLIST: SinkDenylist = Object.freeze({
-  version: '2026-09-30',
+  version: '2026-10-06',
   entries: Object.freeze<readonly SinkEntry[]>([
     // Out-of-band interaction services used to prove exfiltration.
     { pattern: 'interact.sh', category: 'oast' },
@@ -27,6 +27,7 @@ export const SINK_DENYLIST: SinkDenylist = Object.freeze({
     { pattern: 'canarytokens.com', category: 'oast' },
     { pattern: 'dnslog.cn', category: 'oast' },
     { pattern: 'ceye.io', category: 'oast' },
+    { pattern: 'requestrepo.com', category: 'oast' },
 
     // Request catchers and inbound webhooks.
     { pattern: 'webhook.site', category: 'webhook' },
@@ -44,18 +45,41 @@ export const SINK_DENYLIST: SinkDenylist = Object.freeze({
     { pattern: 'hooks.zapier.com', category: 'webhook' },
     { pattern: 'maker.ifttt.com', category: 'webhook' },
     { pattern: 'discord.com/api/webhooks', category: 'webhook' },
+    { pattern: 'discord.com/api/*/webhooks', category: 'webhook' },
     { pattern: 'discordapp.com/api/webhooks', category: 'webhook' },
+    { pattern: 'discordapp.com/api/*/webhooks', category: 'webhook' },
+    { pattern: 'webhook.office.com', category: 'webhook' },
+    { pattern: 'chat.googleapis.com/v1/spaces', category: 'webhook' },
+    { pattern: 'smee.io', category: 'webhook' },
+    // The Bot API takes sendMessage as a GET: one link or image is a message to the attacker's bot.
+    { pattern: 'api.telegram.org/bot', category: 'webhook' },
+
+    // IP loggers: tracking links and pixels that show their creator every request.
+    { pattern: 'iplogger.org', category: 'webhook' },
+    { pattern: 'iplogger.com', category: 'webhook' },
+    { pattern: 'yip.su', category: 'webhook' },
+    { pattern: 'grabify.link', category: 'webhook' },
 
     // Tunnels that expose a laptop to the internet.
     { pattern: 'ngrok.io', category: 'tunnel' },
     { pattern: 'ngrok.app', category: 'tunnel' },
     { pattern: 'ngrok-free.app', category: 'tunnel' },
     { pattern: 'ngrok.dev', category: 'tunnel' },
+    { pattern: 'ngrok-free.dev', category: 'tunnel' },
+    { pattern: 'ngrok.pizza', category: 'tunnel' },
+    { pattern: 'ngrok.pro', category: 'tunnel' },
     { pattern: 'loca.lt', category: 'tunnel' },
     { pattern: 'serveo.net', category: 'tunnel' },
     { pattern: 'trycloudflare.com', category: 'tunnel' },
     { pattern: 'localhost.run', category: 'tunnel' },
     { pattern: 'lhr.life', category: 'tunnel' },
+    { pattern: 'pinggy.link', category: 'tunnel' },
+    { pattern: 'pinggy-free.link', category: 'tunnel' },
+    { pattern: 'share.zrok.io', category: 'tunnel' },
+    { pattern: 'tunnelmole.net', category: 'tunnel' },
+    { pattern: 'devtunnels.ms', category: 'tunnel' },
+    // Codespaces forwarded ports; github.dev itself (the web editor) stays allowed.
+    { pattern: 'app.github.dev', category: 'tunnel' },
 
     // Anonymous serverless endpoints.
     { pattern: 'workers.dev', category: 'serverless' },
@@ -64,6 +88,7 @@ export const SINK_DENYLIST: SinkDenylist = Object.freeze({
     { pattern: 'repl.co', category: 'serverless' },
     { pattern: 'replit.app', category: 'serverless' },
     { pattern: 'replit.dev', category: 'serverless' },
+    { pattern: 'lambda-url.*.on.aws', category: 'serverless' },
 
     // Forms: the agent asks the user to "confirm" something on a page the attacker owns.
     { pattern: 'forms.gle', category: 'forms' },
@@ -78,10 +103,27 @@ export const SINK_DENYLIST: SinkDenylist = Object.freeze({
     { pattern: 'getform.io', category: 'forms' },
     { pattern: 'formsubmit.co', category: 'forms' },
     { pattern: 'formcarry.com', category: 'forms' },
+    { pattern: 'wufoo.com', category: 'forms' },
+    { pattern: 'cognitoforms.com', category: 'forms' },
+    { pattern: 'formstack.com', category: 'forms' },
+    { pattern: 'paperform.co', category: 'forms' },
+    { pattern: 'fillout.com', category: 'forms' },
+    { pattern: 'forms.zohopublic.com', category: 'forms' },
+    { pattern: 'usebasin.com', category: 'forms' },
+    { pattern: 'web3forms.com', category: 'forms' },
 
     // Public object storage with anonymous write or logging.
     { pattern: 'blob.core.windows.net', category: 'blob-storage' },
+    { pattern: 'dfs.core.windows.net', category: 'blob-storage' },
+    { pattern: 'web.core.windows.net', category: 'blob-storage' },
+    // S3: global, regional (s3.<region>), dual-stack, website and access-point endpoints, path-style
+    // and virtual-hosted, and the legacy dash forms (s3-<region>, s3-website-<region>, s3-external-1).
     { pattern: 's3.amazonaws.com', category: 'blob-storage' },
+    { pattern: 's3.*.amazonaws.com', category: 'blob-storage' },
+    { pattern: 's3.dualstack.*.amazonaws.com', category: 'blob-storage' },
+    { pattern: 's3-website.*.amazonaws.com', category: 'blob-storage' },
+    { pattern: 's3-accesspoint.*.amazonaws.com', category: 'blob-storage' },
+    { pattern: 's3-*.amazonaws.com', category: 'blob-storage' },
     { pattern: 'storage.googleapis.com', category: 'blob-storage' },
     { pattern: 'r2.dev', category: 'blob-storage' },
     { pattern: 'digitaloceanspaces.com', category: 'blob-storage' },

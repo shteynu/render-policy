@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createRenderer, resolvePolicy } from '../src/index.js';
+import { createRenderer, matchSink, resolvePolicy, SINK_DENYLIST } from '../src/index.js';
+import type { SinkDenylist } from '../src/index.js';
 
 const box = (): HTMLDivElement => document.createElement('div');
 
@@ -181,6 +182,82 @@ describe('sink denylist', () => {
     const target = box();
     createRenderer({ policy: { urls: { sinkDenylist: 'off' } } }).renderHtmlInto(target, '<a href="https://webhook.site/x">b</a>');
     expect(target.querySelector('a')?.getAttribute('href')).toBe('https://webhook.site/x');
+  });
+
+  describe('patterns', () => {
+    const list = (...patterns: string[]): SinkDenylist => ({ version: 'test', entries: patterns.map((pattern) => ({ pattern, category: 'blob-storage' as const })) });
+    const hit = (href: string, ...patterns: string[]): boolean => matchSink(new URL(href), list(...patterns)) !== null;
+
+    it('match a host and its subdomains, never a lookalike', () => {
+      expect(hit('https://webhook.site/x', 'webhook.site')).toBe(true);
+      expect(hit('https://a.b.webhook.site/x', 'webhook.site')).toBe(true);
+      expect(hit('https://notwebhook.site/x', 'webhook.site')).toBe(false);
+      expect(hit('https://webhook.site.example/x', 'webhook.site')).toBe(false);
+    });
+
+    it('a * in the host stands for part of one label and never crosses a dot', () => {
+      expect(hit('https://s3.eu-west-1.amazonaws.com/b/k', 's3.*.amazonaws.com')).toBe(true);
+      expect(hit('https://bucket.s3.eu-west-1.amazonaws.com/k', 's3.*.amazonaws.com')).toBe(true);
+      expect(hit('https://s3.a.b.amazonaws.com/k', 's3.*.amazonaws.com')).toBe(false);
+      expect(hit('https://s3.amazonaws.com/k', 's3.*.amazonaws.com')).toBe(false);
+      expect(hit('https://bucket.s3-us-west-2.amazonaws.com/k', 's3-*.amazonaws.com')).toBe(true);
+      expect(hit('https://ec2.amazonaws.com/k', 's3-*.amazonaws.com')).toBe(false);
+    });
+
+    it('a path narrows the match by prefix; a * in it stands for part of one segment', () => {
+      expect(hit('https://discord.com/api/webhooks/1/t', 'discord.com/api/*/webhooks')).toBe(false);
+      expect(hit('https://discord.com/api/v10/webhooks/1/t', 'discord.com/api/*/webhooks')).toBe(true);
+      expect(hit('https://canary.discord.com/api/v9/webhooks/1/t', 'discord.com/api/*/webhooks')).toBe(true);
+      expect(hit('https://discord.com/api/v10/users/1', 'discord.com/api/*/webhooks')).toBe(false);
+      expect(hit('https://discord.com/api/a/b/webhooks', 'discord.com/api/*/webhooks')).toBe(false);
+      expect(hit('https://api.telegram.org/bot123:abc/sendMessage', 'api.telegram.org/bot')).toBe(true);
+      expect(hit('https://api.telegram.org/file/x', 'api.telegram.org/bot')).toBe(false);
+    });
+
+    it('treat regex metacharacters in a pattern literally', () => {
+      expect(hit('https://xexample.com/', 'x.example.com')).toBe(false);
+      expect(hit('https://a.b/c+d', 'a.b/c+d')).toBe(true);
+      expect(hit('https://a.b/ccd', 'a.b/c+d')).toBe(false);
+    });
+  });
+
+  describe('the shipped list', () => {
+    it('is well formed: lower case, no scheme, no empty label, no duplicates, a known category', () => {
+      const categories = new Set(['oast', 'webhook', 'tunnel', 'serverless', 'forms', 'blob-storage']);
+      const seen = new Set<string>();
+      for (const { pattern, category } of SINK_DENYLIST.entries) {
+        expect(pattern, pattern).toBe(pattern.toLowerCase());
+        expect(pattern, pattern).not.toMatch(/^[a-z]+:|^\/|^\.|\.\.|\.$|\.\/|\s/);
+        expect(categories.has(category), pattern).toBe(true);
+        expect(seen.has(pattern), `duplicate ${pattern}`).toBe(false);
+        seen.add(pattern);
+      }
+      expect(SINK_DENYLIST.version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it.each([
+      ['https://bucket.s3.eu-central-1.amazonaws.com/x.png', 'blob-storage'],
+      ['https://s3-us-west-2.amazonaws.com/bucket/x.png', 'blob-storage'],
+      ['https://abc.lambda-url.us-east-1.on.aws/x.png', 'serverless'],
+      ['https://api.telegram.org/bot123:abc/sendMessage?chat_id=1&text=secret', 'webhook'],
+      ['https://discord.com/api/v10/webhooks/1/token', 'webhook'],
+      ['https://contoso.webhook.office.com/webhookb2/x', 'webhook'],
+      ['https://iplogger.org/abc.png', 'webhook'],
+      ['https://abc.requestrepo.com/x.png', 'oast'],
+      ['https://abc-3000.devtunnels.ms/x.png', 'tunnel'],
+      ['https://abc.ngrok-free.dev/x.png', 'tunnel'],
+      ['https://abc.a.free.pinggy.link/x.png', 'tunnel'],
+      ['https://abc-8080.app.github.dev/x.png', 'tunnel'],
+    ])('covers %s', (href, category) => {
+      expect(matchSink(new URL(href), SINK_DENYLIST)?.category).toBe(category);
+    });
+
+    it.each(['https://amazonaws.com/', 'https://aws.amazon.com/s3/', 'https://github.dev/owner/repo', 'https://zrok.io/docs', 'https://telegram.org/', 'https://discord.com/channels/1/2'])(
+      'leaves %s alone',
+      (href) => {
+        expect(matchSink(new URL(href), SINK_DENYLIST)).toBeNull();
+      },
+    );
   });
 });
 

@@ -11,7 +11,7 @@ Framework-free core with Angular and React adapters.
 
 | Package | What it is | Status |
 | --- | --- | --- |
-| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 128 unit and property tests + a real-Chromium proof |
+| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 151 unit and property tests + a real-Chromium proof |
 | [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | builds with ng-packagr; browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
 | [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 11 unit tests + browser proof with the real mermaid |
@@ -146,7 +146,7 @@ The policy has three groups: `content` (which elements, attributes and classes a
 | `allowedSchemes` | `http, https, mailto, tel` | Schemes allowed in `href`, `src` and every other URL attribute. Everything else is dropped, after browser-style normalization (`java\tscript:` is `javascript:`). |
 | `allowRelativeUrls` | `true` | Scheme-less URLs resolve against the host page. Protocol-relative (`//host`, `\\host`) counts as remote. |
 | `heuristics` | `{ maxLength: 2048, maxTokenLength: 64, minEntropy: 4 }` | Block remote image URLs that are too long or carry a long high-entropy or hex token in the path or query. `false` disables. |
-| `sinkDenylist` | `'block'` | Hosts that exist to receive data: OAST services, request catchers, tunnels, anonymous serverless endpoints, form builders, public object storage. [The list](packages/core/src/data/sink-domains.ts) is data with its own version; replace it with `createRenderer({ sinkDenylist })`. An explicit `images.hosts` entry wins over the denylist. |
+| `sinkDenylist` | `'block'` | Hosts that exist to receive data: OAST services, request catchers, tunnels, anonymous serverless endpoints, form builders, public object storage. [The list](packages/core/src/data/sink-domains.ts) is data with its own version; replace it with `createRenderer({ sinkDenylist })`. A pattern matches a host and its subdomains, optionally narrowed by a path prefix; `*` stands for part of one host label or path segment (`s3.*.amazonaws.com`, `discord.com/api/*/webhooks`). An explicit `images.hosts` entry wins over the denylist. |
 | `decide` | `null` | Application hook run for every URL after the checks above, for links and images alike (an image reaches it only after the `images` host, query and heuristic checks, with its query already handled): return `{ allow: false }` to drop it, `{ rewrite }` to route it (a link through a redirector, an image through a proxy; re-checked against `allowedSchemes`), or `null` to leave it. This is where a link policy lives. If it throws, that one URL is dropped and the render goes on. |
 
 **`images`** (image requests fire without a click)

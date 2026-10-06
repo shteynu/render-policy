@@ -55,7 +55,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [x] Гайд по image proxy для `images.rewriteUrl` (защита от SSRF на стороне прокси): `docs/image-proxy.md`, эталонный прокси проверен на таблице атак из гайда.
 - [x] Из ревью дизайна: `RenderPolicy` сгруппирован в `content / urls / images` с послойным merge; хук политики URL `urls.decide(url, context)` (allow / deny / rewrite для ссылок и картинок). Сделано до релиза, пока нет пользователей.
 - [ ] Остаток ревью дизайна (не ломает API, можно после релиза): конвейер атрибутных правил вместо одного хука в `sanitize.ts`; разбить mermaid-трансформ на кэш и обёртку; JSDoc-типы для `mcp-app-lint`.
-- [ ] Ревизия стартового denylist стоков (`packages/core/src/data/sink-domains.ts`), версия в поле `version`.
+- [x] Ревизия стартового denylist стоков (`packages/core/src/data/sink-domains.ts`), версия в поле `version`. 2026-10-06: `*` в шаблонах, региональные S3, Telegram Bot API, IP-логгеры, новые туннели; дальше ревизия раз в квартал.
 - [ ] Ещё раз взвесить дефолт `balanced`: пустой allowlist картинок блокирует все удалённые картинки, пока хост не перечислен (осознанный выбор, описан в README).
 - [ ] Корпус: новые кейсы → `npm run corpus:results` → коммит `corpus/RESULTS.md`.
 - [ ] A2UI: внести раздел «Proposed: structured agent UI (A2UI)» из `ROADMAP.md` в приватный план и поставить даты. Решить открытые вопросы: отдельный пакет или вход в core, какую версию спецификации брать первой (v0.9 или v1.0), как проверять результат `formatString`. Первые шаги: `guardA2uiValue` и строгий режим для `Text`.
