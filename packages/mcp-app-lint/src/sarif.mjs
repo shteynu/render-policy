@@ -1,9 +1,15 @@
+import { readFileSync } from 'node:fs';
 import { RULES, RULE_INDEX } from './rules.mjs';
 import { levelOf } from './lint.mjs';
 
 /** @import { Finding } from './lint.mjs' */
 
-export const TOOL_VERSION = '0.1.0';
+/**
+ * The version of this package, as the SARIF driver reports it. Read from package.json, which every
+ * install ships, so it cannot fall behind a release.
+ * @type {string}
+ */
+export const TOOL_VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 
 /**
  * A SARIF 2.1.0 log with one run.

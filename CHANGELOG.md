@@ -35,6 +35,8 @@
   sources are type-checked with `checkJs`. Two inputs that used to fail late now fail early: an
   option given without its value (`--dir` at the end of the command line) is a usage error, and
   `scanPackage()` rejects a package without a tarball before downloading.
+- `mcp-app-lint`: the SARIF driver version is read from `package.json`; it was a constant left at
+  `0.1.0`, so 0.1.1 reported the wrong version.
 - `eslint-plugin-render-policy`: `no-unsafe-innerhtml` takes `escapeFunctions`, names of functions
   whose result counts as static (default none, so library code is checked as before).
 - Census report: the protocol census re-classifies domain lists from the hosts kept in each

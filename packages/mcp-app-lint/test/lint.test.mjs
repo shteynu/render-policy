@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { levelOf, lintHtml, lintResource, lintTools, lintUiMeta, RULES, run, toSarif, toText } from '../src/index.mjs';
+import { levelOf, lintHtml, lintResource, lintTools, lintUiMeta, RULES, run, toSarif, toText, TOOL_VERSION } from '../src/index.mjs';
 
 const ids = (findings) => findings.map((f) => f.ruleId).sort();
 
@@ -84,6 +84,7 @@ test('sarif: valid 2.1.0 shape with rule indexes and locations', () => {
   assert.equal(log.version, '2.1.0');
   const run0 = log.runs[0];
   assert.equal(run0.tool.driver.name, 'mcp-app-lint');
+  assert.equal(run0.tool.driver.version, TOOL_VERSION);
   assert.equal(run0.tool.driver.rules.length, RULES.length);
   const result = run0.results[0];
   assert.equal(result.ruleId, 'MCPAPP002');
@@ -91,6 +92,12 @@ test('sarif: valid 2.1.0 shape with rule indexes and locations', () => {
   assert.equal(result.level, 'error');
   assert.equal(result.locations[0].physicalLocation.artifactLocation.uri, 'ui://a');
   assert.match(toText(findings), /error +MCPAPP002 ui:\/\/a/);
+});
+
+test('sarif: the driver version is the package version', async () => {
+  const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(TOOL_VERSION, version);
+  assert.equal(toSarif([]).runs[0].tool.driver.version, version);
 });
 
 test('cli: --read with --list and --tools, text output, exit codes', async () => {
