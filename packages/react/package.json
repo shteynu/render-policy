@@ -1,6 +1,6 @@
 {
   "name": "@render-policy/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React adapter for @render-policy/core: render agent Markdown/HTML into a ref without dangerouslySetInnerHTML, with a streaming mode.",
   "license": "MIT",
   "type": "module",

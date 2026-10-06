@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 — 2026-10-06
 
 - `@render-policy/core` (security): `urls.decide` now sees an image only after the image host,
   query and heuristic checks, and receives the URL after query handling. In 0.1.0 the hook ran
@@ -21,6 +21,8 @@
   again); `cacheSize: 0` turns caching off (it kept one entry). Render ids are unique per page,
   not per transform: two transforms rendering at once both used `rp-mermaid-1`, and mermaid
   places a temporary element with that id in the document.
+- `mcp-app-lint`: requires `@render-policy/core` and `eslint-plugin-render-policy` `^0.1.1`, so its
+  sink-host findings use the `2026-10-06` denylist.
 - Docs: [`docs/image-proxy.md`](docs/image-proxy.md), routing images through a proxy without
   opening an SSRF hole on the server.
 - Corpus `2026-10-06`: five link-to-sink cases (chat bot API, versioned chat webhook, IP logger,

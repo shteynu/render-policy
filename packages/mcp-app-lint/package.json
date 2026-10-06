@@ -1,6 +1,6 @@
 {
   "name": "mcp-app-lint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SARIF findings about what an MCP App declares (CSP domain lists, permissions, tool visibility) and what its HTML does (innerHTML sinks, postMessage to '*', external hosts, data sinks).",
   "license": "MIT",
   "type": "module",
@@ -22,9 +22,9 @@
     "node": ">=22.12"
   },
   "dependencies": {
-    "@render-policy/core": "^0.1.0",
+    "@render-policy/core": "^0.1.1",
     "eslint": "^10.11.0",
-    "eslint-plugin-render-policy": "^0.1.0"
+    "eslint-plugin-render-policy": "^0.1.1"
   },
   "publishConfig": {
     "access": "public"
