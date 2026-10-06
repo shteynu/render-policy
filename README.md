@@ -18,10 +18,8 @@ Framework-free core with Angular and React adapters.
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 45 rule tests |
 | [`mcp-app-lint`](packages/mcp-app-lint) | SARIF findings about what an MCP App declares (`_meta.ui` CSP lists, permissions, tool visibility, list/read policy differences) and what its HTML does; CLI over a package, a directory or the JSON a server returned | 18 rules, 10 tests; also the analyzer behind the census |
 
-Until the packages are on npm, every [GitHub release](https://github.com/shteynu/render-policy/releases) carries their tarballs:
-
 ```
-npm install https://github.com/shteynu/render-policy/releases/download/v0.1.0/render-policy-core-0.1.0.tgz
+npm install @render-policy/core
 ```
 
 ## Why a policy and not "sanitize, then innerHTML"

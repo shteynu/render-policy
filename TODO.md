@@ -8,16 +8,16 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 
 - [ ] GitHub → Settings → Pages → Source: **GitHub Actions**. После этого `pages.yml` начнёт деплоить демо на https://shteynu.github.io/render-policy/ (сейчас каждый запуск падает с «Resource not accessible by integration»).
 - [ ] GitHub → Settings → Code security → **Private vulnerability reporting: enable**. На это ссылаются `SECURITY.md` и шаблоны issue.
-- [ ] npm: создать организацию `render-policy` (скоуп `@render-policy`), сгенерировать automation-токен, положить в GitHub → Settings → Secrets → Actions как `NPM_TOKEN`. Без токена release-workflow только прикладывает тарболы к GitHub Release.
+- [~] npm: организация `render-policy` создана 2026-10-06. Осталось сгенерировать automation-токен, положить в GitHub → Settings → Secrets → Actions как `NPM_TOKEN`. Без токена release-workflow только прикладывает тарболы к GitHub Release.
 - [ ] Проверить, что Dependabot создал первые PR (`.github/dependabot.yml`); группа `security-critical` (DOMPurify, marked) требует ручного взгляда на changelog перед merge.
 
 ## 2. Релиз v0.1.0
 
-- [ ] Версии всех шести пакетов (включая `mcp-app-lint`) сейчас `0.1.0`; в `CHANGELOG.md` заменить «(unreleased)» на дату.
+- [x] Версии всех шести пакетов (включая `mcp-app-lint`) `0.1.0`; в `CHANGELOG.md` дата 2026-09-30.
 - [x] Проверка тарболов перед публикацией: `npm pack` всех шести, publint и arethetypeswrong чистые (ESM-only предупреждение ожидаемо), установка в чистый проект: ESM-импорт, `require()`, типы под `node16` и `bundler`, `@render-policy/core/internal` через `typesVersions`; LICENSE лежит в каждом пакете.
 - [ ] `npm ci && npm run check` локально (нужен Chromium: `npx playwright install chromium`).
-- [ ] `git tag v0.1.0 && git push origin v0.1.0` → `release.yml`: проверки, сверка версий с тегом, тарболы на GitHub Release, публикация на npm с provenance при наличии `NPM_TOKEN` (порядок: core, eslint-plugin, react, mermaid, angular из `packages/angular/dist`).
-- [ ] После публикации: в `README.md` убрать блок «install from release tarballs», проверить `npm install @render-policy/core` в чистом проекте.
+- [x] `git tag v0.1.0 && git push origin v0.1.0` → `release.yml`: проверки, сверка версий с тегом, тарболы на GitHub Release. `NPM_TOKEN` не было, поэтому 0.1.0 опубликован на npm 2026-10-06 вручную с локальной машины (без provenance; 2FA ключом безопасности через браузер). Следующие версии: через `release.yml` с токеном, тогда будет provenance.
+- [x] После публикации: в `README.md` убран блок «install from release tarballs», `npm install @render-policy/core` в чистом проекте работает.
 
 ## 3. Перепись CSP: протокольный обход (нужна обычная сеть, из облачной сессии не работает)
 
