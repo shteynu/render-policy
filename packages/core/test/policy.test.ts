@@ -463,4 +463,66 @@ describe('grouped policy and the urls.decide hook', () => {
     expect(target.querySelector('a')?.hasAttribute('href')).toBe(false);
     expect(decisions.some((d) => d.code === 'url-rewrite-invalid')).toBe(true);
   });
+
+  describe('the order of the URL checks', () => {
+    const watching = (policy: NonNullable<Parameters<typeof createRenderer>[0]>['policy'] = {}) => {
+      const seen: string[] = [];
+      const renderer = createRenderer({
+        policy: {
+          ...policy,
+          urls: {
+            ...policy?.urls,
+            decide: (url) => {
+              seen.push(url.href);
+              return null;
+            },
+          },
+        },
+      });
+      return { seen, renderer };
+    };
+
+    it('a URL the scheme check refuses never reaches decide', () => {
+      const { seen, renderer } = watching();
+      const { decisions } = renderer.renderHtmlInto(box(), '<a href="javascript:alert(1)">x</a> <a href="https://ok.example/">y</a>');
+      expect(seen).toEqual(['https://ok.example/']);
+      expect(decisions.map((d) => d.code)).toContain('scheme-not-allowed');
+    });
+
+    it('a blocked sink never reaches decide; a logged one does, and is flagged first', () => {
+      const blocking = watching();
+      blocking.renderer.renderMarkdownInto(box(), '[x](https://webhook.site/abc)');
+      expect(blocking.seen).toEqual([]);
+
+      const logging = watching({ urls: { sinkDenylist: 'log' } });
+      const target = box();
+      const { decisions } = logging.renderer.renderMarkdownInto(target, '[x](https://webhook.site/abc)');
+      expect(logging.seen).toEqual(['https://webhook.site/abc']);
+      expect(target.querySelector('a')?.getAttribute('href')).toBe('https://webhook.site/abc');
+      expect(decisions.find((d) => d.code === 'sink-host')?.kind).toBe('flagged');
+    });
+
+    it('an image rewritten by decide goes through the image policy again', () => {
+      const target = box();
+      const { decisions } = createRenderer({
+        policy: {
+          images: { hosts: ['cdn.example'] },
+          urls: { decide: (url, ctx) => (ctx.subject === 'image' ? { rewrite: `https://other.example${url.pathname}` } : null) },
+        },
+      }).renderMarkdownInto(target, '![x](https://cdn.example/a.png)');
+      expect(target.querySelector('img')).toBeNull();
+      // The placeholder points at the URL that was refused: the rewritten one.
+      expect(target.querySelector('a.rp-blocked-image')?.getAttribute('href')).toBe('https://other.example/a.png');
+      expect(decisions.map((d) => d.code)).toEqual(['url-rewritten', 'image-host-not-allowed']);
+    });
+
+    it('journals a stripped query before the decide rewrite and keeps the rewritten value', () => {
+      const target = box();
+      const { decisions } = createRenderer({
+        policy: { images: { hosts: 'any' }, urls: { decide: (url, ctx) => (ctx.subject === 'image' ? { rewrite: `/p${url.pathname}` } : null) } },
+      }).renderMarkdownInto(target, '![x](https://cdn.example/a.png?t=1)');
+      expect(target.querySelector('img')?.getAttribute('src')).toBe('/p/a.png');
+      expect(decisions.map((d) => d.code)).toEqual(['image-query-stripped', 'url-rewritten']);
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import createDOMPurify, { type Config } from 'dompurify';
+import createDOMPurify, { type Config, type UponSanitizeAttributeHookEvent } from 'dompurify';
 import type { TrustedHTML } from 'trusted-types/lib/index.js';
 import type { CoreDecisionCode, DecisionSubject, RenderDecision } from './decisions.js';
 import { messageOf } from './errors.js';
@@ -101,6 +101,39 @@ type ImageScreen =
   | { readonly ok: true; readonly url: URL | null; readonly stripped: Problem | null }
   | ({ readonly ok: false } & Problem);
 
+/** One attribute as DOMPurify hands it to the hook. */
+interface AttributeInput {
+  readonly node: Element;
+  readonly data: UponSanitizeAttributeHookEvent;
+  /** Lower-cased attribute and tag names, and the value as the content wrote it. */
+  readonly name: string;
+  readonly tag: string;
+  readonly original: string;
+  /** Remove the attribute and journal why. */
+  drop(subject: DecisionSubject, code: CoreDecisionCode, reason: string): void;
+}
+
+interface AttributeRule {
+  readonly name: (name: string) => boolean;
+  readonly apply: (attribute: AttributeInput, s: CallState) => void;
+}
+
+/** A URL attribute on its way through the URL steps. */
+interface UrlTarget {
+  readonly tag: string;
+  readonly attribute: string;
+  readonly original: string;
+  readonly subject: DecisionSubject;
+  readonly isImage: boolean;
+  /** The URL as it now stands; a step that rewrites it replaces this, and later steps check the new one. */
+  parsed: ParsedUrl;
+  /** The attribute value to write back when every step passes. */
+  value: string;
+}
+
+/** A URL step returns the reason to block, or null to pass the URL on. */
+type UrlStep = (target: UrlTarget, s: CallState) => Problem | null;
+
 export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylist: SinkDenylist): Sanitizer {
   const purify = createDOMPurify(win);
   const config = buildConfig(policy);
@@ -180,140 +213,155 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     return { ok: true, value, rewritten };
   };
 
+  // URL steps, in order. Each one may block the URL, change it (`target.parsed` and `target.value`),
+  // or pass it on; the first block ends the chain. The order is the security argument: the scheme
+  // check runs before anything sees the URL (in the hook below), the sink denylist before
+  // application code, and the image policy last, so that a `urls.decide` rewrite is checked too.
+  const urlSteps: readonly UrlStep[] = [
+    // Known exfiltration sinks. `log` mode flags the URL and lets it through.
+    (target, s) => {
+      if (target.parsed.relative || policy.urls.sinkDenylist === 'off') return null;
+      const { isImage, parsed } = target;
+      const explicitlyAllowed =
+        isImage && Array.isArray(policy.images.hosts) && hostMatches(parsed.url.host, policy.images.hosts, policy.images.allowWildcardHosts);
+      const hit = explicitlyAllowed ? null : matchSink(parsed.url, denylist);
+      if (!hit) return null;
+      const reason = `host matches the sink denylist (${hit.category}: ${hit.pattern}, list ${denylist.version})`;
+      if (policy.urls.sinkDenylist === 'block') return { code: 'sink-host', reason };
+      record(s, { kind: 'flagged', subject: target.subject, code: 'sink-host', reason, tag: target.tag, attribute: target.attribute, value: parsed.normalized });
+      return null;
+    },
+
+    // Application URL hook: the place a link policy lives (deny or redirect off-site links). If it
+    // throws, that one URL is dropped. An image is screened as the content wrote it before the hook
+    // sees it, and the hook gets the URL after query handling: a rewrite to a same-origin proxy must
+    // not carry through a host, query or payload the image policy would have blocked.
+    (target, s) => {
+      if (!policy.urls.decide) return null;
+      const { subject, tag, attribute, original } = target;
+      let screened: URL | null = null;
+      let stripped: Problem | null = null;
+      if (target.isImage) {
+        const screen = screenImage(target.parsed);
+        if (!screen.ok) return screen;
+        screened = screen.url;
+        stripped = screen.stripped;
+      }
+      let decision;
+      try {
+        decision = policy.urls.decide(new URL((screened ?? target.parsed.url).href), { subject: subject as 'link' | 'image' | 'url', tag, attribute, relative: target.parsed.relative });
+      } catch (error) {
+        return { code: 'url-decider-failed', reason: `urls.decide threw: ${messageOf(error)}` };
+      }
+      if (!decision) return null;
+      if (decision.allow === false) return { code: 'url-denied', reason: decision.reason ?? 'denied by urls.decide' };
+      if (typeof decision.rewrite === 'string' && decision.rewrite !== target.parsed.normalized) {
+        const check = checkUrl(decision.rewrite, policy.urls, pageBase());
+        if (!check.ok) return { code: 'url-rewrite-invalid', reason: `urls.decide returned an invalid URL: ${check.reason}` };
+        target.parsed = check.parsed;
+        target.value = decision.rewrite;
+        if (stripped) record(s, { kind: 'rewritten', subject: 'image', code: stripped.code, reason: stripped.reason, tag, attribute, value: original });
+        record(s, { kind: 'rewritten', subject, code: 'url-rewritten', reason: decision.reason ?? 'rewritten by urls.decide', tag, attribute, value: original });
+      }
+      return null;
+    },
+
+    // Image hosts, query handling, heuristics and `images.rewriteUrl`, on the URL as it now stands.
+    (target, s) => {
+      if (!target.isImage) return null;
+      const outcome = applyImagePolicy(target.parsed);
+      if (!outcome.ok) return outcome;
+      if (outcome.value !== target.original) {
+        target.value = outcome.value;
+        if (outcome.rewritten) {
+          record(s, { kind: 'rewritten', subject: 'image', code: outcome.rewritten.code, reason: outcome.rewritten.reason, tag: target.tag, attribute: target.attribute, value: target.original });
+        }
+      }
+      return null;
+    },
+  ];
+
+  // Attribute rules: the first rule whose `name` test holds owns the attribute; attributes no rule
+  // claims are left to DOMPurify's allowlist.
+  const attributeRules: readonly AttributeRule[] = [
+    {
+      name: (n) => n.startsWith('on'),
+      apply: (a) => a.drop('attribute', 'event-handler', 'event handler attribute'),
+    },
+    {
+      name: (n) => n === 'class',
+      apply: (a, s) => {
+        const tokens = a.original.split(/\s+/).filter(Boolean);
+        const kept = tokens.filter((token) =>
+          policy.content.allowedClassPatterns.some((pattern) => {
+            pattern.lastIndex = 0;
+            return pattern.test(token);
+          }),
+        );
+        if (kept.length === 0) {
+          if (tokens.length > 0) a.drop('class', 'class-not-allowed', 'class names are not in the allowlist');
+          else a.data.keepAttr = false;
+          return;
+        }
+        if (kept.length !== tokens.length) {
+          a.data.attrValue = kept.join(' ');
+          record(s, { kind: 'rewritten', subject: 'class', code: 'class-filtered', reason: 'class names outside the allowlist removed', tag: a.tag, attribute: a.name, value: a.original });
+        }
+      },
+    },
+    {
+      name: (n) => n === 'target',
+      apply: (a) => {
+        if (!policy.content.allowTargetBlank || a.original.trim().toLowerCase() !== '_blank') {
+          a.drop('attribute', 'target-not-allowed', 'only target="_blank" is allowed');
+        }
+      },
+    },
+    {
+      name: (n) => URL_ATTRIBUTES.has(n),
+      apply: (a, s) => {
+        const isImage = a.tag === 'img' && a.name === 'src';
+        const subject: DecisionSubject = isImage ? 'image' : a.name === 'href' ? 'link' : 'url';
+        const verdict = checkUrl(a.original, policy.urls, pageBase());
+        if (!verdict.ok) {
+          // Nothing parseable to show, so a refused image gets no placeholder.
+          a.drop(subject, verdict.code, verdict.reason);
+          return;
+        }
+        const target: UrlTarget = { tag: a.tag, attribute: a.name, original: a.original, subject, isImage, parsed: verdict.parsed, value: a.original };
+        for (const step of urlSteps) {
+          const problem = step(target, s);
+          if (problem) {
+            a.drop(subject, problem.code, problem.reason);
+            if (isImage && policy.images.blocked === 'placeholder') {
+              s.blockedImages.set(a.node, { src: target.parsed.url.href, reason: problem.reason });
+            }
+            return;
+          }
+        }
+        if (target.value !== a.original) a.data.attrValue = target.value;
+      },
+    },
+  ];
+
   purify.addHook('uponSanitizeAttribute', (node, data) => {
     const s = state;
     if (!s) return;
     const name = data.attrName.toLowerCase();
     const tag = node.nodeName.toLowerCase();
     const original = data.attrValue;
-    const drop = (subject: DecisionSubject, code: CoreDecisionCode, reason: string): void => {
-      data.keepAttr = false;
-      record(s, { kind: 'blocked', subject, code, reason, tag, attribute: name, value: original });
-    };
-
-    if (name.startsWith('on')) {
-      drop('attribute', 'event-handler', 'event handler attribute');
-      return;
-    }
-
-    if (name === 'class') {
-      const tokens = original.split(/\s+/).filter(Boolean);
-      const kept = tokens.filter((token) =>
-        policy.content.allowedClassPatterns.some((pattern) => {
-          pattern.lastIndex = 0;
-          return pattern.test(token);
-        }),
-      );
-      if (kept.length === 0) {
-        if (tokens.length > 0) drop('class', 'class-not-allowed', 'class names are not in the allowlist');
-        else data.keepAttr = false;
-        return;
-      }
-      if (kept.length !== tokens.length) {
-        data.attrValue = kept.join(' ');
-        record(s, { kind: 'rewritten', subject: 'class', code: 'class-filtered', reason: 'class names outside the allowlist removed', tag, attribute: name, value: original });
-      }
-      return;
-    }
-
-    if (name === 'target') {
-      if (!policy.content.allowTargetBlank || original.trim().toLowerCase() !== '_blank') {
-        drop('attribute', 'target-not-allowed', 'only target="_blank" is allowed');
-      }
-      return;
-    }
-
-    if (!URL_ATTRIBUTES.has(name)) return;
-
-    const isImage = tag === 'img' && name === 'src';
-    const subject: DecisionSubject = isImage ? 'image' : name === 'href' ? 'link' : 'url';
-    const verdict = checkUrl(original, policy.urls, pageBase());
-    if (!verdict.ok) {
-      drop(subject, verdict.code, verdict.reason);
-      return;
-    }
-    let parsed = verdict.parsed;
-    const blockImage = (reason: string): void => {
-      if (isImage && policy.images.blocked === 'placeholder') s.blockedImages.set(node, { src: parsed.url.href, reason });
-    };
-
-    if (!parsed.relative && policy.urls.sinkDenylist !== 'off') {
-      const explicitlyAllowed =
-        isImage && Array.isArray(policy.images.hosts) && hostMatches(parsed.url.host, policy.images.hosts, policy.images.allowWildcardHosts);
-      const hit = explicitlyAllowed ? null : matchSink(parsed.url, denylist);
-      if (hit) {
-        const reason = `host matches the sink denylist (${hit.category}: ${hit.pattern}, list ${denylist.version})`;
-        if (policy.urls.sinkDenylist === 'block') {
-          drop(subject, 'sink-host', reason);
-          blockImage(reason);
-          return;
-        }
-        record(s, { kind: 'flagged', subject, code: 'sink-host', reason, tag, attribute: name, value: parsed.normalized });
-      }
-    }
-
-    // Application URL hook: the place a link policy lives (deny or redirect off-site links). If it
-    // throws, that one URL is dropped.
-    if (policy.urls.decide) {
-      // An image is screened as the content wrote it before the hook sees it, and the hook gets the
-      // URL after query handling: a rewrite to a same-origin proxy must not carry through a host,
-      // query or payload the image policy would have blocked.
-      let screened: URL | null = null;
-      let stripped: Problem | null = null;
-      if (isImage) {
-        const screen = screenImage(parsed);
-        if (!screen.ok) {
-          drop('image', screen.code, screen.reason);
-          blockImage(screen.reason);
-          return;
-        }
-        screened = screen.url;
-        stripped = screen.stripped;
-      }
-      let decision;
-      try {
-        decision = policy.urls.decide(new URL((screened ?? parsed.url).href), { subject: subject as 'link' | 'image' | 'url', tag, attribute: name, relative: parsed.relative });
-      } catch (error) {
-        drop(subject, 'url-decider-failed', `urls.decide threw: ${messageOf(error)}`);
-        blockImage(`urls.decide threw: ${messageOf(error)}`);
-        return;
-      }
-      if (decision) {
-        if (decision.allow === false) {
-          const reason = decision.reason ?? 'denied by urls.decide';
-          drop(subject, 'url-denied', reason);
-          blockImage(reason);
-          return;
-        }
-        if (typeof decision.rewrite === 'string' && decision.rewrite !== parsed.normalized) {
-          const check = checkUrl(decision.rewrite, policy.urls, pageBase());
-          if (!check.ok) {
-            drop(subject, 'url-rewrite-invalid', `urls.decide returned an invalid URL: ${check.reason}`);
-            blockImage(`urls.decide returned an invalid URL: ${check.reason}`);
-            return;
-          }
-          parsed = check.parsed;
-          data.attrValue = decision.rewrite;
-          if (stripped) record(s, { kind: 'rewritten', subject: 'image', code: stripped.code, reason: stripped.reason, tag, attribute: name, value: original });
-          record(s, { kind: 'rewritten', subject, code: 'url-rewritten', reason: decision.reason ?? 'rewritten by urls.decide', tag, attribute: name, value: original });
-        }
-      }
-    }
-
-    if (!isImage) return;
-
-    const outcome = applyImagePolicy(parsed);
-    if (!outcome.ok) {
-      drop('image', outcome.code, outcome.reason);
-      blockImage(outcome.reason);
-      return;
-    }
-    if (outcome.value !== original) {
-      data.attrValue = outcome.value;
-      if (outcome.rewritten) {
-        record(s, { kind: 'rewritten', subject: 'image', code: outcome.rewritten.code, reason: outcome.rewritten.reason, tag, attribute: name, value: original });
-      }
-    }
+    const rule = attributeRules.find((r) => r.name(name));
+    if (!rule) return;
+    rule.apply(
+      {
+        node, data, name, tag, original,
+        drop: (subject, code, reason) => {
+          data.keepAttr = false;
+          record(s, { kind: 'blocked', subject, code, reason, tag, attribute: name, value: original });
+        },
+      },
+      s,
+    );
   });
 
   purify.addHook('afterSanitizeAttributes', (node) => {
