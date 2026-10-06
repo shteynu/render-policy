@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": {
+      "@render-policy/angular": ["../src/index.ts"],
+      "@render-policy/core": ["../../core/src/index.ts"]
+    }
+  },
+  "include": [".", "../vitest.config.ts"]
+}

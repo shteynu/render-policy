@@ -5,8 +5,9 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "ng-packagr -p ng-package.json -c tsconfig.lib.json"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p test/tsconfig.json --noEmit",
+    "build": "ng-packagr -p ng-package.json -c tsconfig.lib.json",
+    "test": "vitest run"
   },
   "peerDependencies": {
     "@angular/common": ">=19.0.0",

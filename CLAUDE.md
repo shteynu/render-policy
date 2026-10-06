@@ -18,6 +18,8 @@ technical part. Documentation is written in English; the maintainer communicates
 - `packages/react`: `@render-policy/react`. Provider, hook, `<RpMarkdown>`, `<RpHtml>`. Tests with react-dom/client + act.
 - `packages/angular`: `@render-policy/angular`. Built with ng-packagr (partial compilation); TypeScript 6.0 is
   installed nested in this package because Angular 22 needs it, the workspace root uses TypeScript 7.
+  Unit tests with TestBed (vitest + jsdom) run over the built FESM, not the source: JIT from source does not see
+  signal inputs, so `npm test -w packages/angular` needs core and angular built first.
   Runtime proof in `packages/angular/e2e` (JIT app over the FESM, Playwright).
 - `packages/mermaid`: `@render-policy/mermaid`. Strict Mermaid as a fragment transform; unit tests with a fake
   mermaid, browser proof with the real one in `packages/mermaid/e2e`.
