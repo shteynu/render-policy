@@ -25,6 +25,12 @@ Flags, unless the value is a static string:
 
 Option `allowStatic` (default `true`): set to `false` to flag the sinks even with static strings.
 
+Option `escapeFunctions` (default `[]`): names of functions whose result counts as static, as an
+identifier (`esc`) or a dotted path (`DOMPurify.sanitize`), so `'<b>' + esc(name) + '</b>'` passes.
+The rule trusts the name, not the implementation, and HTML escaping does not make a value safe
+inside a URL attribute (`href`, `src`). Meant for auditing code you do not own (`mcp-app-lint` uses
+it to separate escaped templates from unescaped ones); in your own code, render through a policy.
+
 ## no-innerhtml-binding
 
 Angular templates (needs `@angular-eslint/template-parser`): flags `[innerHTML]`, `[(innerHTML)]`,

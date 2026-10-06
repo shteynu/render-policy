@@ -8,7 +8,7 @@
  *   mcp-app-lint --html app.html                   # one UI document
  * Options: --out file.sarif, --format sarif|text (default sarif), --fail-on error|warning|note|none (default error)
  */
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { UI_MIME } from './analyze.mjs';
@@ -63,8 +63,7 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
   if (options.package) {
     const meta = await packageMeta(options.package);
     if (!meta.tarball) throw new Error(`${options.package}: no tarball`);
-    const work = path.join(os.tmpdir(), 'mcp-app-lint');
-    await mkdir(work, { recursive: true });
+    const work = await mkdtemp(path.join(os.tmpdir(), 'mcp-app-lint-'));
     try {
       const scan = await scanPackage(meta, work);
       findings.push(...lintPackageScan(scan, `npm:${meta.name}@${meta.version}`));

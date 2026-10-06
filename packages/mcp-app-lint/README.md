@@ -54,17 +54,17 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 
 | Id | Name | Level | What it means |
 | --- | --- | --- | --- |
-| MCPAPP001 | csp-missing | warning | no `ui.csp`; a compliant host applies `default-src 'none'`, `connect-src 'none'` |
+| MCPAPP001 | csp-missing | warning | no `ui.csp`; a compliant host applies `default-src 'none'`, `connect-src 'none'`. For a package: it serves a UI resource and no domain list is found, literal or built at runtime |
 | MCPAPP002 | csp-allows-every-host | error | `*` or a scheme-only entry (`https:`) expands to every host |
 | MCPAPP003 | csp-wildcard-host | warning | `*.example.com` allows every subdomain |
-| MCPAPP004 | csp-insecure-scheme | warning | `http:` origin |
+| MCPAPP004 | csp-insecure-scheme | warning | `http:` origin other than loopback |
 | MCPAPP005 | csp-sink-host | error | host on the sink denylist that reaches accounts anyone can create: request catchers, tunnels, form builders, a storage service host (`storage.googleapis.com`), a wildcard over its customers (`*.blob.core.windows.net`) |
-| MCPAPP006 | csp-development-origin | note | localhost, 127.0.0.1, `blob:` in published metadata |
+| MCPAPP006 | csp-development-origin | note | localhost, 127.0.0.1, 0.0.0.0 in published metadata |
 | MCPAPP007 | permissions-sensitive | note | camera, microphone or geolocation requested |
 | MCPAPP008 | tool-side-effects-app-visible | warning | tool without `readOnlyHint` callable by the app |
 | MCPAPP009 | tool-visibility-implicit | note | tool with UI metadata relies on the default `["model", "app"]` |
-| MCPAPP010 | html-dynamic-innerhtml | warning | hand-written inline script assigns dynamic content to an HTML sink (with line and column) |
-| MCPAPP011 | html-postmessage-wildcard | warning | hand-written `postMessage(…, '*')` |
+| MCPAPP010 | html-dynamic-innerhtml | warning | hand-written inline script assigns dynamic content to an HTML sink (with line and column); values whose every dynamic part goes through an escaping helper are left out |
+| MCPAPP011 | html-postmessage-wildcard | warning | hand-written `postMessage(…, '*')` outside the app protocol (JSON-RPC or mcp-ui messages to `parent`/`top`), with line |
 | MCPAPP012 | html-inline-handlers | note | `on*` attributes |
 | MCPAPP013 | html-eval | warning | `eval` or `new Function` in hand-written script |
 | MCPAPP014 | html-form-action | note | a form that posts somewhere |
@@ -77,6 +77,12 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 Hand-written means an inline script with short lines and not too many of them; bundles carry
 framework internals and the SDK bridge (which posts to `'*'` by design) and are not reported
 for MCPAPP010, MCPAPP011 and MCPAPP013.
+
+In a package scan, domain lists are read where they are written: as a literal array, or through a
+constant or shorthand defined in the same file (`resourceDomains: DOMAINS`, `{ connectDomains }`).
+Each CSP finding points at that file and line. A list built at runtime counts as declared, so it
+does not raise MCPAPP001, but its entries cannot be checked. Packages that only mention the MCP
+Apps MIME type or `ui://` (hosts, renderers, SDKs) are not treated as serving a UI resource.
 
 The rules come out of the [MCP Apps UI census](../../census) in this repository; the analyzer is
 shared. The HTML sink detection is `eslint-plugin-render-policy`'s `no-unsafe-innerhtml`. The sink

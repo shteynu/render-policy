@@ -31,6 +31,9 @@ tester.run('no-unsafe-innerhtml', rule, {
     'stream.write(chunk);',
     'res.writeln(line);',
     'renderer.renderHtmlInto(el, html);',
+    { code: "el.innerHTML = '<b>' + esc(name) + '</b>';", options: [{ escapeFunctions: ['esc'] }] },
+    { code: 'el.innerHTML = `<li>${esc(a)}</li><li>${ok ? esc(b) : "-"}</li>`;', options: [{ escapeFunctions: ['esc'] }] },
+    { code: "el.insertAdjacentHTML('beforeend', DOMPurify.sanitize(html));", options: [{ escapeFunctions: ['DOMPurify.sanitize'] }] },
   ],
   invalid: [
     { code: 'el.innerHTML = userInput;', errors: [{ messageId: 'assignment', data: { sink: 'innerHTML', what: 'dynamic content' } }] },
@@ -50,6 +53,13 @@ tester.run('no-unsafe-innerhtml', rule, {
     { code: 'const node = <div dangerouslySetInnerHTML={{ __html: html }} />;', errors: [{ messageId: 'jsx' }] },
     { code: 'const node = <div dangerouslySetInnerHTML={props.raw} />;', errors: [{ messageId: 'jsx' }] },
     { code: "el.innerHTML = '<hr>';", options: [{ allowStatic: false }], errors: [{ messageId: 'assignment' }] },
+    // Escape functions count only when named, only as the whole interpolated value, and never by default.
+    { code: "el.innerHTML = '<b>' + esc(name) + '</b>';", errors: [{ messageId: 'assignment' }] },
+    { code: "el.innerHTML = '<b>' + esc(a) + b + '</b>';", options: [{ escapeFunctions: ['esc'] }], errors: [{ messageId: 'assignment' }] },
+    { code: "el.innerHTML = '<b>' + escape(name) + '</b>';", options: [{ escapeFunctions: ['esc'] }], errors: [{ messageId: 'assignment' }] },
+    { code: 'el.innerHTML = sanitize(html);', options: [{ escapeFunctions: ['DOMPurify.sanitize'] }], errors: [{ messageId: 'assignment' }] },
+    { code: 'el.innerHTML = obj[k](x);', options: [{ escapeFunctions: ['esc'] }], errors: [{ messageId: 'assignment' }] },
+    { code: "el.innerHTML = '<b>' + esc(name) + '</b>';", options: [{ allowStatic: false, escapeFunctions: ['esc'] }], errors: [{ messageId: 'assignment' }] },
     { code: "sanitizer.bypassSecurityTrustHtml('<b>static</b>');", options: [{ allowStatic: false }], errors: [{ messageId: 'bypass' }] },
   ],
 });

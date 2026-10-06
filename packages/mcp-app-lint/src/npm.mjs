@@ -86,6 +86,17 @@ export async function extractTarball(file, dir) {
 
 const SOURCE_EXT = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.mts', '.cts']);
 const CSP_ARRAY_RE = /\b(connectDomains|resourceDomains|frameDomains|baseUriDomains)\s*:\s*\[([^\]]*)\]/g;
+// `connectDomains: DOMAINS` and the shorthand `{ connectDomains }`: a list built elsewhere. Lookaheads keep
+// out member access (`x.array(…)` in the SDK's bundled schema) and type annotations (`string[]`).
+const CSP_IDENT_RE = /\b(connectDomains|resourceDomains|frameDomains|baseUriDomains)\s*:\s*([A-Za-z_$][\w$]*)\s*(?=[,}\r\n])/g;
+const CSP_SHORTHAND_RE = /[{,]\s*(connectDomains|resourceDomains|frameDomains|baseUriDomains)\s*(?=[,}])/g;
+const NOT_A_LIST = new Set(['undefined', 'null', 'true', 'false', 'string', 'number', 'boolean', 'any', 'unknown', 'never']);
+// What a server that serves a UI resource writes; a host or SDK mentions the MIME type or ui:// too.
+const SERVES_UI_RE = /\b(registerAppResource|createUIResource)\s*\(|\bmimeType\s*(:|=)\s*(RESOURCE_MIME_TYPE\b|["'`]text\/html;profile=mcp-app)|\buri\s*[:=]\s*["'`]ui:\/\/|\.(registerResource|resource)\s*\(\s*[^,()]+,\s*["'`]ui:\/\//;
+// `mimeType: APP_MIME` where some file of the package sets APP_MIME to the MCP Apps MIME type.
+const MIME_CONSTANT_RE = /\b([A-Za-z_$][\w$]*)\s*=\s*["'`]text\/html;profile=mcp-app["'`]/g;
+const MIME_IDENT_RE = /\bmimeType\s*:\s*([A-Za-z_$][\w$]*)\s*(?=[,}\r\n])/g;
+const lineAt = (text, index) => text.slice(0, index).split('\n').length;
 const PERMISSIONS_RE = /\bpermissions\s*:\s*\{([^}]*)\}/g;
 const VISIBILITY_RE = /\bvisibility\s*:\s*\[([^\]]*)\]/g;
 const EMBEDDED_HTML_RE = /<!doctype html>[\s\S]*?<\/html>/gi;
@@ -117,6 +128,9 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
     uiMimeMentions: 0,
     uiUriMentions: 0,
     cspArrays: 0,
+    cspDynamic: 0,
+    servesUi: false,
+    domainSites: [],
     domains: { connectDomains: [], resourceDomains: [], frameDomains: [], baseUriDomains: [] },
     permissions: new Set(),
     toolVisibility: { app: 0, model: 0 },
@@ -124,6 +138,8 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
     html: [],
     embeddedHtml: 0,
   };
+  const mimeConstants = new Set();
+  const mimeIdents = new Set();
   for await (const file of walk(dir)) {
     result.files += 1;
     if (result.files > maxFiles) break;
@@ -142,9 +158,29 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
     result.appResourceRegistrations += (text.match(/\bregisterAppResource\s*\(/g) ?? []).length;
     result.uiMimeMentions += (text.match(/text\/html;profile=mcp-app/g) ?? []).length;
     result.uiUriMentions += (text.match(/["'`]ui:\/\//g) ?? []).length;
-    for (const match of text.matchAll(CSP_ARRAY_RE)) {
+    const relative = path.relative(dir, file).split(path.sep).join('/');
+    const declaration = !/\.d\.[cm]?ts$/.test(file);
+    if (declaration) {
+      if (SERVES_UI_RE.test(text)) result.servesUi = true;
+      for (const m of text.matchAll(MIME_CONSTANT_RE)) mimeConstants.add(m[1]);
+      for (const m of text.matchAll(MIME_IDENT_RE)) mimeIdents.add(m[1]);
+    }
+    const addList = (key, body, index) => {
       result.cspArrays += 1;
-      result.domains[match[1]].push(...stringLiterals(match[2]));
+      const line = lineAt(text, index);
+      for (const raw of stringLiterals(body)) {
+        result.domains[key].push(raw);
+        // One list referenced twice (`resourceDomains: DOMAINS` in two tools) is one place to fix.
+        if (!result.domainSites.some((site) => site.key === key && site.raw === raw && site.file === relative && site.line === line)) result.domainSites.push({ key, raw, file: relative, line });
+      }
+    };
+    for (const match of text.matchAll(CSP_ARRAY_RE)) addList(match[1], match[2], match.index);
+    const named = [...text.matchAll(CSP_IDENT_RE)].map((m) => [m[1], m[2]]).concat([...text.matchAll(CSP_SHORTHAND_RE)].map((m) => [m[1], m[1]]));
+    for (const [key, name] of declaration ? named : []) {
+      if (NOT_A_LIST.has(name)) continue;
+      const list = new RegExp(`\\b(?:const|let|var)\\s+${name.replace(/\$/g, '\\$')}\\s*(?::[^=]+)?=\\s*\\[([^\\]]*)\\]`).exec(text);
+      if (list) addList(key, list[1], list.index);
+      else result.cspDynamic += 1;
     }
     for (const match of text.matchAll(PERMISSIONS_RE)) {
       for (const key of ['camera', 'microphone', 'geolocation', 'clipboardWrite']) if (new RegExp(`\\b${key}\\b`).test(match[1])) result.permissions.add(key);
@@ -166,7 +202,9 @@ export async function scanPackageDir(dir, { maxFiles = 4000, maxFileBytes = 2 * 
     permissions: [...result.permissions],
     domainsClassified: classified,
     declaresUi: result.appResourceRegistrations + result.uiMimeMentions + result.uiUriMentions > 0,
-    cspDeclared: result.cspArrays > 0,
+    cspDeclared: result.cspArrays + result.cspDynamic > 0,
+    // A domain list written in code is itself a sign the package serves a UI resource.
+    servesUi: result.servesUi || [...mimeIdents].some((name) => mimeConstants.has(name)) || result.domainSites.some((site) => !/\.d\.[cm]?ts$/.test(site.file)),
   };
 }
 

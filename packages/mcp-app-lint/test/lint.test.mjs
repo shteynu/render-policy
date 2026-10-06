@@ -18,7 +18,8 @@ test('ui meta: missing csp, every-host entries, wildcards, http, sink hosts, dev
     { ui: { csp: { connectDomains: ['https:', '*.example.com', 'http://api.example.com', 'https://hooks.zapier.com'], frameDomains: ['blob:', 'http://127.0.0.1:*'] }, permissions: { camera: {}, clipboardWrite: {} } } },
     'ui://a',
   );
-  assert.deepEqual(ids(findings), ['MCPAPP002', 'MCPAPP003', 'MCPAPP004', 'MCPAPP004', 'MCPAPP005', 'MCPAPP006', 'MCPAPP006', 'MCPAPP007']);
+  // blob: never reaches the network; the loopback origin is a development origin, not an insecure transport.
+  assert.deepEqual(ids(findings), ['MCPAPP002', 'MCPAPP003', 'MCPAPP004', 'MCPAPP005', 'MCPAPP006', 'MCPAPP007']);
   assert.equal(findings.find((f) => f.ruleId === 'MCPAPP005').logical.name, 'csp.connectDomains');
 });
 
@@ -39,6 +40,27 @@ test('resource: read wider than list is an error, plain mismatch a warning, html
   const sink = withHtml.find((f) => f.ruleId === 'MCPAPP010');
   assert.equal(sink.region.startLine, 2);
   assert.equal(sink.uri, 'ui://a');
+});
+
+test('ui meta: a wildcard above a sink service is a sink', () => {
+  const findings = lintUiMeta({ ui: { csp: { resourceDomains: ['https://*.amazonaws.com', 'https://*.mapbox.com'] } } }, 'ui://a');
+  assert.deepEqual(ids(findings), ['MCPAPP003', 'MCPAPP003', 'MCPAPP005']);
+});
+
+test('html: escaped templates and the app protocol are not findings', () => {
+  const html = [
+    '<!doctype html><html><body><script>',
+    "app.innerHTML = '<b>' + esc(name) + '</b>';",
+    "app.innerHTML = '<b>' + name + '</b>';",
+    "window.parent.postMessage({ jsonrpc: '2.0', method: 'ui/notifications/size-changed', params: { height: h } }, '*');",
+    "parent.postMessage({ type: 'ui-size-change', payload: { height: h } }, '*');",
+    "window.parent.postMessage(data, '*');",
+    "frame.contentWindow.postMessage({ jsonrpc: '2.0', id: 1 }, '*');",
+    '</script></body></html>',
+  ].join('\n');
+  const findings = lintHtml(html, 'app.html');
+  assert.deepEqual(findings.filter((f) => f.ruleId === 'MCPAPP010').map((f) => f.region.startLine), [3]);
+  assert.deepEqual(findings.filter((f) => f.ruleId === 'MCPAPP011').map((f) => f.region.startLine), [6, 7]);
 });
 
 test('html: postMessage star, handlers, eval, forms, external and sink hosts', () => {

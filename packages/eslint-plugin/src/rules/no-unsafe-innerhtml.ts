@@ -12,10 +12,16 @@ import type * as ESTree from 'estree';
  *
  * A static string literal is allowed by default (`el.innerHTML = '<hr>'`): it cannot carry
  * agent content. Set `allowStatic: false` to forbid the sinks altogether.
+ *
+ * `escapeFunctions` (default none) names functions whose result counts as static, by identifier
+ * (`esc`) or dotted path (`DOMPurify.sanitize`): `'<b>' + esc(name) + '</b>'` then passes. The
+ * rule trusts the name, not the implementation, and HTML escaping does not make a value safe in
+ * a URL attribute (`href="javascript:…"`); it is meant for auditing code you do not own.
  */
 
 interface Options {
   readonly allowStatic?: boolean;
+  readonly escapeFunctions?: readonly string[];
 }
 
 const SINK_PROPERTIES = new Set(['innerHTML', 'outerHTML']);
@@ -43,17 +49,31 @@ function propertyName(node: ESTree.MemberExpression): string | null {
   return null;
 }
 
-function isStatic(node: ESTree.Node | null | undefined): boolean {
+/** `a.b.c` for a chain of identifiers, else null. */
+function dottedName(node: ESTree.Node): string | null {
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') {
+    const object = dottedName(node.object);
+    return object === null ? null : `${object}.${node.property.name}`;
+  }
+  return null;
+}
+
+function isStatic(node: ESTree.Node | null | undefined, escapes: ReadonlySet<string> = new Set()): boolean {
   if (!node) return false;
   switch (node.type) {
     case 'Literal':
       return true;
     case 'TemplateLiteral':
-      return node.expressions.every((expression) => isStatic(expression));
+      return node.expressions.every((expression) => isStatic(expression, escapes));
     case 'BinaryExpression':
-      return node.operator === '+' && isStatic(node.left) && isStatic(node.right);
+      return node.operator === '+' && isStatic(node.left, escapes) && isStatic(node.right, escapes);
     case 'ConditionalExpression':
-      return isStatic(node.consequent) && isStatic(node.alternate);
+      return isStatic(node.consequent, escapes) && isStatic(node.alternate, escapes);
+    case 'CallExpression': {
+      const name = escapes.size > 0 && node.callee.type !== 'Super' ? dottedName(node.callee) : null;
+      return name !== null && escapes.has(name);
+    }
     default:
       return false;
   }
@@ -78,6 +98,7 @@ const rule: Rule.RuleModule = {
         type: 'object',
         properties: {
           allowStatic: { type: 'boolean' },
+          escapeFunctions: { type: 'array', items: { type: 'string' }, uniqueItems: true },
         },
         additionalProperties: false,
       },
@@ -95,7 +116,8 @@ const rule: Rule.RuleModule = {
   create(context) {
     const options = (context.options[0] ?? {}) as Options;
     const allowStatic = options.allowStatic ?? true;
-    const allowed = (node: ESTree.Node | null | undefined): boolean => allowStatic && isStatic(node);
+    const escapes = new Set(options.escapeFunctions ?? []);
+    const allowed = (node: ESTree.Node | null | undefined): boolean => allowStatic && isStatic(node, escapes);
 
     const listeners: Rule.RuleListener = {
       AssignmentExpression(node) {

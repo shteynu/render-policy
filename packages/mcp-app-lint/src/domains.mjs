@@ -34,7 +34,7 @@ export function parseDomainPattern(raw) {
     scheme,
     schemeOnly: schemeOnly !== null,
     localScheme,
-    development: localScheme || DEV_HOST_RE.test(host),
+    development: DEV_HOST_RE.test(host),
     host,
     wildcard,
     full,
@@ -94,7 +94,11 @@ const PATH_STYLE_ENDPOINTS = /^([a-z]+\d+\.digitaloceanspaces\.com|(f\d+|s3\.[a-
 export function sinkScope(pattern) {
   const p = typeof pattern === 'string' ? parseDomainPattern(pattern) : pattern;
   const match = sinkMatch(p.bareHost);
-  if (!match) return null;
+  if (!match) {
+    // A wildcard above a sink service covers it: *.amazonaws.com includes s3.amazonaws.com.
+    const covered = p.leadingWildcard && p.bareHost.includes('.') ? SINK_DENYLIST.entries.find((e) => e.pattern.split('/')[0].toLowerCase().endsWith(`.${p.bareHost}`)) : null;
+    return covered ? { entry: covered, scope: 'shared' } : null;
+  }
   const tenant = TENANT_CATEGORIES.has(match.entry.category)
     && match.prefix !== null
     && !(p.wildcard && !p.leadingWildcard)
@@ -108,7 +112,7 @@ export function sinkScope(pattern) {
  * and naming conventions; a host that fits several falls into the first one listed. Used for
  * aggregates only, so a misfiled host moves a count by one and names nothing.
  */
-export const DOMAIN_CATEGORIES = ['every-host', 'development', 'sink', 'fonts', 'analytics', 'maps', 'storage', 'media', 'cdn', 'api', 'other'];
+export const DOMAIN_CATEGORIES = ['every-host', 'development', 'local-scheme', 'sink', 'fonts', 'analytics', 'maps', 'storage', 'media', 'cdn', 'api', 'other'];
 
 const HOST_RULES = [
   ['fonts', /^(fonts\.googleapis\.com|fonts\.gstatic\.com|(use|p)\.typekit\.net|fonts\.bunny\.net|rsms\.me|(use|kit|ka-f)\.fontawesome\.com|fonts\.cdnfonts\.com)$/],
@@ -125,6 +129,7 @@ export function categorizeDomain(pattern) {
   const p = typeof pattern === 'string' ? parseDomainPattern(pattern) : pattern;
   if (p.full) return 'every-host';
   if (p.development) return 'development';
+  if (p.localScheme) return 'local-scheme';
   if (sinkScope(p)?.scope === 'shared') return 'sink';
   for (const [category, re] of HOST_RULES) if (re.test(p.bareHost)) return category;
   return 'other';

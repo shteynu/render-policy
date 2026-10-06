@@ -86,7 +86,12 @@ export function analyzeTools(tools) {
   return { total: list.length, withUi, visibleToApp, appOnly, sideEffectsVisibleToApp };
 }
 
+/** Escaping helpers whose result the census treats as text: by name, not by implementation. */
+export const ESCAPE_FUNCTIONS = ['esc', 'escapeHtml', 'escapeHTML', 'htmlEscape', 'escapeAttr', 'escapeHtmlAttr', 'DOMPurify.sanitize'];
+
 let linter = null;
+// The rule runs twice over each script: strict, and with ESCAPE_FUNCTIONS. A sink only the strict
+// run reports gets every dynamic part through an escaping helper.
 function lintInlineScript(code) {
   if (!linter) {
     const { Linter } = require('eslint');
@@ -95,8 +100,8 @@ function lintInlineScript(code) {
     const config = [
       {
         files: ['**/*.js'],
-        plugins: { 'render-policy': plugin },
-        rules: { 'render-policy/no-unsafe-innerhtml': 'error' },
+        plugins: { 'render-policy': plugin, escaped: plugin },
+        rules: { 'render-policy/no-unsafe-innerhtml': 'error', 'escaped/no-unsafe-innerhtml': ['error', { escapeFunctions: ESCAPE_FUNCTIONS }] },
         languageOptions: { ecmaVersion: 2024, sourceType: 'module', parserOptions: { ecmaFeatures: { jsx: true } } },
       },
     ];
@@ -106,6 +111,43 @@ function lintInlineScript(code) {
 }
 
 const SCRIPT_RE = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+const POST_MESSAGE_RE = /([\w$.]*)\s*\.\s*postMessage\s*\(/g;
+const PROTOCOL_TARGET_RE = /(^|\.)(parent|top)$/;
+// MCP Apps JSON-RPC, and the message types of the mcp-ui protocol.
+const PROTOCOL_MESSAGE_RE = /\bjsonrpc\s*:|\bmethod\s*:\s*['"`]ui\/|\btype\s*:\s*['"`](ui-[a-z-]+|prompt|link|tool|intent|notify)['"`]/;
+
+/** The argument text of a call whose opening parenthesis ends at `start`, or null if unbalanced. */
+function callArguments(code, start) {
+  let depth = 1;
+  let quote = null;
+  for (let i = start; i < code.length && i < start + 20000; i += 1) {
+    const c = code[i];
+    if (quote) {
+      if (c === '\\') i += 1;
+      else if (c === quote) quote = null;
+    } else if (c === '"' || c === "'" || c === '`') quote = c;
+    else if (c === '(' || c === '{' || c === '[') depth += 1;
+    else if (c === ')' || c === '}' || c === ']') {
+      depth -= 1;
+      if (depth === 0) return code.slice(start, i);
+    }
+  }
+  return null;
+}
+
+/** postMessage calls whose target origin is '*', with position and whether they carry the app protocol to the host. */
+export function postMessageStarCalls(code) {
+  const calls = [];
+  for (const match of code.matchAll(POST_MESSAGE_RE)) {
+    const args = callArguments(code, match.index + match[0].length);
+    if (args === null || !/,\s*['"`]\*['"`]\s*(,[^,]*)?,?\s*$/.test(args)) continue;
+    const before = code.slice(0, match.index);
+    const line = before.split('\n').length;
+    const column = match.index - before.lastIndexOf('\n');
+    calls.push({ line, column, protocol: PROTOCOL_TARGET_RE.test(match[1]) && PROTOCOL_MESSAGE_RE.test(args) });
+  }
+  return calls;
+}
 const URL_ATTR_RE = /\b(?:src|href|action|poster|data)\s*=\s*["']([^"']+)["']/gi;
 
 /** Static signals in a UI resource's HTML. Heuristic by design; the report says so. */
@@ -120,6 +162,9 @@ export function analyzeHtml(html) {
     unsafeInnerHtmlHandwritten: 0,
     evalLikeHandwritten: 0,
     postMessageStarHandwritten: 0,
+    postMessageStarHandwrittenNonProtocol: 0,
+    unsafeInnerHtmlHandwrittenUnescaped: 0,
+    postMessages: [],
     lintErrors: 0,
     unparsedScripts: 0,
     inlineHandlers: (text.match(/\son[a-z]+\s*=/gi) ?? []).length,
@@ -162,6 +207,11 @@ export function analyzeHtml(html) {
       result.evalLikeHandwritten += (body.match(/\beval\s*\(|new\s+Function\s*\(/g) ?? []).length;
       result.postMessageStarHandwritten += (body.match(/postMessage\s*\([^)]*['"]\*['"]/g) ?? []).length;
     }
+    const scriptLine = text.slice(0, match.index).split('\n').length + (match[0].slice(0, match[0].indexOf('>') + 1).split('\n').length - 1);
+    for (const call of postMessageStarCalls(body)) {
+      result.postMessages.push({ ...call, line: scriptLine + call.line - 1, handwritten });
+      if (handwritten && !call.protocol) result.postMessageStarHandwrittenNonProtocol += 1;
+    }
     try {
       const messages = lintInlineScript(body);
       const fatal = messages.filter((m) => m.fatal);
@@ -170,10 +220,14 @@ export function analyzeHtml(html) {
         continue;
       }
       const hits = messages.filter((m) => m.ruleId === 'render-policy/no-unsafe-innerhtml');
+      const unescaped = new Set(messages.filter((m) => m.ruleId === 'escaped/no-unsafe-innerhtml').map((m) => `${m.line}:${m.column}`));
       result.unsafeInnerHtml += hits.length;
-      if (handwritten) result.unsafeInnerHtmlHandwritten += hits.length;
-      const scriptLine = text.slice(0, match.index).split('\n').length + (match[0].slice(0, match[0].indexOf('>') + 1).split('\n').length - 1);
-      for (const hit of hits) result.sinks.push({ line: scriptLine + hit.line - 1, column: hit.column, handwritten, message: hit.message });
+      for (const hit of hits) {
+        const escaped = !unescaped.has(`${hit.line}:${hit.column}`);
+        if (handwritten) result.unsafeInnerHtmlHandwritten += 1;
+        if (handwritten && !escaped) result.unsafeInnerHtmlHandwrittenUnescaped += 1;
+        result.sinks.push({ line: scriptLine + hit.line - 1, column: hit.column, handwritten, escaped, message: hit.message });
+      }
     } catch {
       result.unparsedScripts += 1;
     }

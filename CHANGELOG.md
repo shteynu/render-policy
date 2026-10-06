@@ -13,6 +13,24 @@
   `sink` follows it (a tenant bucket is `storage`).
 - `mcp-app-lint`: denylist entries with `*` (`s3.*.amazonaws.com`, `s3-*.amazonaws.com`,
   `lambda-url.*.on.aws`) match as in core; they were compared literally and never matched.
+- `mcp-app-lint`, after a run over the 174 npm packages that depend on a UI SDK:
+  - CSP findings (MCPAPP002–006, 019) in a package scan point at the file and line of the entry;
+    they pointed at the package. One list referenced twice is reported once.
+  - Domain lists written through a constant or shorthand in the same file are read; a list built
+    at runtime counts as declared. Before, both raised MCPAPP001.
+  - MCPAPP001 for a package requires that it serves a UI resource (`scanPackageDir` returns
+    `servesUi` beside `declaresUi`); hosts, renderers and SDKs that only mention the MIME type
+    or `ui://` are no longer told to declare a CSP.
+  - MCPAPP004 skips loopback origins (MCPAPP006 reports them); MCPAPP006 no longer reports
+    `blob:`, and local schemes have their own domain category, `local-scheme`.
+  - MCPAPP005 covers a wildcard above a sink service (`*.amazonaws.com`, `*.googleapis.com`).
+  - MCPAPP010 leaves out values whose every dynamic part goes through an escaping helper
+    (`ESCAPE_FUNCTIONS`); MCPAPP011 leaves out the app protocol (JSON-RPC or mcp-ui messages to
+    `parent`/`top`) and reports each remaining call with its line. The analysis keeps the old
+    totals and adds `unsafeInnerHtmlHandwrittenUnescaped`, `postMessageStarHandwrittenNonProtocol`
+    and `postMessages`.
+- `eslint-plugin-render-policy`: `no-unsafe-innerhtml` takes `escapeFunctions`, names of functions
+  whose result counts as static (default none, so library code is checked as before).
 - Census report: the protocol census re-classifies domain lists from the hosts kept in each
   record, reports shared and tenant sink hosts separately, and gives server counts beside the
   resource counts.

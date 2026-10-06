@@ -66,6 +66,10 @@ test('--dir emits code-scanning-ready SARIF and exits per --fail-on', async () =
     // The html finding carries a line/column region.
     const sink = runLog.results.find((r) => r.ruleId === 'MCPAPP010');
     assert.ok(sink.locations[0].physicalLocation.region?.startLine >= 1);
+    // A CSP entry points at the file and line where it is written.
+    const every = runLog.results.find((r) => r.ruleId === 'MCPAPP002').locations[0].physicalLocation;
+    assert.ok(every.artifactLocation.uri.endsWith('/src/server.js'), every.artifactLocation.uri);
+    assert.equal(every.region?.startLine, 3);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

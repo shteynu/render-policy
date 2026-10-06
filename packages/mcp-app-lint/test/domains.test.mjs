@@ -8,7 +8,7 @@ test('scheme-only entries: network schemes allow every host, local schemes do no
   const http = parseDomainPattern('http:');
   assert.deepEqual([http.full, http.insecureScheme], [true, true]);
   const blob = parseDomainPattern('blob:');
-  assert.deepEqual([blob.scheme, blob.full, blob.localScheme, blob.development], ['blob', false, true, true]);
+  assert.deepEqual([blob.scheme, blob.full, blob.localScheme, blob.development], ['blob', false, true, false]);
   assert.equal(parseDomainPattern('data:').full, false);
   assert.equal(parseDomainPattern('wss:').full, true);
 });
@@ -30,7 +30,8 @@ test('categories are heuristic but stable', () => {
     '*': 'every-host',
     'https:': 'every-host',
     'http://localhost:*': 'development',
-    'blob:': 'development',
+    'blob:': 'local-scheme',
+    'data:': 'local-scheme',
     'https://webhook.site': 'sink',
     'https://fonts.googleapis.com': 'fonts',
     'https://fonts.gstatic.com': 'fonts',
@@ -107,6 +108,11 @@ test('sink scope: a host anyone can use is shared, one account on a storage or s
     'myapp.replit.app': 'tenant',
     'abc123.lambda-url.us-east-1.on.aws': 'tenant',
     'https://api.example.com': null,
+    // A wildcard above a sink service covers it.
+    '*.amazonaws.com': 'shared',
+    '*.googleapis.com': 'shared',
+    '*.core.windows.net': 'shared',
+    '*.mapbox.com': null,
   };
   for (const [raw, expected] of Object.entries(cases)) assert.equal(scope(raw), expected, raw);
   assert.equal(categorizeDomain('acct.blob.core.windows.net'), 'storage');

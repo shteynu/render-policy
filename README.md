@@ -15,8 +15,8 @@ Framework-free core with Angular and React adapters.
 | [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | 11 TestBed tests over the ng-packagr bundle + browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
 | [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 14 unit tests + browser proof with the real mermaid |
-| [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 45 rule tests |
-| [`mcp-app-lint`](packages/mcp-app-lint) | SARIF findings about what an MCP App declares (`_meta.ui` CSP lists, permissions, tool visibility, list/read policy differences) and what its HTML does; CLI over a package, a directory or the JSON a server returned | 19 rules, 17 tests; also the analyzer behind the census |
+| [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 54 rule tests |
+| [`mcp-app-lint`](packages/mcp-app-lint) | SARIF findings about what an MCP App declares (`_meta.ui` CSP lists, permissions, tool visibility, list/read policy differences) and what its HTML does; CLI over a package, a directory or the JSON a server returned | 19 rules, 24 tests; also the analyzer behind the census |
 
 ```
 npm install @render-policy/core
