@@ -100,7 +100,11 @@ export interface UrlPolicy {
   readonly heuristics: UrlHeuristics | false;
   /** Hosts known to receive arbitrary data (webhook catchers, tunnels, forms, blob storage): block, log only, or ignore. */
   readonly sinkDenylist: 'block' | 'log' | 'off';
-  /** Application hook to allow, deny or rewrite each URL. `null` to make no per-URL decisions. */
+  /**
+   * Application hook to allow, deny or rewrite each URL. `null` to make no per-URL decisions.
+   * An image reaches it only after the image host, query and heuristic checks, with the query
+   * already handled, so a rewrite to a same-origin proxy cannot carry what those checks remove.
+   */
   readonly decide: UrlDecider | null;
 }
 

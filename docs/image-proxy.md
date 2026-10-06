@@ -48,11 +48,14 @@ in Angular.
 
 1. scheme allowlist and browser-style URL normalization;
 2. sink denylist (with `hosts: 'any'` there is no explicit allowlist entry to override it);
-3. `urls.decide`, if you set one;
-4. `images.hosts`;
-5. `images.query` (`'strip'` by default: the query string and fragment are removed);
-6. length and entropy heuristics;
-7. `images.rewriteUrl(url)`, which receives the URL as it stands after steps 1–6.
+3. `images.hosts`;
+4. `images.query` (`'strip'` by default: the query string and fragment are removed);
+5. length and entropy heuristics;
+6. `urls.decide`, if you set one, which receives the URL as it stands after steps 1–5;
+7. `images.rewriteUrl(url)`, which receives the same URL.
+
+(Without a `urls.decide` hook, steps 3–5 and 7 run as one stage; with it, an image that fails
+steps 3–5 never reaches the hook.)
 
 The URL it returns is checked for its scheme and parsed again, and nothing more: a proxy URL
 carries the original URL in its own query string, so the length and entropy heuristics would
@@ -69,13 +72,18 @@ Each image leaves a decision in the journal that `render*Into()` returns:
 | `image-rewrite-invalid` | the returned URL failed the scheme check |
 | `sink-host`, `image-query-stripped`, `url-too-long`, `url-encoded-payload` | the earlier steps, unchanged by the proxy |
 
-### Do not use `urls.decide` for the proxy
+### Prefer `images.rewriteUrl` over `urls.decide`
 
-`urls.decide` can rewrite an image URL too, but it runs before the image policy. Once it has
-turned `https://evil.example/a.png?q=secret` into `/img-proxy?url=…`, the image policy sees a
-same-origin URL and lets it through untouched: the query string is never stripped and the
-heuristics never run, so the secret travels inside the proxy URL to the attacker's host. Keep
-`urls.decide` for links and for denying images; route images with `images.rewriteUrl`.
+`urls.decide` can rewrite an image URL too. After 0.1.0 it sees an image only after the host,
+query and heuristic checks, and receives the URL with the query already stripped, so a rewrite to
+a same-origin proxy carries nothing those checks would have removed. In **0.1.0** the hook ran
+first: a rewrite of `https://evil.example/a.png?q=secret` to `/img-proxy?url=…` turned the image
+into a same-origin URL that skipped the image policy, and the secret travelled inside the proxy
+URL to the attacker's host. If you are on 0.1.0, route images with `images.rewriteUrl` only.
+
+`images.rewriteUrl` is still the better place: it exists for exactly this, it is not called for
+links, and its journal codes (`image-rewritten` and the others above) say what happened to the
+image rather than to a URL in general.
 
 ### Set a CSP for images
 

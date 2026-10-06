@@ -97,6 +97,10 @@ type ImageOutcome =
   | { readonly ok: true; readonly value: string; readonly rewritten: Problem | null }
   | ({ readonly ok: false } & Problem);
 
+type ImageScreen =
+  | { readonly ok: true; readonly url: URL | null; readonly stripped: Problem | null }
+  | ({ readonly ok: false } & Problem);
+
 export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylist: SinkDenylist): Sanitizer {
   const purify = createDOMPurify(win);
   const config = buildConfig(policy);
@@ -115,15 +119,17 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     }
   };
 
-  const applyImagePolicy = (parsed: ParsedUrl): ImageOutcome => {
+  // Host, query and heuristic checks on an image URL. `url` is null when the URL is local
+  // (relative or same-origin) and needs no checks; otherwise it is the URL after query handling.
+  const screenImage = (parsed: ParsedUrl): ImageScreen => {
     if (parsed.relative) {
       // Resolves within the host page's own origin.
-      return { ok: true, value: parsed.normalized, rewritten: null };
+      return { ok: true, url: null, stripped: null };
     }
     const origin = pageOrigin();
     const url = new URL(parsed.url.href);
     if (origin !== null && url.origin === origin) {
-      return { ok: true, value: parsed.normalized, rewritten: null };
+      return { ok: true, url: null, stripped: null };
     }
     const images = policy.images;
     if (images.hosts === 'none') {
@@ -132,7 +138,7 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     if (images.hosts !== 'any' && !hostMatches(url.host, images.hosts, images.allowWildcardHosts)) {
       return { ok: false, code: 'image-host-not-allowed', reason: `image host "${url.host}" is not in the allowlist` };
     }
-    let rewritten: Problem | null = null;
+    let stripped: Problem | null = null;
     const hasQuery = url.search !== '' || url.hash !== '';
     if (hasQuery && images.query === 'deny') {
       return { ok: false, code: 'image-query-denied', reason: 'image URL carries a query string or fragment' };
@@ -140,12 +146,22 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
     if (hasQuery && images.query === 'strip') {
       url.search = '';
       url.hash = '';
-      rewritten = { code: 'image-query-stripped', reason: 'query string removed' };
+      stripped = { code: 'image-query-stripped', reason: 'query string removed' };
     }
     if (policy.urls.heuristics) {
       const problem = checkUrlHeuristics(url, policy.urls.heuristics);
       if (problem) return { ok: false, ...problem };
     }
+    return { ok: true, url, stripped };
+  };
+
+  const applyImagePolicy = (parsed: ParsedUrl): ImageOutcome => {
+    const screen = screenImage(parsed);
+    if (!screen.ok) return screen;
+    if (screen.url === null) return { ok: true, value: parsed.normalized, rewritten: null };
+    const { url } = screen;
+    const images = policy.images;
+    let rewritten = screen.stripped;
     let value = rewritten ? url.href : parsed.normalized;
     if (images.rewriteUrl) {
       let out: string | null;
@@ -236,12 +252,27 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
       }
     }
 
-    // Application URL hook: the place a link policy lives (deny or redirect off-site links); it runs
-    // for images too, before the image-specific policy. If it throws, that one URL is dropped.
+    // Application URL hook: the place a link policy lives (deny or redirect off-site links). If it
+    // throws, that one URL is dropped.
     if (policy.urls.decide) {
+      // An image is screened as the content wrote it before the hook sees it, and the hook gets the
+      // URL after query handling: a rewrite to a same-origin proxy must not carry through a host,
+      // query or payload the image policy would have blocked.
+      let screened: URL | null = null;
+      let stripped: Problem | null = null;
+      if (isImage) {
+        const screen = screenImage(parsed);
+        if (!screen.ok) {
+          drop('image', screen.code, screen.reason);
+          blockImage(screen.reason);
+          return;
+        }
+        screened = screen.url;
+        stripped = screen.stripped;
+      }
       let decision;
       try {
-        decision = policy.urls.decide(new URL(parsed.url.href), { subject: subject as 'link' | 'image' | 'url', tag, attribute: name, relative: parsed.relative });
+        decision = policy.urls.decide(new URL((screened ?? parsed.url).href), { subject: subject as 'link' | 'image' | 'url', tag, attribute: name, relative: parsed.relative });
       } catch (error) {
         drop(subject, 'url-decider-failed', `urls.decide threw: ${messageOf(error)}`);
         blockImage(`urls.decide threw: ${messageOf(error)}`);
@@ -263,6 +294,7 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
           }
           parsed = check.parsed;
           data.attrValue = decision.rewrite;
+          if (stripped) record(s, { kind: 'rewritten', subject: 'image', code: stripped.code, reason: stripped.reason, tag, attribute: name, value: original });
           record(s, { kind: 'rewritten', subject, code: 'url-rewritten', reason: decision.reason ?? 'rewritten by urls.decide', tag, attribute: name, value: original });
         }
       }

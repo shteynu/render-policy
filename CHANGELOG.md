@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- `@render-policy/core` (security): `urls.decide` now sees an image only after the image host,
+  query and heuristic checks, and receives the URL after query handling. In 0.1.0 the hook ran
+  first, so rewriting an image to a same-origin proxy (`/img-proxy?url=…`) skipped the image
+  policy: an unlisted host was let through and a query string such as `?q=secret` travelled to the
+  image host inside the proxy URL. `images.rewriteUrl` was not affected. A `decide` hook no longer
+  sees images the image policy blocks.
+- Docs: [`docs/image-proxy.md`](docs/image-proxy.md), routing images through a proxy without
+  opening an SSRF hole on the server.
+
 ## 0.1.0 — 2026-09-30
 
 First release.

