@@ -90,5 +90,5 @@ a new package needs `npm trust github <pkg> --repo shteynu/render-policy --file 
 (npm 11.10+) after its first manual publish. The Angular package publishes from `packages/angular/dist`.
 Scoped packages live in the `render-policy` npm organisation. GitHub Pages must be enabled with source "GitHub Actions" for `pages.yml` to deploy.
 The Claude Code plugin (`plugins/render-policy`, marketplace file `.claude-plugin/marketplace.json`) has the
-same version as the packages and pins `npx mcp-app-lint@<version>` in its skill and README; `release.yml`
-fails the tag otherwise. Check it with `claude plugin validate ./plugins/render-policy` and `claude plugin validate .`.
+same version as the packages; `release.yml` fails the tag otherwise. Its skills never run a package
+launcher (`npx`): Anthropic's plugin directory flags download-and-run commands. Check it with `claude plugin validate ./plugins/render-policy` and `claude plugin validate .`.

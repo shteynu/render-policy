@@ -67,14 +67,10 @@ jobs:
               exit 1
             fi
           done
-          # The Claude Code plugin carries the same version and pins the CLI its skill runs to it.
+          # The Claude Code plugin carries the same version as the packages.
           plugin="$(node -p "require('./plugins/render-policy/.claude-plugin/plugin.json').version")"
           if [ "$plugin" != "$tag" ]; then
             echo "plugins/render-policy is $plugin, tag is $tag" >&2
-            exit 1
-          fi
-          if grep -rhoE 'mcp-app-lint@[0-9][^ `]*' plugins/render-policy | grep -vxF "mcp-app-lint@$tag"; then
-            echo "plugins/render-policy pins another mcp-app-lint version, tag is $tag" >&2
             exit 1
           fi
       - name: Pack tarballs

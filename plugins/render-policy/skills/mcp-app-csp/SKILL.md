@@ -12,14 +12,21 @@ silently breaks the App.
 
 ## 1. Run the linter
 
-From the server's package directory (source or build output):
+`mcp-app-lint` is an MIT CLI from the render-policy project. It reads the files you point it at and
+prints findings. It sends nothing anywhere.
+
+Use the copy installed in the project. Check `package.json` (`devDependencies`) and
+`node_modules/.bin/mcp-app-lint`. If it is not installed, ask the user before adding it as a dev
+dependency with the project's package manager (for example `npm install --save-dev mcp-app-lint`);
+do not run it through a package launcher. Then, from the server's package directory (source or
+build output):
 
 ```bash
-npx mcp-app-lint@0.1.4 --dir . --format text
+./node_modules/.bin/mcp-app-lint --dir . --format text
 ```
 
-`mcp-app-lint` is an MIT CLI from the render-policy project. It reads the files in that directory
-and prints findings. It sends nothing anywhere. Other inputs:
+Suggest a script in `package.json` so the check stays in the project, for example
+`"lint:mcp-app": "mcp-app-lint --dir . --format text"`. Other inputs:
 
 - `--read read.json --list list.json --tools tools.json`: saved results of `resources/read`,
   `resources/list` and `tools/list` from a running server

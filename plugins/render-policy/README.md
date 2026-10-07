@@ -29,12 +29,14 @@ The plugin has no hooks, MCP servers or background processes. It runs nothing on
 
 - **safe-agent-html** may ask Claude to add the `@render-policy/*` npm packages (and
   `eslint-plugin-render-policy`) to your project with your package manager.
-- **mcp-app-csp** asks Claude to run `npx mcp-app-lint@0.1.4`. npx downloads that exact version
-  from the npm registry. The CLI reads the directory or files you point it at and prints findings
-  locally. With `--package <name>` it downloads that npm package to a temporary directory, scans it
-  and deletes it. It sends nothing else anywhere.
+- **mcp-app-csp** asks Claude to run `mcp-app-lint` from your project's `node_modules`. If it is
+  not installed, Claude asks you before adding it as a dev dependency with your package manager,
+  which downloads it from the npm registry. The CLI reads the directory or files you point it at and
+  prints findings locally. With `--package <name>` it downloads that npm package to a temporary
+  directory, scans it and deletes it. It sends nothing else anywhere.
 
-The plugin collects no data.
+Every command goes through Claude's normal tool permissions. The plugin collects no data; see
+[PRIVACY.md](PRIVACY.md).
 
 ## License
 
