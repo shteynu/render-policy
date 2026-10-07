@@ -125,7 +125,7 @@ export function lintResource({ uri, listMeta = null, readMeta = null, html = nul
   if (listMeta && readMeta) {
     const compared = compareListRead(listMeta, readMeta);
     if (compared.readWider) findings.push(finding('MCPAPP018', 'resources/read declares a wider policy than resources/list.', uri));
-    else if (compared.mismatch) findings.push(finding('MCPAPP017', 'resources/read and resources/list declare different policies.', uri));
+    else if (compared.conflict) findings.push(finding('MCPAPP017', 'resources/read and resources/list declare different policies.', uri));
   }
   if (analysis) findings.push(...htmlFindings(analysis, uri));
   return findings;

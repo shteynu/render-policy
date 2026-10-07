@@ -80,22 +80,23 @@ function canonical(value) {
 
 /**
  * Does `resources/read` declare a different policy than `resources/list`? The host that checked list is then wrong.
+ * `mismatch` is any difference, for the census. A listing may stay silent: the MCP Apps SDK puts the CSP in the read
+ * result only. So `conflict` and `readWider`, which the rules use, compare a field (csp, permissions, domain) only
+ * when both sides declare it; `readWider` is a CSP entry at read time that the listing's same key does not have.
  * @param {unknown} listMeta `_meta` of the listing entry
  * @param {unknown} readMeta `_meta` of the read result's content item
  */
 export function compareListRead(listMeta, readMeta) {
   const a = uiMetaOf(listMeta);
   const b = uiMetaOf(readMeta);
-  if (!a && !b) return { comparable: false, mismatch: false };
+  if (!a && !b) return { comparable: false, mismatch: false, conflict: false, readWider: false };
+  const FIELDS = /** @type {const} */ (['csp', 'permissions', 'domain']);
   /** @param {UiMeta | null} m */
-  const pick = (m) => (m ? { csp: m.csp ?? null, permissions: m.permissions ?? null, domain: m.domain ?? null } : null);
-  const left = JSON.stringify(canonical(pick(a)));
-  const right = JSON.stringify(canonical(pick(b)));
-  const readWider = (() => {
-    if (!a?.csp || !b?.csp) return false;
-    return CSP_KEYS.some((k) => (b.csp[k]?.length ?? 0) > (a.csp[k]?.length ?? 0) || (b.csp[k] ?? []).some((/** @type {unknown} */ d) => String(d).includes('*') && !(a.csp[k] ?? []).includes(d)));
-  })();
-  return { comparable: true, mismatch: left !== right, readWider, listOnly: !!a && !b, readOnly: !a && !!b };
+  const pick = (m) => (m ? Object.fromEntries(FIELDS.map((f) => [f, m[f] ?? null])) : null);
+  const same = (/** @type {unknown} */ x, /** @type {unknown} */ y) => JSON.stringify(canonical(x)) === JSON.stringify(canonical(y));
+  const conflict = FIELDS.some((f) => a?.[f] != null && b?.[f] != null && !same(a[f], b[f]));
+  const readWider = !!(a?.csp && b?.csp) && CSP_KEYS.some((k) => (b.csp[k] ?? []).some((/** @type {unknown} */ d) => !(a.csp[k] ?? []).includes(d)));
+  return { comparable: true, mismatch: !same(pick(a), pick(b)), conflict, readWider, listOnly: !!a && !b, readOnly: !a && !!b };
 }
 
 /**

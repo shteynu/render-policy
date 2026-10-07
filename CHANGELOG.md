@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- `@render-policy/core`: sink denylist 2026-10-07 adds S3-compatible object stores and backend
+  platforms with public storage, where anyone can open an account and receive data through a
+  presigned upload or a public bucket: Cloudflare R2's S3 endpoint (`r2.cloudflarestorage.com`;
+  `r2.dev` was already listed), Linode, Yandex Cloud, Alibaba OSS, Tencent COS, Scaleway, IBM
+  COS, Oracle Object Storage, Hetzner, Storj, Firebase Storage, Vercel Blob and Supabase. Links
+  and images to these hosts are blocked in `balanced` and `strict` like the other storage hosts.
+  `mcp-app-lint` follows: a wildcard over them or their path-style endpoint is MCPAPP005, one
+  named account MCPAPP019.
+- `mcp-app-lint`: MCPAPP017 and MCPAPP018 compare `resources/list` and `resources/read` field by
+  field (`csp`, `permissions`, `domain`), and only where both sides declare the field. The MCP
+  Apps SDK puts the CSP in the read result only, so a listing without one is not a mismatch; it
+  raised MCPAPP017 whenever the listing carried any `_meta`. MCPAPP018 now also catches a replaced
+  domain (the listing has `api.example.com`, read has another host), which was a mismatch only.
+  `compareListRead()` returns `conflict` beside `mismatch`; `mismatch` keeps its meaning (any
+  difference) for the census.
+
 ## 0.1.3 — 2026-10-06
 
 `@render-policy/core`, `@render-policy/react`, `@render-policy/mermaid`, `@render-policy/angular`

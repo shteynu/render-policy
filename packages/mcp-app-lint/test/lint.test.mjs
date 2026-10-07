@@ -49,13 +49,25 @@ test('resource: read wider than list is an error, plain mismatch a warning, html
   const list = { ui: { csp: { connectDomains: ['https://api.example.com'] } } };
   const wider = lintResource({ uri: 'ui://a', listMeta: list, readMeta: { ui: { csp: { connectDomains: ['https://api.example.com', 'https://other.example.com'] } } } });
   assert.ok(ids(wider).includes('MCPAPP018'));
-  const different = lintResource({ uri: 'ui://a', listMeta: list, readMeta: { ui: { csp: { connectDomains: ['https://api2.example.com'] } } } });
-  assert.ok(ids(different).includes('MCPAPP017'));
+  // A replaced domain is a domain the listing did not declare.
+  const replaced = lintResource({ uri: 'ui://a', listMeta: list, readMeta: { ui: { csp: { connectDomains: ['https://api2.example.com'] } } } });
+  assert.deepEqual(ids(replaced).filter((id) => id >= 'MCPAPP017'), ['MCPAPP018']);
+  const narrower = lintResource({ uri: 'ui://a', listMeta: { ui: { csp: { connectDomains: ['https://api.example.com', 'https://b.example.com'] } } }, readMeta: list });
+  assert.deepEqual(ids(narrower), ['MCPAPP017']);
+  const permissions = lintResource({ uri: 'ui://a', listMeta: { ui: { ...list.ui, permissions: {} } }, readMeta: { ui: { ...list.ui, permissions: { camera: {} } } } });
+  assert.deepEqual(ids(permissions), ['MCPAPP007', 'MCPAPP017']);
   const html = '<!doctype html><html><body><div id="o"></div><script>\ndocument.getElementById("o").innerHTML = result.text;\n</script></body></html>';
   const withHtml = lintResource({ uri: 'ui://a', readMeta: list, html });
   const sink = withHtml.find((f) => f.ruleId === 'MCPAPP010');
   assert.equal(sink.region.startLine, 2);
   assert.equal(sink.uri, 'ui://a');
+});
+
+test('list and read: a listing that declares no CSP is not a mismatch (the SDK puts the CSP in the read result)', () => {
+  const read = { ui: { csp: { connectDomains: ['https://api.example.com'] }, prefersBorder: true } };
+  for (const listMeta of [null, {}, { ui: {} }, { ui: { prefersBorder: true } }]) {
+    assert.deepEqual(lintResource({ uri: 'ui://a', listMeta, readMeta: read }), [], JSON.stringify(listMeta));
+  }
 });
 
 test('ui meta: a wildcard above a sink service is a sink', () => {

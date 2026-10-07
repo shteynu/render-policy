@@ -70,8 +70,8 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 | MCPAPP014 | html-form-action | note | a form that posts somewhere |
 | MCPAPP015 | html-external-host | note | scripts, styles, images or media from external hosts |
 | MCPAPP016 | html-sink-host | error | a URL in the document points at a sink host |
-| MCPAPP017 | meta-list-read-mismatch | warning | `resources/read` declares a different policy than `resources/list` |
-| MCPAPP018 | meta-read-wider-than-list | error | the read-time policy adds domains or wildcards the listing did not declare |
+| MCPAPP017 | meta-list-read-mismatch | warning | `resources/read` and `resources/list` both declare a field (`csp`, `permissions`, `domain`) with different values; a listing with no CSP is not a mismatch, since the SDK puts the CSP in the read result |
+| MCPAPP018 | meta-read-wider-than-list | error | both declare a CSP and the read-time one adds an entry (domain or wildcard) the listing did not declare under the same key |
 | MCPAPP019 | csp-sink-tenant-host | note | one bucket, worker or app on a storage or serverless service from the denylist (`acct.blob.core.windows.net`, `pub-<id>.r2.dev`); fine while the owner keeps the name |
 
 Hand-written means an inline script with short lines and not too many of them; bundles carry

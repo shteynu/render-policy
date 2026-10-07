@@ -248,11 +248,22 @@ describe('sink denylist', () => {
       ['https://abc.ngrok-free.dev/x.png', 'tunnel'],
       ['https://abc.a.free.pinggy.link/x.png', 'tunnel'],
       ['https://abc-8080.app.github.dev/x.png', 'tunnel'],
+      ['https://0123abcd.r2.cloudflarestorage.com/bucket/x.png', 'blob-storage'],
+      ['https://0123abcd.eu.r2.cloudflarestorage.com/bucket/x.png', 'blob-storage'],
+      ['https://us-east-1.linodeobjects.com/bucket/x.png', 'blob-storage'],
+      ['https://bucket.oss-cn-hangzhou.aliyuncs.com/x.png', 'blob-storage'],
+      ['https://bucket-125.cos.ap-guangzhou.myqcloud.com/x.png', 'blob-storage'],
+      ['https://s3.fr-par.scw.cloud/bucket/x.png', 'blob-storage'],
+      ['https://objectstorage.us-ashburn-1.oraclecloud.com/n/ns/b/bucket/o/x.png', 'blob-storage'],
+      ['https://bucket.fsn1.your-objectstorage.com/x.png', 'blob-storage'],
+      ['https://firebasestorage.googleapis.com/v0/b/app.appspot.com/o/x.png', 'blob-storage'],
+      ['https://store.public.blob.vercel-storage.com/x.png', 'blob-storage'],
+      ['https://abcdefghijklmnop.supabase.co/storage/v1/object/public/b/x.png', 'blob-storage'],
     ])('covers %s', (href, category) => {
       expect(matchSink(new URL(href), SINK_DENYLIST)?.category).toBe(category);
     });
 
-    it.each(['https://amazonaws.com/', 'https://aws.amazon.com/s3/', 'https://github.dev/owner/repo', 'https://zrok.io/docs', 'https://telegram.org/', 'https://discord.com/channels/1/2'])(
+    it.each(['https://amazonaws.com/', 'https://aws.amazon.com/s3/', 'https://supabase.com/docs', 'https://www.aliyun.com/', 'https://ecs.aliyuncs.com/', 'https://vercel.com/storage/blob', 'https://github.dev/owner/repo', 'https://zrok.io/docs', 'https://telegram.org/', 'https://discord.com/channels/1/2'])(
       'leaves %s alone',
       (href) => {
         expect(matchSink(new URL(href), SINK_DENYLIST)).toBeNull();

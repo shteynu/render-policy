@@ -1,6 +1,6 @@
 # MCP Apps UI census: summary
 
-Generated 2026-10-06 by `census/report.mjs`. Aggregates only; see `census/README.md` for method and limits.
+Generated 2026-10-07 by `census/report.mjs`. Aggregates only; see `census/README.md` for method and limits.
 
 ## Registry composition
 
@@ -31,7 +31,7 @@ Candidates come from npm keyword searches and the npm packages named in the regi
 | CSP with a full wildcard (`*`) | 5 |
 | CSP with an http: domain | 2 |
 | CSP naming a sink host anyone can use (denylist) | 2 |
-| CSP naming one account on a storage or serverless service from the denylist | 0 |
+| CSP naming one account on a storage or serverless service from the denylist | 2 |
 | requesting sandbox permissions | clipboardWrite 3, microphone 2, camera 1 |
 | tools declared visible to the app | 47 packages |
 
@@ -88,6 +88,7 @@ The scanner's rules run over the 174 scanned packages from the stored scans (sta
 | MCPAPP012 html-inline-handlers | note | 24 | 59 |
 | MCPAPP014 html-form-action | note | 7 | 7 |
 | MCPAPP015 html-external-host | note | 29 | 88 |
+| MCPAPP019 csp-sink-tenant-host | note | 2 | 2 |
 
 ## Protocol census over remote servers
 
@@ -114,8 +115,8 @@ Each measure counts UI resources and the servers with at least one such resource
 | CSP with a wildcard host | 87 | 35 |
 | CSP allowing every host (`*` or scheme-only) | 2 | 1 |
 | CSP with an http: origin | 1 | 1 |
-| CSP naming a sink host anyone can use | 43 | 18 |
-| CSP naming one account on a storage or serverless service from the denylist | 74 | 27 |
+| CSP naming a sink host anyone can use | 60 | 26 |
+| CSP naming one account on a storage or serverless service from the denylist | 100 | 46 |
 | `_meta.ui` comparable between list and read | 1074 | 503 |
 | list and read differ | 496 | 227 |
 | only read carries `_meta.ui` | 436 | 203 |
@@ -143,15 +144,15 @@ Hosts in the policy a host enforces (read when it carries `ui.csp`, otherwise li
 | every-host | 2 | 1 | 3 |
 | development | 0 | 0 | 0 |
 | local-scheme | 0 | 0 | 0 |
-| sink | 43 | 18 | 47 |
+| sink | 60 | 26 | 78 |
 | fonts | 57 | 23 | 112 |
 | analytics | 13 | 2 | 13 |
 | maps | 41 | 13 | 112 |
-| storage | 106 | 49 | 125 |
+| storage | 83 | 41 | 95 |
 | media | 150 | 59 | 227 |
 | cdn | 276 | 91 | 451 |
 | api | 94 | 30 | 217 |
-| other | 624 | 266 | 1803 |
+| other | 624 | 266 | 1802 |
 
 ### Tools on servers with UI resources
 

@@ -12,7 +12,7 @@ import type { SinkDenylist, SinkEntry } from '../sinks.js';
  * allowlist and a CSP `img-src`.
  */
 export const SINK_DENYLIST: SinkDenylist = Object.freeze({
-  version: '2026-10-06',
+  version: '2026-10-07',
   entries: Object.freeze<readonly SinkEntry[]>([
     // Out-of-band interaction services used to prove exfiltration.
     { pattern: 'interact.sh', category: 'oast' },
@@ -129,6 +129,23 @@ export const SINK_DENYLIST: SinkDenylist = Object.freeze({
     { pattern: 'digitaloceanspaces.com', category: 'blob-storage' },
     { pattern: 'backblazeb2.com', category: 'blob-storage' },
     { pattern: 'wasabisys.com', category: 'blob-storage' },
+    // S3-compatible stores: an account anyone can open, then a presigned upload or a public bucket.
+    // A `*` in the regional label keeps `<endpoint>` itself (path-style, any bucket) apart from `<bucket>.<endpoint>`.
+    { pattern: 'r2.cloudflarestorage.com', category: 'blob-storage' },
+    { pattern: '*.linodeobjects.com', category: 'blob-storage' },
+    { pattern: 'storage.yandexcloud.net', category: 'blob-storage' },
+    { pattern: 'oss-*.aliyuncs.com', category: 'blob-storage' },
+    { pattern: 'cos.*.myqcloud.com', category: 'blob-storage' },
+    { pattern: 's3.*.scw.cloud', category: 'blob-storage' },
+    { pattern: 's3.*.cloud-object-storage.appdomain.cloud', category: 'blob-storage' },
+    { pattern: 'objectstorage.*.oraclecloud.com', category: 'blob-storage' },
+    { pattern: '*.your-objectstorage.com', category: 'blob-storage' },
+    { pattern: 'gateway.storjshare.io', category: 'blob-storage' },
+    { pattern: 'link.storjshare.io', category: 'blob-storage' },
+    // Backend platforms whose project host serves public storage and functions.
+    { pattern: 'firebasestorage.googleapis.com', category: 'blob-storage' },
+    { pattern: 'public.blob.vercel-storage.com', category: 'blob-storage' },
+    { pattern: 'supabase.co', category: 'blob-storage' },
     { pattern: 'file.io', category: 'blob-storage' },
     { pattern: 'transfer.sh', category: 'blob-storage' },
     { pattern: '0x0.st', category: 'blob-storage' },

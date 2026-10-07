@@ -4,7 +4,7 @@
 
 ## In one paragraph
 
-MCP Apps let a server ship an interactive interface that a host renders in a sandboxed iframe. The specification puts almost all of the security work on the host: it must build a Content Security Policy from what the server declares, apply a no-network default when nothing is declared, prefer the policy delivered at read time over the one seen at listing time, and keep the sandbox on a separate origin. We measured what servers actually declare, twice: in the source of the 174 npm packages that depend on a UI SDK, and on the wire, by asking every reachable remote server in the official registry for its UI resources. Of 15,120 remote servers that answered, 654 serve UI resources. Their declared policies are mostly narrow: wildcards appear on 35 servers, a policy that allows every host on one. The gaps are elsewhere. On 18 servers the policy names a storage or tunnel host that reaches accounts anyone can create, so data can leave the sandbox for a stranger's bucket without breaking the CSP. On 203 servers at least one policy exists only in the `resources/read` result, so a host that reviews policies when it connects sees nothing to review. And the interfaces themselves are hand-written and render tool output through `innerHTML`: 466 of 833 live documents with a hand-written script pass a dynamic value to an HTML sink, on 211 servers. Under the specification's default `script-src 'unsafe-inline'`, an injected tool result that reaches one of those sinks unescaped runs as script inside the sandbox, with the app's tool surface as the blast radius.
+MCP Apps let a server ship an interactive interface that a host renders in a sandboxed iframe. The specification puts almost all of the security work on the host: it must build a Content Security Policy from what the server declares, apply a no-network default when nothing is declared, prefer the policy delivered at read time over the one seen at listing time, and keep the sandbox on a separate origin. We measured what servers actually declare, twice: in the source of the 174 npm packages that depend on a UI SDK, and on the wire, by asking every reachable remote server in the official registry for its UI resources. Of 15,120 remote servers that answered, 654 serve UI resources. Their declared policies are mostly narrow: wildcards appear on 35 servers, a policy that allows every host on one. The gaps are elsewhere. On 26 servers the policy names a storage or tunnel host that reaches accounts anyone can create, so data can leave the sandbox for a stranger's bucket without breaking the CSP. On 203 servers at least one policy exists only in the `resources/read` result, so a host that reviews policies when it connects sees nothing to review. And the interfaces themselves are hand-written and render tool output through `innerHTML`: 466 of 833 live documents with a hand-written script pass a dynamic value to an HTML sink, on 211 servers. Under the specification's default `script-src 'unsafe-inline'`, an injected tool result that reaches one of those sinks unescaped runs as script inside the sandbox, with the app's tool surface as the blast radius.
 
 ## Why this matters
 
@@ -116,8 +116,8 @@ Every measure below is from the protocol census: what 654 servers returned for 1
 | with a wildcard host | 87 (35) |
 | allowing every host (`*` or scheme-only) | 2 (1) |
 | with an `http:` origin | 1 (1) |
-| naming a sink host anyone can use | 43 (18) |
-| naming one account on a storage or serverless service | 74 (27) |
+| naming a sink host anyone can use | 60 (26) |
+| naming one account on a storage or serverless service | 100 (46) |
 
 Seventy-two percent declare a policy, against 51% of packages; more than a quarter of those declarations (280) are empty lists, the same as the default. A hosted product that loads its own images and API needs a policy to work on a compliant host, and most of them have one. Development origins, which reach published packages, do not appear in any live policy, and the widest entries are rare: one server allows every host.
 
@@ -127,16 +127,16 @@ What the enforced policies allow, by category of host (the read-time policy when
 | --- | --- | --- |
 | script and asset CDNs | 276 (91) | 451 |
 | images and media | 150 (59) | 227 |
-| object storage | 106 (49) | 125 |
+| object storage | 83 (41) | 95 |
 | API endpoints | 94 (30) | 217 |
 | fonts | 57 (23) | 112 |
 | maps and tiles | 41 (13) | 112 |
-| sink denylist | 43 (18) | 47 |
+| sink denylist | 60 (26) | 78 |
 | analytics and telemetry | 13 (2) | 13 |
 | every host | 2 (1) | 3 |
-| other, mostly the vendor's own hosts | 624 (266) | 1,803 |
+| other, mostly the vendor's own hosts | 624 (266) | 1,802 |
 
-**The sink entries are storage, not request catchers.** No live policy names a request catcher, an OAST service or a form builder. The 18 servers with a sink host anyone can use list either the storage service host itself (`storage.googleapis.com`, `s3.amazonaws.com` and its regional forms, which serve any bucket by path), a wildcard over a storage provider's customers (`*.blob.core.windows.net`, `*.s3.amazonaws.com`) or over a whole cloud provider (`*.amazonaws.com`, which covers every bucket), or a wildcard over a tunnel service left over from development. Each of these is a channel to an account anyone can create: content injected into the interface can send what the interface shows to the attacker's own bucket, by `fetch` where `connectDomains` allows it or by an image URL where `resourceDomains` does, and the CSP the host built will allow it. The fix is one line per entry: name the bucket's own host. Another 27 servers name a single account on such a service, presumably their own; that is not a channel to a stranger, as long as the name is not abandoned and claimed by someone else.
+**The sink entries are storage, not request catchers.** No live policy names a request catcher, an OAST service or a form builder. The 26 servers with a sink host anyone can use list either the storage service host itself (`storage.googleapis.com`, `s3.amazonaws.com` and its regional forms, which serve any bucket by path), a wildcard over a storage provider's or backend platform's customers (`*.blob.core.windows.net`, `*.s3.amazonaws.com`, `*.r2.cloudflarestorage.com`, `*.supabase.co`) or over a whole cloud provider (`*.amazonaws.com`, which covers every bucket), or a wildcard over a tunnel service left over from development. Each of these is a channel to an account anyone can create: content injected into the interface can send what the interface shows to the attacker's own bucket, by `fetch` where `connectDomains` allows it or by an image URL where `resourceDomains` does, and the CSP the host built will allow it. The fix is one line per entry: name the bucket's or project's own host. Another 46 servers name a single account on such a service, presumably their own; that is not a channel to a stranger, as long as the name is not abandoned and claimed by someone else.
 
 **List versus read: the policy is usually only at read time.**
 
