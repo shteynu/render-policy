@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@render-policy/core": "^0.1.4",
-    "eslint": "^10.11.0",
+    "eslint": "^10.12.0",
     "eslint-plugin-render-policy": "^0.1.2"
   },
   "publishConfig": {

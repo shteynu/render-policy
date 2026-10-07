@@ -28,7 +28,7 @@
   "devDependencies": {
     "@angular-eslint/template-parser": "^22.5.0",
     "@types/estree": "^1.0.8",
-    "eslint": "^10.11.0"
+    "eslint": "^10.12.0"
   },
   "keywords": [
     "eslint",
