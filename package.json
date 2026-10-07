@@ -1,6 +1,6 @@
 {
   "name": "render-policy-monorepo",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Safe rendering of agent-generated content: sanitize to a DocumentFragment, insert without innerHTML, Trusted Types friendly, streaming aware.",
   "license": "MIT",

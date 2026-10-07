@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — 2026-10-07
+
+`@render-policy/react`, `@render-policy/mermaid`, `@render-policy/angular` and
+`eslint-plugin-render-policy` are unchanged; they move to 0.1.4 so all six packages share one
+version. `mcp-app-lint` requires `@render-policy/core` ^0.1.4 for the new denylist entries.
 
 - `@render-policy/core`: sink denylist 2026-10-07 adds S3-compatible object stores and backend
   platforms with public storage, where anyone can open an account and receive data through a
