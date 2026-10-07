@@ -103,6 +103,15 @@ export default [
 ];
 ```
 
+### Claude Code plugin
+
+Two skills: one replaces HTML sinks in code that shows agent output with these packages, the other runs `mcp-app-lint` on an MCP App and fixes what it reports. Details in [`plugins/render-policy`](plugins/render-policy).
+
+```bash
+claude plugin marketplace add shteynu/render-policy
+claude plugin install render-policy@render-policy
+```
+
 `no-unsafe-innerhtml` flags `innerHTML`/`outerHTML` assignment, `insertAdjacentHTML`, `setHTMLUnsafe`, `createContextualFragment`, `document.write`, `bypassSecurityTrustHtml` and `dangerouslySetInnerHTML` with anything but a static string. `no-innerhtml-binding` flags `[innerHTML]`, `[(innerHTML)]`, `bind-innerHTML`, `[innerHtml]` and `[outerHTML]` in Angular templates.
 
 ## Modes

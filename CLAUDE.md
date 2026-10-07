@@ -29,6 +29,8 @@ technical part. Documentation is written in English; the maintainer communicates
   repo-relative for code scanning). It `require`s the built `dist` of core and eslint-plugin, so build before its
   tests. Tests with `node:test` (`test/*.test.mjs`, run by root `npm test`). The repo-root `action.yml` is a
   composite GitHub Action that runs the CLI and uploads SARIF to code scanning.
+- `plugins/render-policy/`: Claude Code plugin, two skills (`safe-agent-html`, `mcp-app-csp`) that point Claude
+  at the packages and the linter; listed by `.claude-plugin/marketplace.json` at the repository root.
 - `e2e/`: browser proofs (`run.mjs` core, `url-parity.mjs` URL classification vs Chromium, `site.mjs` Pages build,
   `bench.mjs` render timings) and the shared harness `e2e/lib/harness.mjs`.
 - `corpus/`: evil-Markdown corpus, runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.
@@ -87,3 +89,6 @@ secret, provenance added by npm). Every package trusts `shteynu/render-policy` +
 a new package needs `npm trust github <pkg> --repo shteynu/render-policy --file release.yml --allow-publish`
 (npm 11.10+) after its first manual publish. The Angular package publishes from `packages/angular/dist`.
 Scoped packages live in the `render-policy` npm organisation. GitHub Pages must be enabled with source "GitHub Actions" for `pages.yml` to deploy.
+The Claude Code plugin (`plugins/render-policy`, marketplace file `.claude-plugin/marketplace.json`) has the
+same version as the packages and pins `npx mcp-app-lint@<version>` in its skill and README; `release.yml`
+fails the tag otherwise. Check it with `claude plugin validate ./plugins/render-policy` and `claude plugin validate .`.

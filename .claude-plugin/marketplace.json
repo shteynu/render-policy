@@ -1,0 +1,13 @@
+{
+  "name": "render-policy",
+  "owner": { "name": "render-policy contributors", "url": "https://github.com/shteynu/render-policy" },
+  "description": "Plugins from the render-policy project: safe rendering of agent-generated HTML and checks for MCP Apps.",
+  "plugins": [
+    {
+      "name": "render-policy",
+      "source": "./plugins/render-policy",
+      "category": "security",
+      "tags": ["security", "xss", "markdown", "mcp-apps", "csp"]
+    }
+  ]
+}
