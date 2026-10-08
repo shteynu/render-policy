@@ -20,3 +20,6 @@ packages/*/.cli-fixture-*/
 # personal agent files: instructions and task notes stay on the maintainer's machine
 CLAUDE.local.md
 .agent-tasks/
+
+# articles are drafted and kept locally until they are published elsewhere
+docs/writeup-*.md
