@@ -1,6 +1,12 @@
 # render-policy
 
+[![npm](https://img.shields.io/npm/v/@render-policy/core?label=%40render-policy%2Fcore)](https://www.npmjs.com/package/@render-policy/core)
+[![CI](https://github.com/shteynu/render-policy/actions/workflows/ci.yml/badge.svg)](https://github.com/shteynu/render-policy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 Safe rendering for content an agent wrote: Markdown and HTML from a model or a tool, shown inside your UI.
+
+**[Live demo](https://shteynu.github.io/render-policy/)**: the same hostile Markdown rendered with `innerHTML` and through the policy, side by side ([Trusted Types variant](https://shteynu.github.io/render-policy/trusted-types.html)).
 
 - **No string sinks.** Content is sanitized into a `DocumentFragment` and inserted with `replaceChildren()`. `innerHTML` is never used, so the renderer runs unchanged under `require-trusted-types-for 'script'`; the only Trusted Types policy is the `dompurify` one the sanitizer parses with, one per page.
 - **A policy, not just a sanitizer.** Which hosts may receive image requests (they happen without a click), which URL schemes links may use, whether agent content may restyle or imitate the host UI, what a blocked image looks like. Three modes: `strict`, `balanced`, `permissive`.
