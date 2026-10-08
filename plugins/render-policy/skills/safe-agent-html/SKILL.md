@@ -1,6 +1,6 @@
 ---
 name: safe-agent-html
-description: Render Markdown or HTML that an LLM, agent or tool produced without innerHTML, dangerouslySetInnerHTML or [innerHTML]. Use when writing or reviewing frontend code that displays model output, chat messages, tool results or other agent-generated content in the DOM (plain DOM, React, Angular), including streaming replies and Mermaid diagrams, or when such code assigns to an HTML sink.
+description: Render Markdown or HTML that an LLM, agent or tool produced without innerHTML, dangerouslySetInnerHTML or [innerHTML]. Use when writing or reviewing frontend code that displays model output, chat messages, tool results or other agent-generated content in the DOM (plain DOM, React, Angular), including streaming replies and Mermaid diagrams, or when such code assigns to an HTML sink. Also use when building an A2UI client or component that renders agent-supplied Text, Image, Video, AudioPlayer or openUrl values.
 ---
 
 # Safe rendering of agent output
@@ -33,6 +33,7 @@ in a hand-written sanitizer.
 | React 18+ | `@render-policy/react` | `<RpMarkdown content={text} streaming={pending} />` inside `<RenderPolicyProvider config={config}>` |
 | Angular 19+ | `@render-policy/angular` | `provideRenderPolicy(config)`, then `<div [rpRender]="text" [rpRenderStreaming]="pending"></div>` |
 | Mermaid blocks in agent output | `@render-policy/mermaid` | `transforms: [createMermaidTransform({ mermaid })]` in the renderer config |
+| A2UI v0.9 surface (agent sends components, not HTML) | `@render-policy/a2ui` | `createA2uiGuard(config)`; components in `@render-policy/react/a2ui` and `@render-policy/angular/a2ui` |
 
 The packages are ESM only. Install with the project's package manager, for example
 `npm install @render-policy/core`.
@@ -87,6 +88,33 @@ providers: [provideRenderPolicy({ mode: 'balanced', policy: { images: { hosts: [
 <div [rpRender]="html" rpRenderMode="html"></div>
 <rp-markdown [content]="message.content" [streaming]="message.pending" />
 ```
+
+## A2UI
+
+An A2UI agent sends no HTML, so there is no sink to replace. The data path is in the values:
+`Image.url`, `Video.url`, `AudioPlayer.url` and `theme.iconUrl` are fetched as soon as they render,
+`openUrl` navigates, and `Text` carries Markdown that the catalog says has no HTML, images or links
+(guidance to the agent, not a guarantee). Most of these values are bound to the data model or built
+with `formatString`, so check the resolved value where the renderer uses it, not the message JSON.
+
+```ts
+import { createA2uiGuard, createA2uiMarkdownRenderer } from '@render-policy/a2ui';
+
+const guard = createA2uiGuard({ policy: { images: { hosts: ['cdn.example.com'] } } });
+
+const r = guard.url('image', resolvedUrl, { surfaceId, componentId }); // also 'video', 'audio', 'icon'
+if (r.allowed) img.src = r.value;              // use r.value, not the input
+guard.openUrl(resolvedArgs.url);               // http/https only, noopener,noreferrer
+guard.renderText(element, resolvedText);       // Text without HTML, images or links
+
+const markdown = createA2uiMarkdownRenderer({ guard }); // the A2UI renderers' Markdown plug-in
+```
+
+In React use `<A2uiGuardProvider config={…}>` with `<RpA2uiText>` and `<RpA2uiImage>` from
+`@render-policy/react/a2ui`; in Angular `provideA2uiGuard(config)` with `<rp-a2ui-text>` and
+`<rp-a2ui-image>` from `@render-policy/angular/a2ui`. Both need `@render-policy/a2ui` installed.
+Prefer them, or `guard.renderText()`, over the Markdown plug-in: the plug-in returns a string that
+the renderer parses again.
 
 ## Choose the mode and the policy
 

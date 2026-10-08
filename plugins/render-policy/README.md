@@ -6,8 +6,9 @@ Two skills that teach Claude to handle agent-generated content safely, from the
 - **safe-agent-html**: when code displays Markdown or HTML that a model, agent or tool produced,
   Claude replaces `innerHTML`, `dangerouslySetInnerHTML` and `[innerHTML]` with the render-policy
   packages for plain DOM, React or Angular. It sanitizes into a fragment, applies a policy for images,
-  links and hosts, and supports streaming replies and Mermaid diagrams. Claude also adds the ESLint rules
-  that keep those sinks from coming back.
+  links and hosts, and supports streaming replies and Mermaid diagrams. For A2UI surfaces it checks
+  the resolved image, media and `openUrl` values and holds `Text` to the catalog's contract. Claude
+  also adds the ESLint rules that keep those sinks from coming back.
 - **mcp-app-csp**: when you build or review an MCP App (a `ui://` resource with
   `text/html;profile=mcp-app`), Claude runs `mcp-app-lint` on the server and fixes what it reports:
   CSP entries that allow every host, wildcards over services where anyone can create a subdomain,
