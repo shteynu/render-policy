@@ -70,7 +70,9 @@ npx mcp-app-lint --dir packages/x --format text   # the scanner on a package dir
 npm test -w packages/core         # one package (vitest's own -w means watch; use npm's)
 ```
 
-Build order matters: core first (others resolve `@render-policy/core` through the workspace link to its `dist`).
+Build order matters: core first (others resolve `@render-policy/core` through the workspace link to its `dist`), then
+a2ui (the `/a2ui` entry points of react and angular compile against its `dist`). npm runs `-w` builds in command-line
+order, so a stale `dist` hides a wrong order locally: check the order with `rm -rf packages/*/dist && npm run build`.
 Unit tests of react/mermaid/a2ui alias `@render-policy/core` to core's `src`, so they run without a build.
 
 ## Rules that are not negotiable

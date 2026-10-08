@@ -15,7 +15,7 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "build": "npm run build -w packages/core && npm run build -w packages/eslint-plugin -w packages/mcp-app-lint -w packages/react -w packages/mermaid -w packages/a2ui -w packages/angular",
+    "build": "npm run build -w packages/core && npm run build -w packages/a2ui && npm run build -w packages/eslint-plugin -w packages/mcp-app-lint -w packages/react -w packages/mermaid -w packages/angular",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "check": "npm run typecheck && npm run build && npm test && npm run test:census && node --test \"conformance/*.test.mjs\" && npm run e2e && npm run corpus",
