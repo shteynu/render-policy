@@ -9,7 +9,8 @@ technical part. Documentation is written in English; the maintainer communicates
 ## Layout
 
 - `packages/core`: `@render-policy/core`. Sanitize (DOMPurify) into a DocumentFragment, policy
-  (modes, image hosts, sink denylist, URL heuristics), streaming (`stream.ts`, whole-buffer render + tail `patchChildren`;
+  (modes, image hosts, sink denylist, URL heuristics), URL checks in `url-guard.ts` (shared by the sanitizer and the
+  public `createUrlGuard`), streaming (`stream.ts`, whole-buffer render + tail `patchChildren`;
   incremental re-parse of only the unsettled tail was attempted and reverted, see ROADMAP streaming v2), transforms hook,
   `createContentBinding` (the lifecycle adapters share). `src/index.ts` is the public API; building blocks go to `src/internal.ts`
   (`@render-policy/core/internal`, not semver). Every journal entry has a stable `code`. Tests: vitest + jsdom.

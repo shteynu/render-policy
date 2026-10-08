@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- `@render-policy/core`: `createUrlGuard()` exposes the URL checks the sanitizer applies to URL
+  attributes (scheme allowlist, sink denylist, `urls.decide`, and the image policy for `image`
+  URLs) for URLs that never pass through HTML. The sanitizer now runs on the same function; its
+  behaviour and journal are unchanged, and a test holds the two to the same result.
+
 ## 0.1.4 — 2026-10-07
 
 `@render-policy/react`, `@render-policy/mermaid`, `@render-policy/angular` and

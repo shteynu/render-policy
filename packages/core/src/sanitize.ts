@@ -1,10 +1,9 @@
 import createDOMPurify, { type Config, type UponSanitizeAttributeHookEvent } from 'dompurify';
 import type { TrustedHTML } from 'trusted-types/lib/index.js';
 import type { CoreDecisionCode, DecisionSubject, RenderDecision } from './decisions.js';
-import { messageOf } from './errors.js';
-import type { RenderPolicy } from './policy.js';
-import { matchSink, type SinkDenylist } from './sinks.js';
-import { checkUrl, checkUrlHeuristics, hostMatches, usableBase, type ParsedUrl } from './url.js';
+import type { RenderPolicy, UrlSubject } from './policy.js';
+import type { SinkDenylist } from './sinks.js';
+import { createUrlPipeline } from './url-guard.js';
 import type { RenderWindow } from './window.js';
 
 export interface SanitizeOutcome<T> {
@@ -88,19 +87,6 @@ interface CallState {
   readonly recorded: Set<string>;
 }
 
-interface Problem {
-  readonly code: CoreDecisionCode;
-  readonly reason: string;
-}
-
-type ImageOutcome =
-  | { readonly ok: true; readonly value: string; readonly rewritten: Problem | null }
-  | ({ readonly ok: false } & Problem);
-
-type ImageScreen =
-  | { readonly ok: true; readonly url: URL | null; readonly stripped: Problem | null }
-  | ({ readonly ok: false } & Problem);
-
 /** One attribute as DOMPurify hands it to the hook. */
 interface AttributeInput {
   readonly node: Element;
@@ -118,32 +104,12 @@ interface AttributeRule {
   readonly apply: (attribute: AttributeInput, s: CallState) => void;
 }
 
-/** A URL attribute on its way through the URL steps. */
-interface UrlTarget {
-  readonly tag: string;
-  readonly attribute: string;
-  readonly original: string;
-  readonly subject: DecisionSubject;
-  readonly isImage: boolean;
-  /** The URL as it now stands; a step that rewrites it replaces this, and later steps check the new one. */
-  parsed: ParsedUrl;
-  /** The attribute value to write back when every step passes. */
-  value: string;
-}
-
-/** A URL step returns the reason to block, or null to pass the URL on. */
-type UrlStep = (target: UrlTarget, s: CallState) => Problem | null;
-
 export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylist: SinkDenylist): Sanitizer {
   const purify = createDOMPurify(win);
   const config = buildConfig(policy);
   let state: CallState | null = null;
 
-  const pageOrigin = (): string | null => {
-    const origin = win.document.location?.origin;
-    return origin && origin !== 'null' ? origin : null;
-  };
-  const pageBase = (): string | undefined => usableBase(win.document.location?.href);
+  const guardUrl = createUrlPipeline(win, policy, denylist);
 
   const record = (s: CallState, decision: RenderDecision): void => {
     s.decisions.push(decision);
@@ -151,135 +117,6 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
       s.recorded.add(`${decision.tag ?? ''}|${decision.attribute}|${decision.value ?? ''}`);
     }
   };
-
-  // Host, query and heuristic checks on an image URL. `url` is null when the URL is local
-  // (relative or same-origin) and needs no checks; otherwise it is the URL after query handling.
-  const screenImage = (parsed: ParsedUrl): ImageScreen => {
-    if (parsed.relative) {
-      // Resolves within the host page's own origin.
-      return { ok: true, url: null, stripped: null };
-    }
-    const origin = pageOrigin();
-    const url = new URL(parsed.url.href);
-    if (origin !== null && url.origin === origin) {
-      return { ok: true, url: null, stripped: null };
-    }
-    const images = policy.images;
-    if (images.hosts === 'none') {
-      return { ok: false, code: 'remote-images-disabled', reason: 'remote images are disabled by the policy' };
-    }
-    if (images.hosts !== 'any' && !hostMatches(url.host, images.hosts, images.allowWildcardHosts)) {
-      return { ok: false, code: 'image-host-not-allowed', reason: `image host "${url.host}" is not in the allowlist` };
-    }
-    let stripped: Problem | null = null;
-    const hasQuery = url.search !== '' || url.hash !== '';
-    if (hasQuery && images.query === 'deny') {
-      return { ok: false, code: 'image-query-denied', reason: 'image URL carries a query string or fragment' };
-    }
-    if (hasQuery && images.query === 'strip') {
-      url.search = '';
-      url.hash = '';
-      stripped = { code: 'image-query-stripped', reason: 'query string removed' };
-    }
-    if (policy.urls.heuristics) {
-      const problem = checkUrlHeuristics(url, policy.urls.heuristics);
-      if (problem) return { ok: false, ...problem };
-    }
-    return { ok: true, url, stripped };
-  };
-
-  const applyImagePolicy = (parsed: ParsedUrl): ImageOutcome => {
-    const screen = screenImage(parsed);
-    if (!screen.ok) return screen;
-    if (screen.url === null) return { ok: true, value: parsed.normalized, rewritten: null };
-    const { url } = screen;
-    const images = policy.images;
-    let rewritten = screen.stripped;
-    let value = rewritten ? url.href : parsed.normalized;
-    if (images.rewriteUrl) {
-      let out: string | null;
-      try {
-        out = images.rewriteUrl(url);
-      } catch (error) {
-        // Application code failed: the image is blocked and the render goes on.
-        return { ok: false, code: 'image-rewrite-failed', reason: `images.rewriteUrl threw: ${messageOf(error)}` };
-      }
-      if (out === null) return { ok: false, code: 'image-rewrite-rejected', reason: 'rejected by images.rewriteUrl' };
-      const check = checkUrl(out, policy.urls, pageBase());
-      if (!check.ok) return { ok: false, code: 'image-rewrite-invalid', reason: `images.rewriteUrl returned an invalid URL: ${check.reason}` };
-      value = out;
-      rewritten = { code: 'image-rewritten', reason: 'rewritten by images.rewriteUrl' };
-    }
-    return { ok: true, value, rewritten };
-  };
-
-  // URL steps, in order. Each one may block the URL, change it (`target.parsed` and `target.value`),
-  // or pass it on; the first block ends the chain. The order is the security argument: the scheme
-  // check runs before anything sees the URL (in the hook below), the sink denylist before
-  // application code, and the image policy last, so that a `urls.decide` rewrite is checked too.
-  const urlSteps: readonly UrlStep[] = [
-    // Known exfiltration sinks. `log` mode flags the URL and lets it through.
-    (target, s) => {
-      if (target.parsed.relative || policy.urls.sinkDenylist === 'off') return null;
-      const { isImage, parsed } = target;
-      const explicitlyAllowed =
-        isImage && Array.isArray(policy.images.hosts) && hostMatches(parsed.url.host, policy.images.hosts, policy.images.allowWildcardHosts);
-      const hit = explicitlyAllowed ? null : matchSink(parsed.url, denylist);
-      if (!hit) return null;
-      const reason = `host matches the sink denylist (${hit.category}: ${hit.pattern}, list ${denylist.version})`;
-      if (policy.urls.sinkDenylist === 'block') return { code: 'sink-host', reason };
-      record(s, { kind: 'flagged', subject: target.subject, code: 'sink-host', reason, tag: target.tag, attribute: target.attribute, value: parsed.normalized });
-      return null;
-    },
-
-    // Application URL hook: the place a link policy lives (deny or redirect off-site links). If it
-    // throws, that one URL is dropped. An image is screened as the content wrote it before the hook
-    // sees it, and the hook gets the URL after query handling: a rewrite to a same-origin proxy must
-    // not carry through a host, query or payload the image policy would have blocked.
-    (target, s) => {
-      if (!policy.urls.decide) return null;
-      const { subject, tag, attribute, original } = target;
-      let screened: URL | null = null;
-      let stripped: Problem | null = null;
-      if (target.isImage) {
-        const screen = screenImage(target.parsed);
-        if (!screen.ok) return screen;
-        screened = screen.url;
-        stripped = screen.stripped;
-      }
-      let decision;
-      try {
-        decision = policy.urls.decide(new URL((screened ?? target.parsed.url).href), { subject: subject as 'link' | 'image' | 'url', tag, attribute, relative: target.parsed.relative });
-      } catch (error) {
-        return { code: 'url-decider-failed', reason: `urls.decide threw: ${messageOf(error)}` };
-      }
-      if (!decision) return null;
-      if (decision.allow === false) return { code: 'url-denied', reason: decision.reason ?? 'denied by urls.decide' };
-      if (typeof decision.rewrite === 'string' && decision.rewrite !== target.parsed.normalized) {
-        const check = checkUrl(decision.rewrite, policy.urls, pageBase());
-        if (!check.ok) return { code: 'url-rewrite-invalid', reason: `urls.decide returned an invalid URL: ${check.reason}` };
-        target.parsed = check.parsed;
-        target.value = decision.rewrite;
-        if (stripped) record(s, { kind: 'rewritten', subject: 'image', code: stripped.code, reason: stripped.reason, tag, attribute, value: original });
-        record(s, { kind: 'rewritten', subject, code: 'url-rewritten', reason: decision.reason ?? 'rewritten by urls.decide', tag, attribute, value: original });
-      }
-      return null;
-    },
-
-    // Image hosts, query handling, heuristics and `images.rewriteUrl`, on the URL as it now stands.
-    (target, s) => {
-      if (!target.isImage) return null;
-      const outcome = applyImagePolicy(target.parsed);
-      if (!outcome.ok) return outcome;
-      if (outcome.value !== target.original) {
-        target.value = outcome.value;
-        if (outcome.rewritten) {
-          record(s, { kind: 'rewritten', subject: 'image', code: outcome.rewritten.code, reason: outcome.rewritten.reason, tag: target.tag, attribute: target.attribute, value: target.original });
-        }
-      }
-      return null;
-    },
-  ];
 
   // Attribute rules: the first rule whose `name` test holds owns the attribute; attributes no rule
   // claims are left to DOMPurify's allowlist.
@@ -321,25 +158,19 @@ export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylis
       name: (n) => URL_ATTRIBUTES.has(n),
       apply: (a, s) => {
         const isImage = a.tag === 'img' && a.name === 'src';
-        const subject: DecisionSubject = isImage ? 'image' : a.name === 'href' ? 'link' : 'url';
-        const verdict = checkUrl(a.original, policy.urls, pageBase());
-        if (!verdict.ok) {
-          // Nothing parseable to show, so a refused image gets no placeholder.
-          a.drop(subject, verdict.code, verdict.reason);
+        const subject: UrlSubject = isImage ? 'image' : a.name === 'href' ? 'link' : 'url';
+        // The URL steps (scheme, sink denylist, `urls.decide`, image policy) live in url-guard.ts.
+        const result = guardUrl(a.original, { subject, tag: a.tag, attribute: a.name });
+        for (const decision of result.decisions) record(s, decision);
+        if (!result.allowed) {
+          a.data.keepAttr = false;
+          record(s, result.decision);
+          if (isImage && result.href !== undefined && policy.images.blocked === 'placeholder') {
+            s.blockedImages.set(a.node, { src: result.href, reason: result.decision.reason });
+          }
           return;
         }
-        const target: UrlTarget = { tag: a.tag, attribute: a.name, original: a.original, subject, isImage, parsed: verdict.parsed, value: a.original };
-        for (const step of urlSteps) {
-          const problem = step(target, s);
-          if (problem) {
-            a.drop(subject, problem.code, problem.reason);
-            if (isImage && policy.images.blocked === 'placeholder') {
-              s.blockedImages.set(a.node, { src: target.parsed.url.href, reason: problem.reason });
-            }
-            return;
-          }
-        }
-        if (target.value !== a.original) a.data.attrValue = target.value;
+        if (result.value !== a.original) a.data.attrValue = result.value;
       },
     },
   ];

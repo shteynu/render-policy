@@ -11,7 +11,7 @@ Framework-free core with Angular and React adapters.
 
 | Package | What it is | Status |
 | --- | --- | --- |
-| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming | 170 unit and property tests + a real-Chromium proof |
+| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming, `createUrlGuard` for URLs outside HTML | 183 unit and property tests + a real-Chromium proof |
 | [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | 11 TestBed tests over the ng-packagr bundle + browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
 | [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 14 unit tests + browser proof with the real mermaid |

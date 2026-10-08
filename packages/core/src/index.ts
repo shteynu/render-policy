@@ -15,6 +15,9 @@ export type { MarkdownOptions, MarkdownRenderer } from './markdown.js';
 export { completeFences, defaultScheduler, frameScheduler, holdIncompleteHtml, holdIncompleteMarkdown } from './stream.js';
 export type { RenderStream, Scheduler, StreamOptions } from './stream.js';
 
+export { createUrlGuard } from './url-guard.js';
+export type { UrlGuard, UrlGuardOptions, UrlGuardResult, UrlRequest } from './url-guard.js';
+
 export { checkUrl, hostMatches } from './url.js';
 export type { ParsedUrl, UrlProblem, UrlVerdict } from './url.js';
 
