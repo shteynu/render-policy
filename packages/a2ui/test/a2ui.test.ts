@@ -161,6 +161,16 @@ describe('createA2uiMarkdownRenderer: the renderers\' string plug-in', () => {
     expect(decisions.map((d) => d.code)).toEqual(['a2ui-text-link']);
   });
 
+  it('needs no global window when the guard was given one', async () => {
+    const guard = createA2uiGuard({ window });
+    vi.stubGlobal('window', undefined);
+    try {
+      expect(await createA2uiMarkdownRenderer({ guard })('**a**')).toBe('<p><strong>a</strong></p>\n');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('accepts a guard shared with the rest of the surface', async () => {
     const guard = createA2uiGuard({ text: 'policy' });
     expect(await createA2uiMarkdownRenderer({ guard })('[d](https://d.example)')).toContain('href="https://d.example"');

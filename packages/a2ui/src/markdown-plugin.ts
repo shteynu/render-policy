@@ -1,4 +1,3 @@
-import { resolveWindow } from '@render-policy/core';
 import { createA2uiGuard, type A2uiGuard, type A2uiGuardOptions } from './guard.js';
 
 /** The options the A2UI web renderers pass to a Markdown plug-in (`MarkdownRendererOptions` in their web core). */
@@ -28,7 +27,6 @@ export interface A2uiMarkdownRendererOptions extends A2uiGuardOptions {
  */
 export function createA2uiMarkdownRenderer(options: A2uiMarkdownRendererOptions = {}): A2uiMarkdownRenderer {
   const guard = options.guard ?? createA2uiGuard(options);
-  const win = resolveWindow(options.window, '@render-policy/a2ui');
   return async (markdown, renderOptions) => {
     const { fragment } = guard.text(markdown, { inline: renderOptions?.renderMode === 'inline' });
     // Classes come from the application's configuration and are added after sanitization.
@@ -36,7 +34,8 @@ export function createA2uiMarkdownRenderer(options: A2uiMarkdownRendererOptions 
       if (!/^[a-z][a-z0-9]*$/i.test(tag) || classes.length === 0) continue;
       for (const element of fragment.querySelectorAll(tag)) element.classList.add(...classes);
     }
-    const holder = win.document.createElement('template');
+    // Serialize in the fragment's own document: the guard holds the window, the plug-in needs none.
+    const holder = fragment.ownerDocument.createElement('template');
     holder.content.append(fragment);
     return holder.innerHTML;
   };
