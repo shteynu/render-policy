@@ -1,8 +1,11 @@
 /** @typedef {'error' | 'warning' | 'note'} Level */
 /**
- * A rule in SARIF terms: `short` and `full` become its short and full description.
- * @typedef {{ id: string, name: string, level: Level, short: string, full: string }} Rule
+ * A rule in SARIF terms: `short` and `full` become its short and full description; `tags` default to
+ * security and mcp-apps.
+ * @typedef {{ id: string, name: string, level: Level, short: string, full: string, tags?: readonly string[] }} Rule
  */
+
+const A2UI_TAGS = ['security', 'a2ui'];
 
 /**
  * The rules, in SARIF terms. Ids are stable; names are what a scanner shows.
@@ -28,6 +31,13 @@ export const RULES = [
   { id: 'MCPAPP017', name: 'meta-list-read-mismatch', level: 'warning', short: 'resources/read declares a different policy than resources/list', full: 'Hosts must prefer the read-time policy. Reported when both sides declare the same field (csp, permissions or domain) with different values and the read-time CSP adds nothing (that is MCPAPP018). A listing that declares no CSP is not a mismatch: the MCP Apps SDK puts the CSP in the read result only.' },
   { id: 'MCPAPP018', name: 'meta-read-wider-than-list', level: 'error', short: 'resources/read widens the policy seen at resources/list', full: 'Both sides declare a CSP and the read-time one has an entry the listing does not have under the same key (a new domain, a replaced one, or a wildcard). This is the pattern a host that reviews at connection time cannot see.' },
   { id: 'MCPAPP019', name: 'csp-sink-tenant-host', level: 'note', short: 'CSP entry names one account on a multi-tenant service', full: 'The host is a single bucket, worker or app on a storage or serverless service from the sink denylist (acct.blob.core.windows.net, pub-<id>.r2.dev). It reaches only that account, which is fine while the owner keeps it; a deleted bucket or app name can be registered by someone else.' },
+  { id: 'A2UI001', name: 'a2ui-openurl-scheme', level: 'error', tags: A2UI_TAGS, short: 'openUrl target is not http or https', full: "The basic catalog requires openUrl to resolve to http: or https: and to abort otherwise. javascript:, data: and other schemes are script or content the agent chose; a client that opens them runs it. Checked on literals and on values bound from the data model in the same stream." },
+  { id: 'A2UI002', name: 'a2ui-sink-host', level: 'error', tags: A2UI_TAGS, short: 'A URL in the surface points at a data sink', full: 'An Image, Video or AudioPlayer url, the theme icon, or an openUrl target names a host on the sink denylist (request catchers, tunnels, anonymous serverless endpoints, form builders, public object storage) where anyone can open an account. Media is fetched as soon as it renders, without a click.' },
+  { id: 'A2UI003', name: 'a2ui-url-encoded-payload', level: 'warning', tags: A2UI_TAGS, short: 'A URL fetched without a click carries an encoded payload', full: 'A media or icon URL is longer than 2048 characters or has a long high-entropy path segment or query value, the shape of data encoded into a request. The client fetches it as soon as it renders. Checked on literals, bound values and formatString results the stream lets the scanner resolve.' },
+  { id: 'A2UI004', name: 'a2ui-url-template-host', level: 'warning', tags: A2UI_TAGS, short: 'formatString takes a URL host from data', full: 'A formatString builds a media URL or openUrl target whose scheme or host comes from the data model, so the host is decided at render time and no allowlist can be reviewed before. Fix the host in the template, or check the resolved URL on the client (@render-policy/a2ui).' },
+  { id: 'A2UI005', name: 'a2ui-url-template-data', level: 'note', tags: A2UI_TAGS, short: 'formatString puts data into a URL fetched without a click', full: 'A media URL is assembled from data model values. Whatever the data holds reaches the host in the request as soon as the component renders. The client should check the resolved URL (length, entropy, host), which is what @render-policy/a2ui does.' },
+  { id: 'A2UI006', name: 'a2ui-text-markup', level: 'warning', tags: A2UI_TAGS, short: 'Text contains HTML, an image or a link', full: 'The basic catalog allows simple Markdown in Text "without HTML, images, or links". The contract binds the agent, not the renderer: a client that renders Text with a general Markdown renderer fetches the image or shows the link. Code spans and fences are not reported. Bare URLs count, because GFM renderers turn them into links.' },
+  { id: 'A2UI007', name: 'a2ui-remote-media-hosts', level: 'note', tags: A2UI_TAGS, short: 'Surfaces load media from remote hosts', full: 'The hosts that media and icon URLs in the stream point at, literal or resolved. A client policy has to allow them, or the images stay blocked.' },
 ];
 
 export const RULE_INDEX = new Map(RULES.map((rule, index) => [rule.id, index]));

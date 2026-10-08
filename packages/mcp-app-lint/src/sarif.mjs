@@ -50,7 +50,7 @@ export function toSarif(findings, { invocation = {} } = {}) {
               fullDescription: { text: rule.full },
               help: { text: rule.full },
               defaultConfiguration: { level: rule.level },
-              properties: { tags: ['security', 'mcp-apps'] },
+              properties: { tags: rule.tags ?? ['security', 'mcp-apps'] },
             })),
           },
         },

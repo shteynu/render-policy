@@ -81,5 +81,6 @@ carries Markdown images, raw HTML and links; a button calls `openUrl('javascript
 no request reaches a host outside the allowlist, the token assembled by `formatString` never leaves,
 and nothing opens. The same messages without the guard are the control: they make those requests.
 
-Not covered yet: a static scan of A2UI messages for literal hazards (planned as `mcp-app-lint`
-rules), and A2UI cases in the evil-Markdown corpus. A2UI v1.0 follows when that version is stable.
+For CI, [`mcp-app-lint --a2ui`](../mcp-app-lint#a2ui-rules) scans recorded A2UI message streams
+for the same hazards before anything renders. Not covered yet: A2UI cases in the evil-Markdown
+corpus. A2UI v1.0 follows when that version is stable.

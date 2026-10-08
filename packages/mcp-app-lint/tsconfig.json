@@ -12,6 +12,9 @@
     "paths": {
       "@render-policy/core": [
         "../core/src/index.ts"
+      ],
+      "@render-policy/core/internal": [
+        "../core/src/internal.ts"
       ]
     }
   },

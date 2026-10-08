@@ -17,7 +17,7 @@ Framework-free core with Angular and React adapters.
 | [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 14 unit tests + browser proof with the real mermaid |
 | [`@render-policy/a2ui`](packages/a2ui) | the policy for A2UI (v0.9) surfaces: image, media, icon and `openUrl` values checked after data binding; `Text` held to the catalog's "no HTML, images or links"; a Markdown plug-in for the A2UI renderers | 21 unit tests + browser proof (`updateDataModel`, `formatString`, `openUrl`) |
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 54 rule tests |
-| [`mcp-app-lint`](packages/mcp-app-lint) | SARIF findings about what an MCP App declares (`_meta.ui` CSP lists, permissions, tool visibility, list/read policy differences) and what its HTML does; CLI over a package, a directory or the JSON a server returned | 19 rules, 27 tests, TypeScript declarations; also the analyzer behind the census |
+| [`mcp-app-lint`](packages/mcp-app-lint) | SARIF findings about what an MCP App declares (`_meta.ui` CSP lists, permissions, tool visibility, list/read policy differences) and what its HTML does, and about the URLs and `Text` in A2UI message streams; CLI over a package, a directory, the JSON a server returned or A2UI JSONL | 26 rules (19 MCP Apps, 7 A2UI), 38 tests, TypeScript declarations; also the analyzer behind the census |
 
 ```
 npm install @render-policy/core

@@ -9,6 +9,7 @@ npx mcp-app-lint --package @scope/name                # an npm package: download
 npx mcp-app-lint --read read.json --list list.json --tools tools.json
                                                       # results of resources/read, resources/list, tools/list
 npx mcp-app-lint --html app.html                      # one UI document
+npx mcp-app-lint --a2ui stream.jsonl                  # A2UI v0.9 messages: one, a JSON array, { messages } or JSONL
 ```
 
 Options: `--out file.sarif`, `--format sarif|text`, `--fail-on error|warning|note|none` (default
@@ -41,7 +42,8 @@ Inputs: `directory` (default `.`), `fail-on` (default `error`), `upload-sarif` (
 `sarif-file` (default `mcp-app-lint.sarif`), `version` (npm dist-tag or version, default `latest`),
 `args` (passed through), `node-version` (default `22`, empty to use the runner's Node). The SARIF
 is written even when findings fail the job, so it still uploads; paths are repo-relative so code
-scanning maps them to the source.
+scanning maps them to the source. Recorded A2UI streams go through `args`, for example
+`args: --a2ui test/fixtures/surface.jsonl`.
 
 Any CI can run the CLI directly and read the exit code (`0` clean, `1` findings at or above
 `--fail-on`, `2` usage error):
@@ -74,6 +76,29 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 | MCPAPP018 | meta-read-wider-than-list | error | both declare a CSP and the read-time one adds an entry (domain or wildcard) the listing did not declare under the same key |
 | MCPAPP019 | csp-sink-tenant-host | note | one bucket, worker or app on a storage or serverless service from the denylist (`acct.blob.core.windows.net`, `pub-<id>.r2.dev`); fine while the owner keeps the name |
 
+### A2UI rules
+
+`--a2ui` reads A2UI v0.9 server-to-client messages (`createSurface`, `updateComponents`,
+`updateDataModel`, `deleteSurface`). A2UI sends no HTML; what matters is where the agent's data may
+flow. Absolute `{ "path": … }` bindings and `formatString` interpolations are resolved against the
+`updateDataModel` messages of the same stream after every message, so a value swapped after the
+first render is checked too, at the line of the update that brought it. Relative paths in list
+templates and client function calls are left to the runtime check
+([`@render-policy/a2ui`](../a2ui)); this scan is a CI aid, not a substitute for it.
+
+| Id | Name | Level | What it means |
+| --- | --- | --- | --- |
+| A2UI001 | a2ui-openurl-scheme | error | `openUrl` target that does not resolve to http or https (`javascript:`, `data:`, `mailto:`), as the basic catalog requires |
+| A2UI002 | a2ui-sink-host | error | `Image`, `Video` or `AudioPlayer` url, `theme.iconUrl` or an `openUrl` target on a sink host anyone can use |
+| A2UI003 | a2ui-url-encoded-payload | warning | media or icon URL, fetched without a click, that is too long or carries a long high-entropy token |
+| A2UI004 | a2ui-url-template-host | warning | `formatString` takes the scheme or host of a media URL or `openUrl` target from data |
+| A2UI005 | a2ui-url-template-data | note | `formatString` puts data into the path or query of a media URL |
+| A2UI006 | a2ui-text-markup | warning | `Text` contains raw HTML, a Markdown image or a link (bare URLs count; code spans and fences do not), which the basic catalog excludes |
+| A2UI007 | a2ui-remote-media-hosts | note | the hosts media and icons load from, for the client's allowlist |
+
+On the 44 examples of the v0.9 basic catalog the scan reports A2UI007 notes and one A2UI006: the
+Markdown example puts a link in `Text`.
+
 Hand-written means an inline script with short lines and not too many of them; bundles carry
 framework internals and the SDK bridge (which posts to `'*'` by design) and are not reported
 for MCPAPP010, MCPAPP011 and MCPAPP013.
@@ -86,10 +111,10 @@ Apps MIME type or `ui://` (hosts, renderers, SDKs) are not treated as serving a 
 looked for in the package's HTML documents only: a `fetch` in server code is not bound by the CSP,
 so it does not count.
 
-The rules come out of the [MCP Apps UI census](../../census) in this repository; the analyzer is
+The MCP Apps rules come out of the [MCP Apps UI census](../../census) in this repository; the analyzer is
 shared. The HTML sink detection is `eslint-plugin-render-policy`'s `no-unsafe-innerhtml`. The sink
 denylist is `@render-policy/core`'s. The package also exports the analysis functions (`analyzeHtml`,
-`analyzeUiMeta`, `compareListRead`, `scanPackageDir`, …) and `categorizeDomain`, the heuristic host
+`analyzeUiMeta`, `compareListRead`, `scanPackageDir`, `lintA2uiMessages`, `parseA2uiMessages`, …) and `categorizeDomain`, the heuristic host
 category (fonts, analytics, maps, storage, media, cdn, api, …) the census report tabulates; it is
 data for aggregates, not a rule.
 

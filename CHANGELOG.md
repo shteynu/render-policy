@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- `mcp-app-lint`: `--a2ui` scans A2UI v0.9 message streams (one message, a JSON array, the
+  `{ messages }` wrapper or JSONL) with seven rules: `openUrl` outside http and https (A2UI001),
+  sink hosts in media, the theme icon or `openUrl` (A2UI002), encoded payloads in URLs fetched
+  without a click (A2UI003), `formatString` taking a URL's host from data (A2UI004) or putting data
+  into a media URL (A2UI005), HTML, images or links in `Text` (A2UI006), and the remote media hosts
+  for the client's allowlist (A2UI007). Absolute data bindings and `formatString` are resolved
+  against the stream's own `updateDataModel` messages after every message. `lintA2uiMessages()` and
+  `parseA2uiMessages()` are exported; A2UI rules carry the SARIF tag `a2ui`.
+
 ## 0.1.5 — 2026-10-08
 
 New package `@render-policy/a2ui`, which requires `@render-policy/core` ^0.1.5 for

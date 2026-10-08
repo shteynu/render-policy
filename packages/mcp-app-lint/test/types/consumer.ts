@@ -3,7 +3,9 @@
 import {
   analyzeHtml,
   categorizeDomain,
+  lintA2uiMessages,
   lintPackageScan,
+  parseA2uiMessages,
   lintResource,
   parseDomainPattern,
   RULES,
@@ -27,8 +29,9 @@ const handwritten: number = analyzeHtml('<script>x.innerHTML = y</script>').unsa
 const sarifVersion: string = toSarif(findings).version;
 const exitCode: Promise<number> = run(['--html', 'app.html'], { stdout: { write: () => true } });
 const ruleIds: string[] = RULES.map((rule) => rule.id);
+const a2ui: Finding[] = lintA2uiMessages(parseA2uiMessages('{"version":"v0.9","deleteSurface":{"surfaceId":"s"}}'), 'stream.jsonl');
 
 // @ts-expect-error a finding needs a uri
 const broken: Finding = { ruleId: 'MCPAPP001', message: 'm' };
 
-export { broken, category, exitCode, fromScan, handwritten, level, ruleIds, sarifVersion, scope };
+export { a2ui, broken, category, exitCode, fromScan, handwritten, level, ruleIds, sarifVersion, scope };

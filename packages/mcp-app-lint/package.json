@@ -1,7 +1,7 @@
 {
   "name": "mcp-app-lint",
   "version": "0.1.5",
-  "description": "SARIF findings about what an MCP App declares (CSP domain lists, permissions, tool visibility) and what its HTML does (innerHTML sinks, postMessage to '*', external hosts, data sinks).",
+  "description": "SARIF findings about what an MCP App declares (CSP domain lists, permissions, tool visibility) and what its HTML does (innerHTML sinks, postMessage to '*', external hosts, data sinks); A2UI message streams (openUrl schemes, sink hosts, data in URLs, markup in Text).",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -39,6 +39,7 @@
   "keywords": [
     "mcp",
     "mcp-apps",
+    "a2ui",
     "sarif",
     "security",
     "csp",

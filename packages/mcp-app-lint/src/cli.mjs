@@ -6,11 +6,13 @@
  *   mcp-app-lint --read read.json [--list list.json] [--tools tools.json]
  *                                                  # results of resources/read, resources/list, tools/list
  *   mcp-app-lint --html app.html                   # one UI document
+ *   mcp-app-lint --a2ui stream.jsonl               # A2UI v0.9 messages (JSON, JSON array, { messages } or JSONL)
  * Options: --out file.sarif, --format sarif|text (default sarif), --fail-on error|warning|note|none (default error)
  */
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { lintA2uiMessages, parseA2uiMessages } from './a2ui.mjs';
 import { UI_MIME } from './analyze.mjs';
 import { lintHtml, lintPackageScan, lintResource, lintTools, levelOf } from './lint.mjs';
 import { packageMeta, scanPackage, scanPackageDir } from './npm.mjs';
@@ -30,6 +32,7 @@ import { toSarif, toText } from './sarif.mjs';
  * @property {string} [list]
  * @property {string} [tools]
  * @property {string} [html]
+ * @property {string} [a2ui]
  * @property {string} [out]
  * @property {boolean} [help]
  */
@@ -54,6 +57,7 @@ function parseArgs(argv) {
     else if (arg === '--list') options.list = next();
     else if (arg === '--tools') options.tools = next();
     else if (arg === '--html') options.html = next();
+    else if (arg === '--a2ui') options.a2ui = next();
     else if (arg === '--out') options.out = next();
     else if (arg === '--format') options.format = next();
     else if (arg === '--fail-on') options.failOn = next();
@@ -87,8 +91,8 @@ function relativeUri(uri) {
  */
 export async function run(argv, { stdout = process.stdout, stderr = process.stderr } = {}) {
   const options = parseArgs(argv);
-  if (options.help || (!options.dir && !options.package && !options.read && !options.html && !options.tools)) {
-    stderr.write('usage: mcp-app-lint (--dir <path> | --package <name> | --read <read.json> [--list <list.json>] | --html <file>) [--tools <tools.json>] [--out file] [--format sarif|text] [--fail-on error|warning|note|none]\n');
+  if (options.help || (!options.dir && !options.package && !options.read && !options.html && !options.tools && !options.a2ui)) {
+    stderr.write('usage: mcp-app-lint (--dir <path> | --package <name> | --read <read.json> [--list <list.json>] | --html <file> | --a2ui <messages>) [--tools <tools.json>] [--out file] [--format sarif|text] [--fail-on error|warning|note|none]\n');
     return 2;
   }
   /** @type {Finding[]} */
@@ -122,6 +126,9 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
   }
   if (options.html) {
     findings.push(...lintHtml(await readFile(options.html, 'utf8'), options.html));
+  }
+  if (options.a2ui) {
+    findings.push(...lintA2uiMessages(parseA2uiMessages(await readFile(options.a2ui, 'utf8')), options.a2ui));
   }
   if (options.tools) {
     const tools = await readJson(options.tools);

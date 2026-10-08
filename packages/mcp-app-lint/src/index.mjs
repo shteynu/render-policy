@@ -1,3 +1,4 @@
+export { lintA2uiMessages, parseA2uiMessages } from './a2ui.mjs';
 export { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, ESCAPE_FUNCTIONS, isHandwritten, postMessageStarCalls, UI_MIME, uiMetaOf, withSinkHosts } from './analyze.mjs';
 export { categorizeDomain, categorizeHost, classifyDomains, DOMAIN_CATEGORIES, parseDomainPattern, sinkFor, sinkScope } from './domains.mjs';
 export { levelOf, lintHtml, lintPackageScan, lintResource, lintTools, lintUiMeta } from './lint.mjs';
@@ -7,6 +8,7 @@ export { toSarif, toText, TOOL_VERSION } from './sarif.mjs';
 export { run } from './cli.mjs';
 
 /**
+ * @typedef {import('./a2ui.mjs').A2uiEntry} A2uiEntry
  * @typedef {import('./analyze.mjs').UiMeta} UiMeta
  * @typedef {import('./analyze.mjs').CspKey} CspKey
  * @typedef {import('./analyze.mjs').HtmlAnalysis} HtmlAnalysis

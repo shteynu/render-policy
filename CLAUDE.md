@@ -30,7 +30,7 @@ technical part. Documentation is written in English; the maintainer communicates
   alias core's `src`; browser proof in `packages/a2ui/e2e` (a minimal v0.9 surface, guarded and unguarded).
 - `packages/mcp-app-lint`: `mcp-app-lint`. Plain ESM with JSDoc types, checked by `tsc` (`checkJs`); its `build` only
   emits declarations to `dist/` and compiles `test/types/consumer.ts` against them. The census analyzer (`analyze.mjs`, `domains.mjs`,
-  `npm.mjs`) plus SARIF rules (`rules.mjs`, `lint.mjs`, `sarif.mjs`) and a CLI (`cli.mjs`, SARIF paths are made
+  `npm.mjs`) plus SARIF rules (`rules.mjs`, `lint.mjs`, `sarif.mjs`), A2UI message rules (`a2ui.mjs`, `--a2ui`) and a CLI (`cli.mjs`, SARIF paths are made
   repo-relative for code scanning). It `require`s the built `dist` of core and eslint-plugin, so build before its
   tests. Tests with `node:test` (`test/*.test.mjs`, run by root `npm test`). The repo-root `action.yml` is a
   composite GitHub Action that runs the CLI and uploads SARIF to code scanning.
