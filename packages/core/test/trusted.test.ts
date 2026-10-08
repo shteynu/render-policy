@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createRenderer } from '../src/index.js';
 
 describe('Trusted Types', () => {
@@ -34,6 +34,55 @@ describe('Trusted Types', () => {
     expect(created).toEqual(['dompurify']);
     expect(out.kind).toBe('TrustedHTML');
     expect(out.value).toBe('<b>x</b>');
+  });
+
+  it('shares one "dompurify" policy between the renderers on a window, as a CSP that names it requires', () => {
+    const dom = new JSDOM('<div id="a"></div><div id="b"></div>', { url: 'https://app.example/' });
+    const created: string[] = [];
+    Object.assign(dom.window, {
+      trustedTypes: {
+        // Chromium under `trusted-types dompurify`: a second policy of the same name is refused.
+        createPolicy(name: string, rules: { createHTML(input: string): string; createScriptURL(input: string): string }) {
+          if (created.includes(name)) throw new TypeError(`Policy with name "${name}" already exists.`);
+          created.push(name);
+          return { createHTML: (input: string) => rules.createHTML(input), createScriptURL: (input: string) => rules.createScriptURL(input) };
+        },
+      },
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const balanced = createRenderer({ window: dom.window });
+      const strict = createRenderer({ window: dom.window, mode: 'strict' });
+      const [a, b] = ['a', 'b'].map((id) => dom.window.document.getElementById(id));
+      if (!a || !b) throw new Error('missing targets');
+      balanced.renderMarkdownInto(a, '**one**');
+      strict.renderMarkdownInto(b, '**two**');
+      expect(created).toEqual(['dompurify']);
+      expect([a.querySelector('strong')?.textContent, b.querySelector('strong')?.textContent]).toEqual(['one', 'two']);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('warns once and renders without a policy when the name is refused', () => {
+    const dom = new JSDOM('<div id="out"></div>', { url: 'https://app.example/' });
+    Object.assign(dom.window, {
+      trustedTypes: {
+        createPolicy(name: string) {
+          throw new TypeError(`Refused to create a TrustedTypePolicy named '${name}'`);
+        },
+      },
+    });
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      createRenderer({ window: dom.window });
+      const renderer = createRenderer({ window: dom.window });
+      expect(renderer.trustedHTML('<b>x</b>')).toBe('<b>x</b>');
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('renders with an explicit window and reads the page origin from it', () => {

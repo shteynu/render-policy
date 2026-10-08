@@ -1,5 +1,5 @@
 import createDOMPurify, { type Config, type UponSanitizeAttributeHookEvent } from 'dompurify';
-import type { TrustedHTML } from 'trusted-types/lib/index.js';
+import type { TrustedHTML, TrustedTypePolicy } from 'trusted-types/lib/index.js';
 import type { CoreDecisionCode, DecisionSubject, RenderDecision } from './decisions.js';
 import type { RenderPolicy, UrlSubject } from './policy.js';
 import type { SinkDenylist } from './sinks.js';
@@ -104,9 +104,35 @@ interface AttributeRule {
   readonly apply: (attribute: AttributeInput, s: CallState) => void;
 }
 
+// One "dompurify" policy per window, shared by every sanitizer on it. DOMPurify parses through
+// DOMParser.parseFromString, a Trusted Types sink, with a policy of that name, and each DOMPurify
+// instance would create its own. A CSP that names policies (`trusted-types dompurify`) admits one
+// policy per name unless it also says 'allow-duplicates', so the second renderer on a page (a
+// strict one next to the default, the A2UI guard's Text renderer) would get none and fail to parse.
+type SharedPolicy = Pick<TrustedTypePolicy, 'name' | 'createHTML' | 'createScriptURL'>;
+const trustedTypesPolicies = new WeakMap<object, SharedPolicy | null>();
+
+function sharedTrustedTypesPolicy(win: RenderWindow): SharedPolicy | null | undefined {
+  const factory = win.trustedTypes;
+  if (!factory || typeof factory.createPolicy !== 'function') return undefined;
+  if (!trustedTypesPolicies.has(win)) {
+    let created: SharedPolicy | null = null;
+    try {
+      created = factory.createPolicy('dompurify', { createHTML: (html: string) => html, createScriptURL: (url: string) => url });
+    } catch {
+      // The CSP does not admit the name, or the page created it already: as DOMPurify itself does, warn and go on without.
+      console.warn('@render-policy/core: the Trusted Types policy "dompurify" could not be created; list it in the trusted-types directive.');
+    }
+    trustedTypesPolicies.set(win, created);
+  }
+  return trustedTypesPolicies.get(win);
+}
+
 export function createSanitizer(win: RenderWindow, policy: RenderPolicy, denylist: SinkDenylist): Sanitizer {
   const purify = createDOMPurify(win);
-  const config = buildConfig(policy);
+  const trustedTypesPolicy = sharedTrustedTypesPolicy(win);
+  // DOMPurify's type asks for a whole policy; it calls only createHTML and createScriptURL, and checks both are there.
+  const config: Config = trustedTypesPolicy === undefined ? buildConfig(policy) : { ...buildConfig(policy), TRUSTED_TYPES_POLICY: trustedTypesPolicy as TrustedTypePolicy | null };
   let state: CallState | null = null;
 
   const guardUrl = createUrlPipeline(win, policy, denylist);

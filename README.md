@@ -2,7 +2,7 @@
 
 Safe rendering for content an agent wrote: Markdown and HTML from a model or a tool, shown inside your UI.
 
-- **No string sinks.** Content is sanitized into a `DocumentFragment` and inserted with `replaceChildren()`. `innerHTML` is never used, so the renderer runs unchanged under `require-trusted-types-for 'script'` and creates no Trusted Types policy of its own.
+- **No string sinks.** Content is sanitized into a `DocumentFragment` and inserted with `replaceChildren()`. `innerHTML` is never used, so the renderer runs unchanged under `require-trusted-types-for 'script'`; the only Trusted Types policy is the `dompurify` one the sanitizer parses with, one per page.
 - **A policy, not just a sanitizer.** Which hosts may receive image requests (they happen without a click), which URL schemes links may use, whether agent content may restyle or imitate the host UI, what a blocked image looks like. Three modes: `strict`, `balanced`, `permissive`.
 - **Streaming aware.** A half-received link or image is never turned into a request. An unfinished code fence renders as code.
 - **Lint the sinks.** An ESLint plugin flags every HTML sink in JS/TS/JSX and `[innerHTML]` bindings in Angular templates, so the safe path is the only path.
@@ -11,7 +11,7 @@ Framework-free core with Angular and React adapters.
 
 | Package | What it is | Status |
 | --- | --- | --- |
-| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming, `createUrlGuard` for URLs outside HTML | 183 unit and property tests + a real-Chromium proof |
+| [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming, `createUrlGuard` for URLs outside HTML | 185 unit and property tests + a real-Chromium proof |
 | [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | 11 TestBed tests over the ng-packagr bundle + browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
 | [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 14 unit tests + browser proof with the real mermaid |
@@ -187,12 +187,12 @@ Always removed, in every mode: `script`, `style`, `template`, `iframe`, `object`
 | SVG through `data:` URLs | `<img src="data:image/svg+xml,…">` | blocked | `data:` is not an allowed scheme; blocked in every mode | `regressions.test.ts` #3 |
 | Diagram renderers in loose mode | ```` ```mermaid ```` with `click … "javascript:"` | stays text; with `@render-policy/mermaid`, a strict diagram with no link | no diagram renderer in core; the transform forces `securityLevel: 'strict'`, sanitizes the SVG and isolates it | `regressions.test.ts` #4, `packages/mermaid/e2e` |
 | Unsafe fallback | Markdown parser throws | plain text | text-node fallback, decision journaled | `regressions.test.ts` #2 |
-| Trusted Types violations | `innerHTML` under `require-trusted-types-for 'script'` | none | no string sinks anywhere; only `trustedHTML()` touches a policy | `e2e/run.mjs` |
+| Trusted Types violations | `innerHTML` under `require-trusted-types-for 'script'` | none | no string sinks in the library; parsing and `trustedHTML()` go through one shared `dompurify` policy | `e2e/run.mjs` |
 
 What is deliberately **not** covered:
 
 - The text itself. Prompt injection, a misleading answer, a link to a convincing phishing page on an allowed host: rendering cannot judge content. render-policy makes the rendered output inert; it does not make it true.
-- CSP. Set one; the renderer needs nothing beyond `trusted-types dompurify` if you use `trustedHTML()`. `img-src` is the second line behind `images.hosts`.
+- CSP. Set one; if it has a `trusted-types` directive, list `dompurify` in it. `img-src` is the second line behind `images.hosts`.
 - iframes and MCP App sandboxes. Host-side isolation of embedded apps is a different problem, on the roadmap as a separate test suite.
 - Server-side rendering. Sanitizing needs a DOM; on the server the Angular adapter emits text.
 
@@ -244,19 +244,19 @@ What the numbers say:
 
 ## Trusted Types and CSP
 
-The core never assigns `innerHTML`, `outerHTML` or `srcdoc`, never calls `insertAdjacentHTML` or `document.write`. DOMPurify parses through `DOMParser`, which is not a Trusted Types sink, and returns a fragment that is inserted with `replaceChildren()`. Under
+The core never assigns `innerHTML`, `outerHTML` or `srcdoc`, never calls `insertAdjacentHTML` or `document.write`. DOMPurify parses with `DOMParser.parseFromString`, which is a Trusted Types sink, through a policy named `dompurify`, and returns a fragment that is inserted with `replaceChildren()`. Every renderer on a page (and the A2UI guard's `Text` renderer) shares that one policy: a CSP that names policies admits one policy per name. Under
 
 ```
 Content-Security-Policy: require-trusted-types-for 'script'
 ```
 
-everything works with no policy allowlisted. DOMPurify creates a policy named `dompurify` when the API exists, so a CSP that names policies should include it, otherwise DOMPurify logs a warning and `trustedHTML()` returns a string:
+everything works with no policy allowlisted. A CSP that names policies must include `dompurify`; otherwise the policy cannot be created, the core logs a warning, and the browser refuses the parse, so nothing renders:
 
 ```
 Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompurify
 ```
 
-The browser proof in `e2e/run.mjs` loads the demo under exactly that header and asserts zero `securitypolicyviolation` events.
+The browser proof in `e2e/run.mjs` loads the demo under exactly that header, renders with a second renderer on the same page, and asserts zero `securitypolicyviolation` events.
 
 ## Demo and browser proofs
 

@@ -9,7 +9,7 @@ technical part. Documentation is written in English; the maintainer communicates
 ## Layout
 
 - `packages/core`: `@render-policy/core`. Sanitize (DOMPurify) into a DocumentFragment, policy
-  (modes, image hosts, sink denylist, URL heuristics), URL checks in `url-guard.ts` (shared by the sanitizer and the
+  (modes, image hosts, sink denylist, URL heuristics; one Trusted Types policy `dompurify` per window, shared by all sanitizers), URL checks in `url-guard.ts` (shared by the sanitizer and the
   public `createUrlGuard`), streaming (`stream.ts`, whole-buffer render + tail `patchChildren`;
   incremental re-parse of only the unsettled tail was attempted and reverted, see ROADMAP streaming v2), transforms hook,
   `createContentBinding` (the lifecycle adapters share). `src/index.ts` is the public API; building blocks go to `src/internal.ts`

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `@render-policy/core`: every sanitizer on a window now shares one Trusted Types policy named
+  `dompurify`. Before, each renderer's DOMPurify instance created its own, and under a CSP that names
+  policies (`trusted-types dompurify`) the second renderer on a page was refused the duplicate and
+  rendered nothing, because DOMPurify parses through `DOMParser.parseFromString`, a Trusted Types
+  sink. Found by an Angular proof with a second renderer next to `<rp-markdown>`; the core's browser
+  proof now renders with a second renderer under that CSP. The README no longer says `DOMParser` is
+  not a sink.
 - `mcp-app-lint`: `--a2ui` scans A2UI v0.9 message streams (one message, a JSON array, the
   `{ messages }` wrapper or JSONL) with seven rules: `openUrl` outside http and https (A2UI001),
   sink hosts in media, the theme icon or `openUrl` (A2UI002), encoded payloads in URLs fetched

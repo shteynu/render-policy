@@ -32,6 +32,7 @@ if (mode !== 'naive') {
   renderer.renderMarkdownInto(document.getElementById('policy'), text);
   log('policy', decisions.map((d) => `${d.kind} ${d.subject}${d.tag ? ` <${d.tag}>` : ''}: ${d.reason}`).join('\n'));
   window.__renderer = renderer;
+  window.__createRenderer = createRenderer; // for the browser proof: a second renderer on the page
   window.__decisions = decisions;
 }
 

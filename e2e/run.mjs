@@ -3,7 +3,8 @@
  *   1. the naive panel executes the payload and requests attacker hosts;
  *   2. the policy panel executes nothing and requests nothing off-origin;
  *   3. the policy panel works under `require-trusted-types-for 'script'` with zero violations,
- *      and trustedHTML() goes through the allowed `dompurify` policy;
+ *      trustedHTML() goes through the allowed `dompurify` policy, and a second renderer on the
+ *      page shares that policy instead of being refused a duplicate;
  *   4. a streamed image URL is requested exactly once, after it is complete.
  *
  * Usage: npm run build -w packages/core && node e2e/run.mjs
@@ -58,6 +59,14 @@ try {
       return { type: typeof out, isTrusted: typeof TrustedHTML !== 'undefined' && out instanceof TrustedHTML, html: div.innerHTML };
     });
     check(escapeHatch.isTrusted && escapeHatch.html === '<b>bold</b><img src="x">', 'trusted types: trustedHTML() returns a TrustedHTML through the dompurify policy', JSON.stringify(escapeHatch));
+    const second = await page.evaluate(() => {
+      const target = document.createElement('div');
+      document.body.append(target);
+      window.__createRenderer({ mode: 'strict' }).renderMarkdownInto(target, '**second** renderer');
+      return target.querySelector('strong')?.textContent ?? null;
+    });
+    const after = await page.evaluate(() => window.__cspViolations);
+    check(second === 'second' && after.length === 0, 'trusted types: a second renderer on the page renders, no duplicate-policy violation', after.join(' | '));
     await page.close();
   }
 
