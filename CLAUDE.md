@@ -38,7 +38,8 @@ technical part. Documentation is written in English; the maintainer communicates
   at the packages and the linter; listed by `.claude-plugin/marketplace.json` at the repository root.
 - `e2e/`: browser proofs (`run.mjs` core, `url-parity.mjs` URL classification vs Chromium, `site.mjs` Pages build,
   `bench.mjs` render timings) and the shared harness `e2e/lib/harness.mjs`.
-- `corpus/`: evil-Markdown corpus, runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.
+- `corpus/`: evil-Markdown corpus (`evil-markdown.json`) and A2UI cases (`evil-a2ui.json`, on the shared minimal surface
+  `lib/a2ui-surface.js`), runner and reference adapters; `corpus/RESULTS.md` is a committed snapshot.
 - `demo/`: the naive-vs-policy demo; `demo/build.mjs` produces `site/` for GitHub Pages.
 - `conformance/`: MCP Apps host conformance. `host.mjs` is a reference for the CSP and `allow` attribute the spec
   makes a host build from `_meta.ui`; `host.test.mjs` checks it against the spec formula; `run.mjs` is a Chromium

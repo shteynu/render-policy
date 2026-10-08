@@ -1,8 +1,10 @@
 # Evil-Markdown corpus results
 
-Corpus version 2026-10-06, 54 cases, run in Chromium by `corpus/run.mjs`.
+Evil-Markdown cases: version 2026-10-06, 54 cases; A2UI cases: version 2026-10-08, 24 cases. Run in Chromium by `corpus/run.mjs`.
 
-A pass means every invariant of the case held: nothing executed, no forbidden element or attribute, no request to the listed hosts, and the guard content survived. "n/a" means the adapter has no streaming API.
+A pass means every invariant of the case held: nothing executed, no forbidden element or attribute, no request to the listed hosts, no forbidden `openUrl` target, and the guard content survived. "n/a" means the adapter has no streaming API or no A2UI surface.
+
+## Evil-Markdown cases
 
 | Category | naive (marked + innerHTML) | DOMPurify defaults + innerHTML | @render-policy/core (balanced, defaults) |
 | --- | --- | --- | --- |
@@ -71,3 +73,42 @@ A pass means every invariant of the case held: nothing executed, no forbidden el
 | `stream-image-cut` image URL received in pieces: no request before the closing parenthesis | ✓ | ✓ | ✓ |
 | `stream-link-cut` link received in pieces: no href before the URL closes | ✗ | ✗ | ✓ |
 | `stream-fence-open` open code fence renders as code while streaming | ✓ | ✓ | ✓ |
+
+## A2UI cases
+
+Each adapter renders a minimal A2UI v0.9 surface (`lib/a2ui-surface.js`: bindings and `formatString` resolved at render time). The naive one uses resolved values as they come and renders `Text` as Markdown through `innerHTML`; the DOMPurify one sanitizes `Text` with the default configuration and uses URLs as they come; render-policy runs every value through `@render-policy/a2ui` with no configuration.
+
+| Category | naive (marked + innerHTML) | DOMPurify defaults + innerHTML | @render-policy/a2ui (balanced, defaults) |
+| --- | --- | --- | --- |
+| exfiltration | 0 / 11 | 0 / 11 | 11 / 11 |
+| script-execution | 0 / 1 | 1 / 1 | 1 / 1 |
+| url-schemes | 0 / 4 | 0 / 4 | 4 / 4 |
+| ui-spoofing | 0 / 3 | 0 / 3 | 3 / 3 |
+| guard | 5 / 5 | 5 / 5 | 5 / 5 |
+
+| Case | naive (marked + innerHTML) | DOMPurify defaults + innerHTML | @render-policy/a2ui (balanced, defaults) |
+| --- | --- | --- | --- |
+| `a2ui-image-literal` Image.url to a remote host with data in the query | ✗ | ✗ | ✓ |
+| `a2ui-image-bound` Image.url bound to the data model | ✗ | ✗ | ✓ |
+| `a2ui-image-swapped` bound Image.url swapped after a clean first render | ✗ | ✗ | ✓ |
+| `a2ui-format-string-data` formatString puts data-model values into an image path | ✗ | ✗ | ✓ |
+| `a2ui-format-string-host` formatString takes the whole origin from the data model | ✗ | ✗ | ✓ |
+| `a2ui-theme-icon` theme.iconUrl in createSurface to a remote host | ✗ | ✗ | ✓ |
+| `a2ui-video` Video.url to a remote host (players fetch metadata on their own) | ✗ | ✗ | ✓ |
+| `a2ui-audio` AudioPlayer.url bound to the data model | ✗ | ✗ | ✓ |
+| `a2ui-text-markdown-image` Markdown image in Text (the catalog allows no images) | ✗ | ✗ | ✓ |
+| `a2ui-text-bound-swap` bound Text swapped from plain text to an HTML image | ✗ | ✗ | ✓ |
+| `a2ui-openurl-sink` openUrl to a chat bot API, the message assembled by formatString | ✗ | ✗ | ✓ |
+| `a2ui-text-img-onerror` HTML with an event handler in bound Text | ✗ | ✓ | ✓ |
+| `a2ui-openurl-javascript` openUrl with a javascript: URL | ✗ | ✗ | ✓ |
+| `a2ui-openurl-bound-javascript` openUrl bound to a mixed-case javascript: URL | ✗ | ✗ | ✓ |
+| `a2ui-openurl-data` openUrl with a data: HTML document | ✗ | ✗ | ✓ |
+| `a2ui-openurl-mailto` openUrl outside http and https (mailto: with a prefilled body) | ✗ | ✗ | ✓ |
+| `a2ui-text-link` Markdown link in Text (the catalog allows no links) | ✗ | ✗ | ✓ |
+| `a2ui-text-form` password form in Text | ✗ | ✗ | ✓ |
+| `a2ui-text-overlay` styled overlay in Text | ✗ | ✗ | ✓ |
+| `a2ui-guard-image-same-origin` same-origin Image.url must render | ✓ | ✓ | ✓ |
+| `a2ui-guard-image-relative` relative Image.url bound to the data model must render | ✓ | ✓ | ✓ |
+| `a2ui-guard-format-string` formatString assembling a same-origin image must render | ✓ | ✓ | ✓ |
+| `a2ui-guard-text-markdown` Markdown formatting in Text must survive | ✓ | ✓ | ✓ |
+| `a2ui-guard-openurl-https` openUrl to an https page must open | ✓ | ✓ | ✓ |

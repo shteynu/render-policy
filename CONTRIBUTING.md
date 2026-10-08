@@ -14,8 +14,9 @@ npm run check
 
 - A sanitizer or policy change: `packages/core` with a jsdom test in `packages/core/test`. If the
   change concerns execution, network or Trusted Types, add a check to `e2e/run.mjs` too.
-- A new hostile input: a case in `corpus/evil-markdown.json` (see `corpus/README.md`), then
-  `npm run corpus:results` and commit the updated `corpus/RESULTS.md`.
+- A new hostile input: a case in `corpus/evil-markdown.json`, or in `corpus/evil-a2ui.json` for
+  A2UI messages (see `corpus/README.md`), then `npm run corpus:results` and commit the updated
+  `corpus/RESULTS.md`.
 - A framework adapter change: its package's tests, and its browser proof for Angular or Mermaid.
 - A lint rule change: `packages/eslint-plugin/test` with RuleTester cases, valid and invalid.
 

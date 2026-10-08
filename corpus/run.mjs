@@ -1,13 +1,15 @@
 /**
- * Runs the evil-Markdown corpus against one or more renderer adapters in a real Chromium.
+ * Runs the evil-Markdown corpus and the A2UI cases against one or more renderer adapters in a real Chromium.
  *
  *   node corpus/run.mjs                         # the three bundled adapters
  *   node corpus/run.mjs --adapter ./my.mjs      # your renderer (see corpus/README.md)
  *   node corpus/run.mjs --results corpus/RESULTS.md --json out.json
  *   node corpus/run.mjs --require-pass render-policy   # exit 1 if that adapter fails a case
+ *   node corpus/run.mjs --set a2ui              # only one case set: markdown or a2ui
  *
  * An adapter is an ES module whose default export is { name, render(container, markdown),
- * createStream?(container) }. It is bundled with esbuild, so it may import npm packages.
+ * createStream?(container), a2ui?: { name?, createSurface(container) } }. It is bundled with
+ * esbuild, so it may import npm packages.
  */
 import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -30,9 +32,19 @@ const only = option('--only');
 const resultsFile = option('--results');
 const jsonFile = option('--json');
 const requirePass = option('--require-pass');
+const set = option('--set');
 
-const corpus = JSON.parse(await readFile(path.join(here, 'evil-markdown.json'), 'utf8'));
-const cases = corpus.cases.filter((c) => !only || c.id === only);
+const SETS = [
+  { key: 'markdown', file: 'evil-markdown.json', title: 'Evil-Markdown cases' },
+  { key: 'a2ui', file: 'evil-a2ui.json', title: 'A2UI cases' },
+];
+const sets = [];
+for (const s of SETS.filter((s) => !set || s.key === set)) {
+  const corpus = JSON.parse(await readFile(path.join(here, s.file), 'utf8'));
+  const selected = corpus.cases.filter((c) => !only || c.id === only).map((c) => ({ ...c, set: s.key }));
+  if (selected.length > 0) sets.push({ ...s, version: corpus.version, cases: selected });
+}
+const cases = sets.flatMap((s) => s.cases);
 
 const buildDir = path.join(here, '.build');
 await mkdir(buildDir, { recursive: true });
@@ -50,6 +62,9 @@ async function bundle(adapterPath) {
       'window.__evaluate = evaluate;',
       'window.__pwned = {};',
       'window.p = (id) => { window.__pwned[id] = true; };',
+      // openUrl targets are recorded, not opened: the invariants look at the URL.
+      'window.__opened = [];',
+      'window.open = (url) => { window.__opened.push(String(url)); return null; };',
       'window.__ready = true;',
     ].join('\n'),
   );
@@ -80,7 +95,29 @@ async function runCase(key, testCase) {
   let status = 'pass';
 
   try {
-    if (testCase.stream) {
+    if (testCase.set === 'a2ui') {
+      const supported = await page.evaluate(() => typeof window.__adapter.a2ui?.createSurface === 'function');
+      if (!supported) {
+        status = 'unsupported';
+      } else {
+        await page.evaluate(() => {
+          window.__surface = window.__adapter.a2ui.createSurface(document.getElementById('out'));
+        });
+        const messages = JSON.parse(fill(JSON.stringify(testCase.messages)));
+        for (const message of messages) {
+          await page.evaluate(async (m) => {
+            await window.__surface.apply(m);
+          }, message);
+          await page.waitForTimeout(100);
+        }
+        for (const id of testCase.activate ?? []) {
+          await page.evaluate(async (componentId) => {
+            await window.__surface.activate?.(componentId);
+          }, id);
+        }
+        await page.waitForTimeout(250);
+      }
+    } else if (testCase.stream) {
       const supported = await page.evaluate(() => typeof window.__adapter.createStream === 'function');
       if (!supported) {
         status = 'unsupported';
@@ -115,7 +152,7 @@ async function runCase(key, testCase) {
 
     if (status !== 'unsupported') {
       const domFailures = await page.evaluate(
-        ([expect, id]) => window.__evaluate(document.getElementById('out'), expect, window.__pwned[id] === true),
+        ([expect, id]) => window.__evaluate(document.getElementById('out'), expect, window.__pwned[id] === true, window.__opened),
         [testCase.expect ?? {}, testCase.id],
       );
       failures.push(...domFailures);
@@ -130,27 +167,30 @@ async function runCase(key, testCase) {
     await page.close().catch(() => {});
   }
   if (status !== 'unsupported') status = failures.length === 0 ? 'pass' : 'fail';
-  return { id: testCase.id, category: testCase.category, status, failures };
+  return { id: testCase.id, set: testCase.set, category: testCase.category, status, failures };
 }
 
 try {
   for (const adapterPath of adapterPaths) {
     const key = await bundle(adapterPath);
-    const name = await (async () => {
+    const names = await (async () => {
       const page = await browser.newPage();
       await page.goto(`${base}/corpus/.build/${key}.html`);
       await page.waitForFunction(() => window.__ready === true);
-      const n = await page.evaluate(() => window.__adapter.name);
+      const n = await page.evaluate(() => ({ markdown: window.__adapter.name, a2ui: window.__adapter.a2ui?.name ?? window.__adapter.name }));
       await page.close();
       return n;
     })();
     const caseResults = [];
     for (const testCase of cases) caseResults.push(await runCase(key, testCase));
-    results.push({ key, name, cases: caseResults });
-    const passed = caseResults.filter((r) => r.status === 'pass').length;
-    const unsupported = caseResults.filter((r) => r.status === 'unsupported').length;
-    console.log(`\n== ${name}: ${passed}/${caseResults.length - unsupported} passed${unsupported ? `, ${unsupported} unsupported` : ''}`);
-    for (const r of caseResults) if (r.status === 'fail') console.log(`  FAIL ${r.id}: ${r.failures.join('; ')}`);
+    results.push({ key, name: names.markdown, names, cases: caseResults });
+    for (const s of sets) {
+      const setResults = caseResults.filter((r) => r.set === s.key);
+      const passed = setResults.filter((r) => r.status === 'pass').length;
+      const unsupported = setResults.filter((r) => r.status === 'unsupported').length;
+      console.log(`\n== ${s.key}, ${names[s.key]}: ${passed}/${setResults.length - unsupported} passed${unsupported ? `, ${unsupported} unsupported` : ''}`);
+      for (const r of setResults) if (r.status === 'fail') console.log(`  FAIL ${r.id}: ${r.failures.join('; ')}`);
+    }
   }
 } finally {
   await browser.close();
@@ -158,23 +198,40 @@ try {
 }
 
 const mark = { pass: '✓', fail: '✗', unsupported: 'n/a' };
-const categories = [...new Set(cases.map((c) => c.category))];
 const lines = [];
-lines.push(`# Evil-Markdown corpus results`, '', `Corpus version ${corpus.version}, ${cases.length} cases, run in Chromium by \`corpus/run.mjs\`.`, '', `A pass means every invariant of the case held: nothing executed, no forbidden element or attribute, no request to the listed hosts, and the guard content survived. "n/a" means the adapter has no streaming API.`, '');
-lines.push(`| Category | ${results.map((r) => r.name).join(' | ')} |`);
-lines.push(`| --- | ${results.map(() => '---').join(' | ')} |`);
-for (const category of categories) {
-  const total = cases.filter((c) => c.category === category).length;
-  lines.push(`| ${category} | ${results.map((r) => `${r.cases.filter((c) => c.category === category && c.status === 'pass').length} / ${total}`).join(' | ')} |`);
-}
-lines.push('', `| Case | ${results.map((r) => r.name).join(' | ')} |`, `| --- | ${results.map(() => '---').join(' | ')} |`);
-for (const testCase of cases) {
-  lines.push(`| \`${testCase.id}\` ${testCase.title} | ${results.map((r) => mark[r.cases.find((c) => c.id === testCase.id).status]).join(' | ')} |`);
+lines.push(
+  `# Evil-Markdown corpus results`,
+  '',
+  `${sets.map((s) => `${s.title}: version ${s.version}, ${s.cases.length} cases`).join('; ')}. Run in Chromium by \`corpus/run.mjs\`.`,
+  '',
+  `A pass means every invariant of the case held: nothing executed, no forbidden element or attribute, no request to the listed hosts, no forbidden \`openUrl\` target, and the guard content survived. "n/a" means the adapter has no streaming API or no A2UI surface.`,
+);
+const summary = [];
+for (const s of sets) {
+  const header = (rows) => [`| ${rows} | ${results.map((r) => r.names[s.key]).join(' | ')} |`, `| --- | ${results.map(() => '---').join(' | ')} |`];
+  const block = [`## ${s.title}`, ''];
+  if (s.key === 'a2ui') {
+    block.push(
+      'Each adapter renders a minimal A2UI v0.9 surface (`lib/a2ui-surface.js`: bindings and `formatString` resolved at render time). The naive one uses resolved values as they come and renders `Text` as Markdown through `innerHTML`; the DOMPurify one sanitizes `Text` with the default configuration and uses URLs as they come; render-policy runs every value through `@render-policy/a2ui` with no configuration.',
+      '',
+    );
+  }
+  block.push(...header('Category'));
+  for (const category of [...new Set(s.cases.map((c) => c.category))]) {
+    const total = s.cases.filter((c) => c.category === category).length;
+    block.push(`| ${category} | ${results.map((r) => `${r.cases.filter((c) => c.set === s.key && c.category === category && c.status === 'pass').length} / ${total}`).join(' | ')} |`);
+  }
+  summary.push(...(summary.length > 0 ? [''] : []), ...block);
+  block.push('', ...header('Case'));
+  for (const testCase of s.cases) {
+    block.push(`| \`${testCase.id}\` ${testCase.title} | ${results.map((r) => mark[r.cases.find((c) => c.set === s.key && c.id === testCase.id).status]).join(' | ')} |`);
+  }
+  lines.push('', ...block);
 }
 const markdown = lines.join('\n') + '\n';
-console.log('\n' + lines.slice(0, 6 + categories.length + 2).join('\n'));
+console.log('\n' + summary.join('\n'));
 if (resultsFile) await writeFile(path.resolve(resultsFile), markdown);
-if (jsonFile) await writeFile(path.resolve(jsonFile), JSON.stringify({ version: corpus.version, results }, null, 2));
+if (jsonFile) await writeFile(path.resolve(jsonFile), JSON.stringify({ versions: Object.fromEntries(sets.map((s) => [s.key, s.version])), results }, null, 2));
 
 if (requirePass) {
   const target = results.find((r) => r.key === requirePass);

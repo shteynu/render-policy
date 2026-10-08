@@ -10,6 +10,12 @@
   for the client's allowlist (A2UI007). Absolute data bindings and `formatString` are resolved
   against the stream's own `updateDataModel` messages after every message. `lintA2uiMessages()` and
   `parseA2uiMessages()` are exported; A2UI rules carry the SARIF tag `a2ui`.
+- Corpus: 24 A2UI v0.9 cases (`corpus/evil-a2ui.json`): media and icon URLs through data binding,
+  `formatString` and a value swapped after the first render, `openUrl` targets outside http and
+  https or to a sink, and `Text` with HTML, images, links or forms. An adapter opts in with
+  `a2ui: { createSurface(container) }`; the reference adapters share a minimal surface
+  (`corpus/lib/a2ui-surface.js`). New invariants `noOpenScheme`, `noOpenTo` and `mustOpen`;
+  `--set markdown|a2ui` runs one set. `@render-policy/a2ui` with no configuration passes all 24.
 
 ## 0.1.5 — 2026-10-08
 

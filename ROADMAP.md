@@ -36,7 +36,7 @@ Also planned for the core:
 
 - [x] streaming v1: keep settled blocks, replace only from the first changed node (`patchChildren`)
 - [ ] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer. Attempted with a line-scanner that finds a safe cut, but a strict fast-check equivalence property (incremental DOM must equal a whole-buffer render after every push) kept finding non-local Markdown cases — link reference definitions, loose-list continuation across a growing last line, and more — so it was reverted pending a design that meets the property. Whole-buffer rendering with tail `patchChildren` ships for now (`npm run bench`: a push costs 2 ms at 8 kB and 17 ms at 64 kB).
-- [x] an evil-Markdown corpus other renderers can run (`corpus/`, 54 cases, reference results in `corpus/RESULTS.md`)
+- [x] an evil-Markdown corpus other renderers can run (`corpus/`, 54 Markdown cases and 24 A2UI cases, reference results in `corpus/RESULTS.md`)
 - [x] image proxy guidance (SSRF-safe) for `images.rewriteUrl`: [`docs/image-proxy.md`](docs/image-proxy.md), with a reference proxy checked against the guide's attack table
 
 ## Proposed: structured agent UI (A2UI)
@@ -73,7 +73,7 @@ contract is string-based; the policy's own output is a fragment.
 | Public URL API | a link decision hook lands as `urls.decide(url, context)` (allow / deny / rewrite, for links and images); `checkUrlHeuristics` stays in `core/internal` for now | done: `urls.decide` |
 | Static message scan | Literal hazards in A2UI messages (`javascript:` in `openUrl`, image hosts outside the allowlist) as `mcp-app-lint` rules; a CI aid, not a substitute for the guard | done: `mcp-app-lint --a2ui`, rules A2UI001–A2UI007; bindings and `formatString` resolved against the stream's own `updateDataModel` |
 | Proofs | jsdom for the guard and presets; Chromium proof that an image URL arriving through `updateDataModel` and blocked by the policy makes no request | done: `packages/a2ui/test`, `packages/a2ui/e2e` (also `formatString`, the theme icon, `Text`, `openUrl`, with an unguarded control run) |
-| Corpus | A2UI cases next to the evil-Markdown ones (bound URLs, `formatString`-assembled URLs, Markdown in `Text` that breaks the catalog contract) | not started |
+| Corpus | A2UI cases next to the evil-Markdown ones (bound URLs, `formatString`-assembled URLs, Markdown in `Text` that breaks the catalog contract) | done: `corpus/evil-a2ui.json`, 24 cases on a minimal v0.9 surface (`corpus/lib/a2ui-surface.js`); adapters opt in with `a2ui.createSurface(container)` |
 
 Decided (2026-10-08): a separate package, `@render-policy/a2ui`, so core does not move with the
 A2UI specification; v0.9 first, because that is what the reference renderers ship (v0.9.1, the

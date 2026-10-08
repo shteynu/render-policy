@@ -82,5 +82,6 @@ no request reaches a host outside the allowlist, the token assembled by `formatS
 and nothing opens. The same messages without the guard are the control: they make those requests.
 
 For CI, [`mcp-app-lint --a2ui`](../mcp-app-lint#a2ui-rules) scans recorded A2UI message streams
-for the same hazards before anything renders. Not covered yet: A2UI cases in the evil-Markdown
-corpus. A2UI v1.0 follows when that version is stable.
+for the same hazards before anything renders. The evil-Markdown corpus has 24 A2UI cases
+([`corpus/evil-a2ui.json`](../../corpus/evil-a2ui.json)) that any A2UI renderer can run through a
+corpus adapter. A2UI v1.0 follows when that version is stable.

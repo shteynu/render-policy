@@ -308,7 +308,7 @@ data. Details in [`packages/a2ui`](packages/a2ui).
 
 ## Evil-Markdown corpus
 
-[`corpus/`](corpus) holds 54 hostile-Markdown cases with the invariants a safe renderer must hold, and a runner that checks any renderer in Chromium through a ten-line adapter. Results for the three reference adapters ([`corpus/RESULTS.md`](corpus/RESULTS.md)):
+[`corpus/`](corpus) holds 54 hostile-Markdown cases and 24 A2UI cases with the invariants a safe renderer must hold, and a runner that checks any renderer in Chromium through a ten-line adapter. Results for the three reference adapters ([`corpus/RESULTS.md`](corpus/RESULTS.md)):
 
 | Category | marked + innerHTML | DOMPurify defaults + innerHTML | @render-policy/core, balanced defaults |
 | --- | --- | --- | --- |
@@ -323,6 +323,16 @@ data. Details in [`packages/a2ui`](packages/a2ui).
 
 DOMPurify's defaults are not wrong: they answer the XSS question. The corpus asks the other questions, and those are the policy's job.
 
+24 more cases are A2UI v0.9 message streams: image, video, audio and icon URLs that arrive through data binding or `formatString` (also a value swapped after a clean first render), `openUrl` targets outside http and https, and `Text` that breaks the catalog's "no HTML, images or links". Each reference adapter renders them on a minimal surface with the same hooks:
+
+| Category | values as given, `Text` via innerHTML | values as given, `Text` via DOMPurify defaults | @render-policy/a2ui, balanced defaults |
+| --- | --- | --- | --- |
+| exfiltration | 0 / 11 | 0 / 11 | 11 / 11 |
+| script execution | 0 / 1 | 1 / 1 | 1 / 1 |
+| URL schemes (`openUrl`) | 0 / 4 | 0 / 4 | 4 / 4 |
+| UI spoofing | 0 / 3 | 0 / 3 | 3 / 3 |
+| guards against over-blocking | 5 / 5 | 5 / 5 | 5 / 5 |
+
 ```
 node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
 ```
@@ -333,7 +343,7 @@ node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md). Next: A2UI message scanning and corpus cases, evil-mcp-app (a Playwright suite that grades MCP Apps hosts), and streaming v2 (re-parse only the unsettled tail).
+See [ROADMAP.md](ROADMAP.md). Next: A2UI components for the React and Angular adapters, evil-mcp-app (a Playwright suite that grades MCP Apps hosts), and streaming v2 (re-parse only the unsettled tail).
 
 ## Security
 

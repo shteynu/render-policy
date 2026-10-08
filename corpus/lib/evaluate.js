@@ -3,7 +3,8 @@
  * after the adapter rendered the input into `container`. Returns a list of
  * failure messages; an empty list means the case passed its DOM invariants.
  * Network invariants (noRequestTo, stream requests) are checked by run.mjs
- * from outside the page.
+ * from outside the page. `opened` lists the URLs passed to window.open, for
+ * the openUrl invariants of the A2UI cases.
  */
 const URL_ATTRIBUTES = ['href', 'src', 'xlink:href', 'action', 'formaction', 'poster', 'data', 'srcset', 'ping', 'background', 'cite'];
 
@@ -16,7 +17,7 @@ function schemeOf(raw) {
   return match ? match[1].toLowerCase() : null;
 }
 
-export function evaluate(container, expect, executed) {
+export function evaluate(container, expect, executed, opened = []) {
   const failures = [];
   const elements = Array.from(container.querySelectorAll('*'));
 
@@ -61,6 +62,22 @@ export function evaluate(container, expect, executed) {
       if (name === 'id' && forbiddenIds.has(attribute.value)) failures.push(`id present: ${attribute.value}`);
       if (name === 'name' && forbiddenNames.has(attribute.value)) failures.push(`name present: ${attribute.value}`);
     }
+  }
+
+  const forbiddenOpenSchemes = new Set((expect.noOpenScheme ?? []).map((s) => s.toLowerCase()));
+  for (const url of opened) {
+    const scheme = schemeOf(url);
+    if (scheme && forbiddenOpenSchemes.has(scheme)) failures.push(`opened a ${scheme}: URL`);
+    for (const host of expect.noOpenTo ?? []) {
+      let hostname = '';
+      try {
+        hostname = new URL(url, container.ownerDocument.baseURI).hostname;
+      } catch {}
+      if (hostname === host || hostname.endsWith(`.${host}`)) failures.push(`opened a URL on ${host}`);
+    }
+  }
+  for (const url of expect.mustOpen ?? []) {
+    if (!opened.includes(url)) failures.push(`not opened: ${url}`);
   }
 
   if (expect.relNoopenerOnTargetBlank) {
