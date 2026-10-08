@@ -37,7 +37,7 @@ Also planned for the core:
 - [x] streaming v1: keep settled blocks, replace only from the first changed node (`patchChildren`)
 - [ ] streaming v2: re-parse only the unsettled Markdown tail instead of the whole buffer. Attempted with a line-scanner that finds a safe cut, but a strict fast-check equivalence property (incremental DOM must equal a whole-buffer render after every push) kept finding non-local Markdown cases — link reference definitions, loose-list continuation across a growing last line, and more — so it was reverted pending a design that meets the property. Whole-buffer rendering with tail `patchChildren` ships for now (`npm run bench`: a push costs 2 ms at 8 kB and 17 ms at 64 kB).
 - [x] an evil-Markdown corpus other renderers can run (`corpus/`, 54 cases, reference results in `corpus/RESULTS.md`)
-- [ ] image proxy guidance (SSRF-safe) for `rewriteImageUrl`
+- [x] image proxy guidance (SSRF-safe) for `images.rewriteUrl`: [`docs/image-proxy.md`](docs/image-proxy.md), with a reference proxy checked against the guide's attack table
 
 ## Proposed: structured agent UI (A2UI)
 
@@ -75,9 +75,10 @@ contract is string-based; the policy's own output is a fragment.
 | Proofs | jsdom for the guard and presets; Chromium proof that an image URL arriving through `updateDataModel` and blocked by the policy makes no request | not started |
 | Corpus | A2UI cases next to the evil-Markdown ones (bound URLs, `formatString`-assembled URLs, Markdown in `Text` that breaks the catalog contract) | not started |
 
-Open questions: a new package (`@render-policy/a2ui`) or a core entry point; which spec version
-to target first (v0.9 is what renderers ship, v1.0 is the stable candidate); whether a
-`formatString` result should be checked as one value or also per interpolated part.
+Decided (2026-10-08): a separate package, `@render-policy/a2ui`, so core does not move with the
+A2UI specification; v0.9 first, because that is what the reference renderers ship; v1.0 follows
+when it is stable. Open: whether a `formatString` result should be checked as one value or also
+per interpolated part.
 
 AG-UI needs no adapter of its own: it transports text deltas, which the existing streaming mode
 already renders.
@@ -96,13 +97,14 @@ repository with `git subtree split`). Three collectors (registry snapshot, stati
 npm packages that use a UI SDK, protocol census over remote servers), one analyzer that reuses
 the sink denylist and the ESLint rule, a report of aggregates. The registry snapshot and the
 static census run from anywhere; the protocol census needs a machine with ordinary outbound
-access. Results so far ([`census/SUMMARY.md`](census/SUMMARY.md), snapshot of 30 Sep 2026): 37,759 servers
-in the registry, 62% with a remote endpoint; 168 npm packages depend on a UI SDK, 153 declare UI
-resources, 39% of those declare any CSP domain list; 596 UI HTML documents analyzed. The protocol
-census over the 22,618 streamable-http remotes still has to run from a machine with ordinary
-outbound access. A draft publication built on these numbers is in
-[`docs/writeup-mcp-apps-census.md`](docs/writeup-mcp-apps-census.md); its live-policy section
-waits for that run.
+access. Results ([`census/SUMMARY.md`](census/SUMMARY.md), registry snapshot of 6 Oct 2026): 39,919
+servers in the registry, 63% with a remote endpoint. Static census: 174 npm packages depend on a UI
+SDK, 146 serve UI resources, 51% of those declare a CSP domain list. Protocol census over the
+24,321 streamable-http remotes (run 6 Oct 2026): 15,120 speak MCP, 654 serve UI resources; a CSP
+names a sink host anyone can use on 60 UI resources across 26 servers. Findings on specific
+servers go to their owners privately before the publication. The publication built on these numbers is
+[`docs/writeup-mcp-apps-census.md`](docs/writeup-mcp-apps-census.md), live-policy section
+included; it waits for the maintainer's proofreading.
 
 ## Stage 4: evil-mcp-app and rules for MCP scanners (30 Nov 2026 – 29 Jan 2027)
 
