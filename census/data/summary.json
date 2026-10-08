@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-07T07:19:12.944Z",
+  "generatedAt": "2026-10-08T13:03:23.508Z",
   "registry": {
     "collectedAt": "2026-10-06T09:05:14.280Z",
     "entries": 39919,
@@ -288,6 +288,48 @@
         "level": "note",
         "packages": 2,
         "findings": 2
+      },
+      "A2UI001": {
+        "name": "a2ui-openurl-scheme",
+        "level": "error",
+        "packages": 0,
+        "findings": 0
+      },
+      "A2UI002": {
+        "name": "a2ui-sink-host",
+        "level": "error",
+        "packages": 0,
+        "findings": 0
+      },
+      "A2UI003": {
+        "name": "a2ui-url-encoded-payload",
+        "level": "warning",
+        "packages": 0,
+        "findings": 0
+      },
+      "A2UI004": {
+        "name": "a2ui-url-template-host",
+        "level": "warning",
+        "packages": 0,
+        "findings": 0
+      },
+      "A2UI005": {
+        "name": "a2ui-url-template-data",
+        "level": "note",
+        "packages": 0,
+        "findings": 0
+      },
+      "A2UI006": {
+        "name": "a2ui-text-markup",
+        "level": "warning",
+        "packages": 0,
+        "findings": 0
+      },
+      "A2UI007": {
+        "name": "a2ui-remote-media-hosts",
+        "level": "note",
+        "packages": 0,
+        "findings": 0
       }
     },
     "permissions": {
@@ -317,6 +359,10 @@
     }
   },
   "remote": {
+    "collected": {
+      "from": "2026-10-06",
+      "to": "2026-10-08"
+    },
     "probed": 24321,
     "reachable": 15120,
     "failures": {
@@ -327,30 +373,30 @@
       "protocol": 48,
       "timeout": 21
     },
-    "withUiResources": 654,
+    "withUiResources": 650,
     "measures": {
       "uiResources": {
-        "resources": 1440,
-        "servers": 654
+        "resources": 1443,
+        "servers": 650
       },
       "mcpAppMime": {
-        "resources": 1115,
-        "servers": 540
+        "resources": 1118,
+        "servers": 536
       },
       "readFailed": {
-        "resources": 60,
-        "servers": 22
+        "resources": 70,
+        "servers": 30
       },
       "cspDeclared": {
-        "resources": 1032,
-        "servers": 474
+        "resources": 1031,
+        "servers": 468
       },
       "cspDeclaredEmpty": {
-        "resources": 280,
-        "servers": 162
+        "resources": 281,
+        "servers": 161
       },
       "cspWithWildcard": {
-        "resources": 87,
+        "resources": 89,
         "servers": 35
       },
       "cspWithFullWildcard": {
@@ -362,24 +408,24 @@
         "servers": 1
       },
       "cspWithSinkHost": {
-        "resources": 60,
-        "servers": 26
+        "resources": 61,
+        "servers": 25
       },
       "cspWithTenantSinkHost": {
-        "resources": 100,
-        "servers": 46
+        "resources": 98,
+        "servers": 44
       },
       "listReadComparable": {
-        "resources": 1074,
-        "servers": 503
+        "resources": 1068,
+        "servers": 494
       },
       "listReadMismatch": {
-        "resources": 496,
-        "servers": 227
+        "resources": 494,
+        "servers": 221
       },
       "listReadReadOnly": {
-        "resources": 436,
-        "servers": 203
+        "resources": 434,
+        "servers": 197
       },
       "listReadListOnly": {
         "resources": 32,
@@ -394,28 +440,32 @@
         "servers": 2
       },
       "html": {
-        "resources": 1380,
-        "servers": 633
+        "resources": 1373,
+        "servers": 623
       },
       "htmlHandwritten": {
-        "resources": 833,
-        "servers": 412
+        "resources": 825,
+        "servers": 406
       },
       "htmlUnsafeInnerHtml": {
-        "resources": 810,
-        "servers": 336
+        "resources": 798,
+        "servers": 331
       },
       "htmlUnsafeInnerHtmlHandwritten": {
-        "resources": 466,
-        "servers": 211
+        "resources": 463,
+        "servers": 210
+      },
+      "htmlUnsafeInnerHtmlHandwrittenUnescaped": {
+        "resources": 455,
+        "servers": 207
       },
       "htmlPostMessageStarHandwritten": {
-        "resources": 468,
-        "servers": 238
+        "resources": 465,
+        "servers": 234
       },
       "htmlInlineHandlers": {
-        "resources": 144,
-        "servers": 58
+        "resources": 142,
+        "servers": 56
       },
       "htmlEvalHandwritten": {
         "resources": 0,
@@ -426,12 +476,12 @@
         "servers": 1
       },
       "htmlMetaCsp": {
-        "resources": 153,
-        "servers": 75
+        "resources": 151,
+        "servers": 73
       },
       "htmlExternalHosts": {
-        "resources": 389,
-        "servers": 180
+        "resources": 386,
+        "servers": 176
       },
       "htmlSinkHosts": {
         "resources": 1,
@@ -439,9 +489,11 @@
       }
     },
     "readFailures": {
-      "auth": 38,
+      "auth": 39,
       "protocol": 18,
-      "http": 4
+      "timeout": 5,
+      "http": 4,
+      "network": 4
     },
     "effectiveCspCategories": {
       "every-host": {
@@ -460,14 +512,14 @@
         "entries": 0
       },
       "sink": {
-        "resources": 60,
-        "servers": 26,
+        "resources": 61,
+        "servers": 25,
         "entries": 78
       },
       "fonts": {
-        "resources": 57,
-        "servers": 23,
-        "entries": 112
+        "resources": 55,
+        "servers": 21,
+        "entries": 108
       },
       "analytics": {
         "resources": 13,
@@ -480,38 +532,38 @@
         "entries": 112
       },
       "storage": {
-        "resources": 83,
-        "servers": 41,
-        "entries": 95
+        "resources": 82,
+        "servers": 40,
+        "entries": 94
       },
       "media": {
-        "resources": 150,
+        "resources": 151,
         "servers": 59,
-        "entries": 227
+        "entries": 228
       },
       "cdn": {
-        "resources": 276,
-        "servers": 91,
-        "entries": 451
+        "resources": 274,
+        "servers": 90,
+        "entries": 448
       },
       "api": {
-        "resources": 94,
-        "servers": 30,
-        "entries": 217
+        "resources": 93,
+        "servers": 29,
+        "entries": 215
       },
       "other": {
-        "resources": 624,
-        "servers": 266,
-        "entries": 1802
+        "resources": 622,
+        "servers": 261,
+        "entries": 1790
       }
     },
     "tools": {
-      "total": 10716,
-      "withUi": 2132,
-      "visibleToApp": 2267,
-      "appOnly": 110,
-      "sideEffectsVisibleToApp": 603,
-      "serversWithSideEffectsVisibleToApp": 194
+      "total": 10813,
+      "withUi": 2145,
+      "visibleToApp": 2282,
+      "appOnly": 113,
+      "sideEffectsVisibleToApp": 606,
+      "serversWithSideEffectsVisibleToApp": 191
     }
   }
 }

@@ -1,6 +1,6 @@
 # MCP Apps UI census: summary
 
-Generated 2026-10-07 by `census/report.mjs`. Aggregates only; see `census/README.md` for method and limits.
+Generated 2026-10-08 by `census/report.mjs`. Aggregates only; see `census/README.md` for method and limits.
 
 ## Registry composition
 
@@ -92,14 +92,14 @@ The scanner's rules run over the 174 scanned packages from the stored scans (sta
 
 ## Protocol census over remote servers
 
-Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further.
+Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further. Probed 2026-10-06 to 2026-10-08; a server probed again counts with its latest answer.
 
 | Measure | Count |
 | --- | --- |
 | servers probed | 24321 |
 | reachable and speaking MCP | 15120 |
 | failures | auth 6126, http 1148, network 989, not-mcp 869, protocol 48, timeout 21 |
-| with UI resources | 654 |
+| with UI resources | 650 |
 
 ### Declared policies and HTML, as served
 
@@ -107,32 +107,33 @@ Each measure counts UI resources and the servers with at least one such resource
 
 | Measure | UI resources | Servers |
 | --- | --- | --- |
-| UI resources read | 1440 | 654 |
-| with the MCP Apps MIME type | 1115 | 540 |
-| resources/read failed (auth 38, protocol 18, http 4) | 60 | 22 |
-| declaring a CSP | 1032 | 474 |
-| of which every list is empty | 280 | 162 |
-| CSP with a wildcard host | 87 | 35 |
+| UI resources read | 1443 | 650 |
+| with the MCP Apps MIME type | 1118 | 536 |
+| resources/read failed (auth 39, protocol 18, timeout 5, http 4, network 4) | 70 | 30 |
+| declaring a CSP | 1031 | 468 |
+| of which every list is empty | 281 | 161 |
+| CSP with a wildcard host | 89 | 35 |
 | CSP allowing every host (`*` or scheme-only) | 2 | 1 |
 | CSP with an http: origin | 1 | 1 |
-| CSP naming a sink host anyone can use | 60 | 26 |
-| CSP naming one account on a storage or serverless service from the denylist | 100 | 46 |
-| `_meta.ui` comparable between list and read | 1074 | 503 |
-| list and read differ | 496 | 227 |
-| only read carries `_meta.ui` | 436 | 203 |
+| CSP naming a sink host anyone can use | 61 | 25 |
+| CSP naming one account on a storage or serverless service from the denylist | 98 | 44 |
+| `_meta.ui` comparable between list and read | 1068 | 494 |
+| list and read differ | 494 | 221 |
+| only read carries `_meta.ui` | 434 | 197 |
 | only list carries `_meta.ui` | 32 | 17 |
 | both carry it, with different values | 28 | 11 |
 | read is wider than list | 6 | 2 |
-| HTML documents | 1380 | 633 |
-| with a handwritten inline script | 833 | 412 |
-| with a dynamic innerHTML-class sink, any script | 810 | 336 |
-| with a dynamic innerHTML-class sink, handwritten script | 466 | 211 |
-| with postMessage(…, '*') in a handwritten script | 468 | 238 |
-| with inline event handlers | 144 | 58 |
+| HTML documents | 1373 | 623 |
+| with a handwritten inline script | 825 | 406 |
+| with a dynamic innerHTML-class sink, any script | 798 | 331 |
+| with a dynamic innerHTML-class sink, handwritten script | 463 | 210 |
+| of which a value is not passed through an escaping helper | 455 | 207 |
+| with postMessage(…, '*') in a handwritten script | 465 | 234 |
+| with inline event handlers | 142 | 56 |
 | with eval or new Function in a handwritten script | 0 | 0 |
 | with a form that posts somewhere | 1 | 1 |
-| with a CSP meta tag of its own | 153 | 75 |
-| loading from external hosts | 389 | 180 |
+| with a CSP meta tag of its own | 151 | 73 |
+| loading from external hosts | 386 | 176 |
 | referencing a sink host | 1 | 1 |
 
 ### What the enforced policies allow
@@ -144,15 +145,15 @@ Hosts in the policy a host enforces (read when it carries `ui.csp`, otherwise li
 | every-host | 2 | 1 | 3 |
 | development | 0 | 0 | 0 |
 | local-scheme | 0 | 0 | 0 |
-| sink | 60 | 26 | 78 |
-| fonts | 57 | 23 | 112 |
+| sink | 61 | 25 | 78 |
+| fonts | 55 | 21 | 108 |
 | analytics | 13 | 2 | 13 |
 | maps | 41 | 13 | 112 |
-| storage | 83 | 41 | 95 |
-| media | 150 | 59 | 227 |
-| cdn | 276 | 91 | 451 |
-| api | 94 | 30 | 217 |
-| other | 624 | 266 | 1802 |
+| storage | 82 | 40 | 94 |
+| media | 151 | 59 | 228 |
+| cdn | 274 | 90 | 448 |
+| api | 93 | 29 | 215 |
+| other | 622 | 261 | 1790 |
 
 ### Tools on servers with UI resources
 
@@ -160,8 +161,8 @@ Only tools that carry `_meta.ui` are classified; the others are counted in the t
 
 | Measure | Count |
 | --- | --- |
-| tools | 10716 |
-| with a UI resource (`_meta.ui.resourceUri`) | 2132 |
-| with `_meta.ui` and visible to the app (explicitly or by default) | 2267 |
-| of those, app-only | 110 |
-| of those, without readOnlyHint | 603, on 194 servers |
+| tools | 10813 |
+| with a UI resource (`_meta.ui.resourceUri`) | 2145 |
+| with `_meta.ui` and visible to the app (explicitly or by default) | 2282 |
+| of those, app-only | 113 |
+| of those, without readOnlyHint | 606, on 191 servers |

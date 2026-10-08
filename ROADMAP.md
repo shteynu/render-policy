@@ -102,11 +102,10 @@ static census run from anywhere; the protocol census needs a machine with ordina
 access. Results ([`census/SUMMARY.md`](census/SUMMARY.md), registry snapshot of 6 Oct 2026): 39,919
 servers in the registry, 63% with a remote endpoint. Static census: 174 npm packages depend on a UI
 SDK, 146 serve UI resources, 51% of those declare a CSP domain list. Protocol census over the
-24,321 streamable-http remotes (run 6 Oct 2026): 15,120 speak MCP, 654 serve UI resources; a CSP
-names a sink host anyone can use on 60 UI resources across 26 servers. Findings on specific
+24,321 streamable-http remotes (run 6 Oct 2026, UI servers probed again 8 Oct): 15,120 speak MCP, 650 serve UI resources; a CSP
+names a sink host anyone can use on 61 UI resources across 25 servers. Findings on specific
 servers go to their owners privately before the publication. The publication built on these numbers is
-[`docs/writeup-mcp-apps-census.md`](docs/writeup-mcp-apps-census.md), live-policy section
-included; it waits for the maintainer's proofreading.
+drafted outside this repository until it is published.
 
 ## Stage 4: evil-mcp-app and rules for MCP scanners (30 Nov 2026 – 29 Jan 2027)
 

@@ -55,7 +55,9 @@ npm run test:census
 The collectors are resumable: a package or server already in the JSONL is skipped. Options:
 `--limit N`, `--concurrency N`, `--only <name>`, and for the protocol census `--max-resources N` and
 `--retry network,timeout`: probe again the servers whose latest probe failed with those kinds, for
-example after the local network dropped during a run. Records are only appended; the report uses
+example after the local network dropped during a run. `--rescan-ui` (both collectors) scans again
+every package or server whose latest record has UI, so an analyzer change reaches the report; a
+server that fails on the rescan keeps its previous record. Records are only appended; the report uses
 the latest record per server.
 
 ## Limits

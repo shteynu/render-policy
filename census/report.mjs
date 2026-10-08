@@ -198,6 +198,8 @@ if (remote.length > 0) {
     htmlHandwritten: both((e) => html(e, 'handwrittenScripts')),
     htmlUnsafeInnerHtml: both((e) => html(e, 'unsafeInnerHtml')),
     htmlUnsafeInnerHtmlHandwritten: both((e) => html(e, 'unsafeInnerHtmlHandwritten')),
+    // Scans older than the escaping split count every handwritten sink as unescaped (an upper bound).
+    htmlUnsafeInnerHtmlHandwrittenUnescaped: both((e) => (e.html?.unsafeInnerHtmlHandwrittenUnescaped ?? e.html?.unsafeInnerHtmlHandwritten ?? 0) > 0),
     htmlPostMessageStarHandwritten: both((e) => html(e, 'postMessageStarHandwritten')),
     htmlInlineHandlers: both((e) => html(e, 'inlineHandlers')),
     htmlEvalHandwritten: both((e) => html(e, 'evalLikeHandwritten')),
@@ -221,7 +223,9 @@ if (remote.length > 0) {
   }
   const tools = withUi.map((r) => r.tools).filter(Boolean);
   const sum = (key) => tools.reduce((n, t) => n + (t[key] ?? 0), 0);
+  const dates = remote.map((r) => r.collectedAt.slice(0, 10)).sort();
   summary.remote = {
+    collected: { from: dates[0], to: dates.at(-1) },
     probed: remote.length,
     reachable: reachable.length,
     failures: tally(remote.filter((r) => r.error), (r) => [r.error.kind]),
@@ -234,7 +238,7 @@ if (remote.length > 0) {
   const m = summary.remote;
   const row = (label, key) => `| ${label} | ${m.measures[key].resources} | ${m.measures[key].servers} |`;
   const t = m.tools;
-  lines.push('## Protocol census over remote servers', '', 'Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further.', '',
+  lines.push('## Protocol census over remote servers', '', `Read-only: initialize, resources/list, resources/read of UI resources, tools/list. No tool was called. Servers that require authentication were not probed further. Probed ${m.collected.from === m.collected.to ? m.collected.from : `${m.collected.from} to ${m.collected.to}`}; a server probed again counts with its latest answer.`, '',
     '| Measure | Count |', '| --- | --- |',
     `| servers probed | ${m.probed} |`, `| reachable and speaking MCP | ${m.reachable} |`, `| failures | ${Object.entries(m.failures).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'} |`,
     `| with UI resources | ${m.withUiResources} |`, '',
@@ -246,7 +250,7 @@ if (remote.length > 0) {
     row('CSP with a wildcard host', 'cspWithWildcard'), row('CSP allowing every host (`*` or scheme-only)', 'cspWithFullWildcard'), row('CSP with an http: origin', 'cspWithInsecureScheme'),
     row('CSP naming a sink host anyone can use', 'cspWithSinkHost'), row('CSP naming one account on a storage or serverless service from the denylist', 'cspWithTenantSinkHost'),
     row('`_meta.ui` comparable between list and read', 'listReadComparable'), row('list and read differ', 'listReadMismatch'), row('only read carries `_meta.ui`', 'listReadReadOnly'), row('only list carries `_meta.ui`', 'listReadListOnly'), row('both carry it, with different values', 'listReadBothDiffer'), row('read is wider than list', 'listReadWider'),
-    row('HTML documents', 'html'), row('with a handwritten inline script', 'htmlHandwritten'), row('with a dynamic innerHTML-class sink, any script', 'htmlUnsafeInnerHtml'), row('with a dynamic innerHTML-class sink, handwritten script', 'htmlUnsafeInnerHtmlHandwritten'),
+    row('HTML documents', 'html'), row('with a handwritten inline script', 'htmlHandwritten'), row('with a dynamic innerHTML-class sink, any script', 'htmlUnsafeInnerHtml'), row('with a dynamic innerHTML-class sink, handwritten script', 'htmlUnsafeInnerHtmlHandwritten'), row('of which a value is not passed through an escaping helper', 'htmlUnsafeInnerHtmlHandwrittenUnescaped'),
     row("with postMessage(…, '*') in a handwritten script", 'htmlPostMessageStarHandwritten'), row('with inline event handlers', 'htmlInlineHandlers'), row('with eval or new Function in a handwritten script', 'htmlEvalHandwritten'),
     row('with a form that posts somewhere', 'htmlFormsWithAction'), row('with a CSP meta tag of its own', 'htmlMetaCsp'), row('loading from external hosts', 'htmlExternalHosts'), row('referencing a sink host', 'htmlSinkHosts'), '',
     '### What the enforced policies allow', '',

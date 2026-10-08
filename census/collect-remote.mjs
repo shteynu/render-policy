@@ -3,14 +3,16 @@
  * read the UI ones, list tools. Read-only; no tool is ever called; no credentials are sent.
  * Servers that answer 401/403 are counted as "auth required" and left alone.
  * Output: census/data/remote-servers.jsonl.
- *   node census/collect-remote.mjs [--limit N] [--concurrency 6] [--only name] [--max-resources 10] [--retry network,timeout]
+ *   node census/collect-remote.mjs [--limit N] [--concurrency 6] [--only name] [--max-resources 10] [--retry network,timeout] [--rescan-ui]
  * `--retry` probes again the servers whose latest probe failed with one of the listed kinds, for
  * example after the local network dropped during a run; the new record is appended and wins.
+ * `--rescan-ui` probes again every server whose latest record has UI resources, so an analyzer
+ * change reaches the report; a server that fails now keeps its previous record.
  */
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, UI_MIME, withSinkHosts } from 'mcp-app-lint';
-import { appendJsonl, argValue, dataDir, ensureDataDir, finishedNames, mapLimit, readJsonl } from './lib/io.mjs';
+import { appendJsonl, argValue, dataDir, ensureDataDir, finishedNames, hasFlag, latestByName, mapLimit, readJsonl } from './lib/io.mjs';
 import { failureKind, McpHttpClient } from './lib/mcp-client.mjs';
 
 await ensureDataDir();
@@ -21,9 +23,12 @@ const only = argValue('--only', null);
 const maxResources = Number(argValue('--max-resources', '10'));
 const registry = JSON.parse(await readFile(path.join(dataDir, 'registry.json'), 'utf8'));
 const retry = new Set(String(argValue('--retry', '')).split(',').filter(Boolean));
-const done = finishedNames(await readJsonl(out), retry);
+const rescanUi = hasFlag('--rescan-ui');
+const previous = latestByName(await readJsonl(out));
+const done = finishedNames(previous, retry);
+const withUi = new Set(previous.filter((r) => (r.uiResourceCount ?? 0) > 0).map((r) => r.name));
 
-let servers = registry.servers.filter((s) => s.remotes.some((r) => r.type === 'streamable-http') && !done.has(s.name));
+let servers = registry.servers.filter((s) => s.remotes.some((r) => r.type === 'streamable-http') && (rescanUi ? withUi.has(s.name) : !done.has(s.name)));
 if (only) servers = servers.filter((s) => s.name === only);
 if (limit) servers = servers.slice(0, limit);
 console.log(`remote servers to probe: ${servers.length} (already done ${done.size})`);
@@ -31,6 +36,7 @@ console.log(`remote servers to probe: ${servers.length} (already done ${done.siz
 const isUiResource = (resource) => (resource?.mimeType ?? '').startsWith('text/html') || String(resource?.uri ?? '').startsWith('ui://');
 
 let processed = 0;
+let kept = 0;
 await mapLimit(servers, concurrency, async (server) => {
   const remote = server.remotes.find((r) => r.type === 'streamable-http');
   const record = { name: server.name, url: remote.url, collectedAt: new Date().toISOString() };
@@ -68,9 +74,11 @@ await mapLimit(servers, concurrency, async (server) => {
   } catch (error) {
     record.error = { kind: failureKind(error), message: String(error.message).slice(0, 160) };
   }
-  await appendJsonl(out, record);
+  if (rescanUi && record.error) kept += 1;
+  else await appendJsonl(out, record);
   processed += 1;
   process.stdout.write(`\rremote: ${processed}/${servers.length}`);
 });
 process.stdout.write('\n');
+if (rescanUi) console.log(`failed now, previous record kept: ${kept}`);
 console.log(`written to ${path.relative(process.cwd(), out)}`);
