@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 — 2026-10-08
+
+New package `@render-policy/a2ui`, which requires `@render-policy/core` ^0.1.5 for
+`createUrlGuard`. `@render-policy/react`, `@render-policy/mermaid`, `@render-policy/angular`,
+`eslint-plugin-render-policy` and `mcp-app-lint` are unchanged; they move to 0.1.5 so all seven
+packages share one version.
 
 - `@render-policy/a2ui` (new): the render policy for A2UI v0.9 surfaces. `createA2uiGuard()` checks
   the resolved values of `Image.url`, `Video.url`, `AudioPlayer.url`, `theme.iconUrl` and `openUrl`

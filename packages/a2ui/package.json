@@ -1,6 +1,6 @@
 {
   "name": "@render-policy/a2ui",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Render-policy checks for A2UI (v0.9) surfaces: image, media, icon and openUrl values checked after data binding, and the catalog's Text contract (no HTML, images or links) enforced.",
   "license": "MIT",
   "type": "module",
@@ -27,10 +27,10 @@
     "marked": "^18.0.14"
   },
   "peerDependencies": {
-    "@render-policy/core": "^0.1.4"
+    "@render-policy/core": "^0.1.5"
   },
   "devDependencies": {
-    "@render-policy/core": "^0.1.4"
+    "@render-policy/core": "^0.1.5"
   },
   "publishConfig": {
     "access": "public"

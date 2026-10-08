@@ -1,6 +1,6 @@
 {
   "name": "@render-policy/core",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Render agent-generated Markdown/HTML safely: sanitize into a DocumentFragment, insert with replaceChildren (never innerHTML), enforce a URL/host policy, stay Trusted Types compatible, handle streaming.",
   "license": "MIT",
   "type": "module",

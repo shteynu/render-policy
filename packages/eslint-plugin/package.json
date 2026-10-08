@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-render-policy",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "ESLint rules that flag HTML injection sinks (innerHTML, outerHTML, insertAdjacentHTML, bypassSecurityTrustHtml, dangerouslySetInnerHTML) so agent content goes through a render policy instead.",
   "license": "MIT",
   "type": "module",

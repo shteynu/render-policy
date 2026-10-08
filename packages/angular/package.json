@@ -1,6 +1,6 @@
 {
   "name": "@render-policy/angular",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Angular adapter for @render-policy/core: [rpRender] directive and <rp-markdown> component that render agent content without [innerHTML] or bypassSecurityTrustHtml.",
   "license": "MIT",
   "type": "module",

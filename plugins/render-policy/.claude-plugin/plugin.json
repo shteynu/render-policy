@@ -1,7 +1,7 @@
 {
   "name": "render-policy",
   "displayName": "render-policy",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Render agent-generated Markdown and HTML without innerHTML, and check the CSP an MCP App declares before you publish it.",
   "author": {
     "name": "render-policy contributors",
