@@ -24,6 +24,10 @@ technical part. Documentation is written in English; the maintainer communicates
   Runtime proof in `packages/angular/e2e` (JIT app over the FESM, Playwright).
 - `packages/mermaid`: `@render-policy/mermaid`. Strict Mermaid as a fragment transform; unit tests with a fake
   mermaid, browser proof with the real one in `packages/mermaid/e2e`.
+- `packages/a2ui`: `@render-policy/a2ui`. The policy for A2UI v0.9 surfaces: `createA2uiGuard` checks resolved
+  URL values (image, video, audio, icon, `openUrl`) through core's `createUrlGuard` and renders `Text` in a strict
+  mode (no HTML, images, links); `createA2uiMarkdownRenderer` fits the A2UI renderers' string plug-in. Unit tests
+  alias core's `src`; browser proof in `packages/a2ui/e2e` (a minimal v0.9 surface, guarded and unguarded).
 - `packages/mcp-app-lint`: `mcp-app-lint`. Plain ESM with JSDoc types, checked by `tsc` (`checkJs`); its `build` only
   emits declarations to `dist/` and compiles `test/types/consumer.ts` against them. The census analyzer (`analyze.mjs`, `domains.mjs`,
   `npm.mjs`) plus SARIF rules (`rules.mjs`, `lint.mjs`, `sarif.mjs`) and a CLI (`cli.mjs`, SARIF paths are made
@@ -64,7 +68,7 @@ npm test -w packages/core         # one package (vitest's own -w means watch; us
 ```
 
 Build order matters: core first (others resolve `@render-policy/core` through the workspace link to its `dist`).
-Unit tests of react/mermaid alias `@render-policy/core` to core's `src`, so they run without a build.
+Unit tests of react/mermaid/a2ui alias `@render-policy/core` to core's `src`, so they run without a build.
 
 ## Rules that are not negotiable
 

@@ -67,18 +67,20 @@ contract is string-based; the policy's own output is a fragment.
 
 | Component | Plan | Status |
 | --- | --- | --- |
-| Resolved-value guard | `guardA2uiValue(kind, value)` for `image`/`media` (image-host allowlist, sink denylist, URL heuristics, `rewriteImageUrl`) and `link` (schemes, sinks); every decision is a journal entry with the existing codes; application hooks that throw become entries, never aborted renders | not started |
-| Strict text mode | A policy preset for `Text`: Markdown without HTML, images or links, matching the catalog's contract | not started |
-| Markdown plug-in | Fragment path: our React and Angular components render `Text` themselves. Compatibility path: a string for the reference renderers' plug-in contract, documented as weaker than a fragment | not started |
+| Resolved-value guard | `guard.url(kind, value)` for `image`, `video`, `audio`, `icon` (`theme.iconUrl`) and `openUrl`: image-host allowlist, sink denylist, URL heuristics, `images.rewriteUrl`, schemes; every decision is a journal entry with the existing codes; application hooks that throw become entries, never aborted renders | done: `@render-policy/a2ui` `createA2uiGuard()`, on core's new `createUrlGuard()` |
+| Strict text mode | A policy preset for `Text`: Markdown without HTML, images or links, matching the catalog's contract | done: raw HTML shown as text, images as alt text, links as text, each journaled; `text: 'policy'` opts out |
+| Markdown plug-in | Fragment path: our React and Angular components render `Text` themselves. Compatibility path: a string for the reference renderers' plug-in contract, documented as weaker than a fragment | compatibility path done (`createA2uiMarkdownRenderer`); fragment path through `guard.renderText()`, React and Angular components not started |
 | Public URL API | a link decision hook lands as `urls.decide(url, context)` (allow / deny / rewrite, for links and images); `checkUrlHeuristics` stays in `core/internal` for now | done: `urls.decide` |
 | Static message scan | Literal hazards in A2UI messages (`javascript:` in `openUrl`, image hosts outside the allowlist) as `mcp-app-lint` rules; a CI aid, not a substitute for the guard | not started |
-| Proofs | jsdom for the guard and presets; Chromium proof that an image URL arriving through `updateDataModel` and blocked by the policy makes no request | not started |
+| Proofs | jsdom for the guard and presets; Chromium proof that an image URL arriving through `updateDataModel` and blocked by the policy makes no request | done: `packages/a2ui/test`, `packages/a2ui/e2e` (also `formatString`, the theme icon, `Text`, `openUrl`, with an unguarded control run) |
 | Corpus | A2UI cases next to the evil-Markdown ones (bound URLs, `formatString`-assembled URLs, Markdown in `Text` that breaks the catalog contract) | not started |
 
 Decided (2026-10-08): a separate package, `@render-policy/a2ui`, so core does not move with the
-A2UI specification; v0.9 first, because that is what the reference renderers ship; v1.0 follows
-when it is stable. Open: whether a `formatString` result should be checked as one value or also
-per interpolated part.
+A2UI specification; v0.9 first, because that is what the reference renderers ship (v0.9.1, the
+current production release, has the same basic catalog); v1.0 follows when it is stable. A
+`formatString` result is checked as one value, the URL the renderer will use: the length and entropy
+heuristics see an interpolated token there, and a per-part check would need the renderer's own
+expression parser.
 
 AG-UI needs no adapter of its own: it transports text deltas, which the existing streaming mode
 already renders.

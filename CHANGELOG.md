@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `@render-policy/a2ui` (new): the render policy for A2UI v0.9 surfaces. `createA2uiGuard()` checks
+  the resolved values of `Image.url`, `Video.url`, `AudioPlayer.url`, `theme.iconUrl` and `openUrl`
+  with the core's URL policy (media and the icon follow the image rules; `openUrl` allows http and
+  https only and opens with `noopener,noreferrer`), and renders `Text` without HTML, images or
+  links, as the basic catalog specifies. `createA2uiMarkdownRenderer()` fits the A2UI renderers'
+  Markdown plug-in contract. New journal codes: `a2ui-not-a-url`, `a2ui-text-html`,
+  `a2ui-text-image`, `a2ui-text-link`.
 - `@render-policy/core`: `createUrlGuard()` exposes the URL checks the sanitizer applies to URL
   attributes (scheme allowlist, sink denylist, `urls.decide`, and the image policy for `image`
   URLs) for URLs that never pass through HTML. The sanitizer now runs on the same function; its

@@ -49,7 +49,7 @@ const targets = [];
   targets.push({ label: `${pkg.name} (own code)`, entry, external: deps });
   targets.push({ label: `${pkg.name} + dompurify + marked (everything a page ships)`, entry, external: [] });
 }
-for (const dir of ['react', 'mermaid']) {
+for (const dir of ['react', 'mermaid', 'a2ui']) {
   const { pkg, deps, peers } = await packageInfo(dir);
   targets.push({ label: `${pkg.name} (own code)`, entry: `packages/${dir}/dist/index.js`, external: [...deps, ...peers, '@render-policy/core'] });
 }

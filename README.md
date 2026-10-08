@@ -15,6 +15,7 @@ Framework-free core with Angular and React adapters.
 | [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | 11 TestBed tests over the ng-packagr bundle + browser proof in Chromium |
 | [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
 | [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 14 unit tests + browser proof with the real mermaid |
+| [`@render-policy/a2ui`](packages/a2ui) | the policy for A2UI (v0.9) surfaces: image, media, icon and `openUrl` values checked after data binding; `Text` held to the catalog's "no HTML, images or links"; a Markdown plug-in for the A2UI renderers | 20 unit tests + browser proof (`updateDataModel`, `formatString`, `openUrl`) |
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 54 rule tests |
 | [`mcp-app-lint`](packages/mcp-app-lint) | SARIF findings about what an MCP App declares (`_meta.ui` CSP lists, permissions, tool visibility, list/read policy differences) and what its HTML does; CLI over a package, a directory or the JSON a server returned | 19 rules, 27 tests, TypeScript declarations; also the analyzer behind the census |
 
@@ -285,6 +286,26 @@ const renderer = createRenderer({ transforms: [createMermaidTransform({ mermaid 
 
 `transforms` post-process every sanitized fragment before insertion, with a context that says whether the render is streaming and whether the source ends inside an open code fence. The Mermaid transform renders in `securityLevel: 'strict'` without HTML labels, sanitizes the SVG (no links, scripts, `foreignObject`, images, external references, `:host` or `@import` in styles), and isolates the result in a shadow root inside a `contain: paint` wrapper. Open fences stay code until they close; finished diagrams stay in place while the rest streams. Details in [`packages/mermaid`](packages/mermaid).
 
+## Structured agent UI (A2UI)
+
+An [A2UI](https://a2ui.org) agent sends components and a data model instead of HTML. The URLs in
+them are still fetched without a click (`Image`, `Video`, `AudioPlayer`, the surface icon) or
+navigated to (`openUrl`), and they are usually bound to the data model or assembled by
+`formatString`, so the effective value exists only at render time. `@render-policy/a2ui` checks that
+value with the same policy, denylist and journal as the core, and holds `Text` to the catalog's
+contract:
+
+```ts
+import { createA2uiGuard } from '@render-policy/a2ui';
+
+const guard = createA2uiGuard({ policy: { images: { hosts: ['cdn.example.com'] } } });
+const result = guard.url('image', resolvedUrl, { surfaceId, componentId });
+if (result.allowed) img.src = result.value;
+```
+
+`createUrlGuard` in the core is the same URL check for any other place agent output carries a URL as
+data. Details in [`packages/a2ui`](packages/a2ui).
+
 ## Evil-Markdown corpus
 
 [`corpus/`](corpus) holds 54 hostile-Markdown cases with the invariants a safe renderer must hold, and a runner that checks any renderer in Chromium through a ten-line adapter. Results for the three reference adapters ([`corpus/RESULTS.md`](corpus/RESULTS.md)):
@@ -312,7 +333,7 @@ node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md). Next: publish the packages to npm, streaming v2 (re-parse only the unsettled tail), the protocol census over remote servers, and evil-mcp-app, a Playwright suite that grades MCP Apps hosts.
+See [ROADMAP.md](ROADMAP.md). Next: A2UI message scanning and corpus cases, evil-mcp-app (a Playwright suite that grades MCP Apps hosts), and streaming v2 (re-parse only the unsettled tail).
 
 ## Security
 
