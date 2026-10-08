@@ -1,7 +1,7 @@
 {
   "name": "@render-policy/react",
   "version": "0.1.5",
-  "description": "React adapter for @render-policy/core: render agent Markdown/HTML into a ref without dangerouslySetInnerHTML, with a streaming mode.",
+  "description": "React adapter for @render-policy/core: render agent Markdown/HTML into a ref without dangerouslySetInnerHTML, with a streaming mode; A2UI Text and Image components under @render-policy/react/a2ui.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./a2ui": {
+      "types": "./dist/a2ui/index.d.ts",
+      "import": "./dist/a2ui/index.js",
+      "default": "./dist/a2ui/index.js"
     }
   },
   "files": [
@@ -24,10 +29,17 @@
     "test": "vitest run"
   },
   "peerDependencies": {
+    "@render-policy/a2ui": "^0.1.5",
     "@render-policy/core": "^0.1.0",
     "react": ">=18.0.0"
   },
+  "peerDependenciesMeta": {
+    "@render-policy/a2ui": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@render-policy/a2ui": "^0.1.5",
     "@render-policy/core": "^0.1.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -45,6 +57,7 @@
     "llm",
     "agent",
     "streaming",
+    "a2ui",
     "security"
   ],
   "repository": {

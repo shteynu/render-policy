@@ -8,10 +8,14 @@
     "paths": {
       "@render-policy/core": [
         "../core/src/index.ts"
+      ],
+      "@render-policy/a2ui": [
+        "../a2ui/src/index.ts"
       ]
     }
   },
   "include": [
-    "src"
+    "src",
+    "a2ui/src"
   ]
 }

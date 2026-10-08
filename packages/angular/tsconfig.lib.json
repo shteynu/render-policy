@@ -15,6 +15,6 @@
     "strictInjectionParameters": true,
     "strictInputAccessModifiers": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "a2ui/src/**/*.ts"],
   "exclude": ["src/**/*.spec.ts"]
 }

@@ -16,12 +16,14 @@ technical part. Documentation is written in English; the maintainer communicates
   (`@render-policy/core/internal`, not semver). Every journal entry has a stable `code`. Tests: vitest + jsdom.
 - `packages/eslint-plugin`: `eslint-plugin-render-policy`. Rules `no-unsafe-innerhtml` (JS/TS/JSX)
   and `no-innerhtml-binding` (Angular templates, needs `@angular-eslint/template-parser`).
-- `packages/react`: `@render-policy/react`. Provider, hook, `<RpMarkdown>`, `<RpHtml>`. Tests with react-dom/client + act.
+- `packages/react`: `@render-policy/react`. Provider, hook, `<RpMarkdown>`, `<RpHtml>`; A2UI `Text`/`Image` components in
+  `src/a2ui` (entry `@render-policy/react/a2ui`, optional peer `@render-policy/a2ui`). Tests with react-dom/client + act.
 - `packages/angular`: `@render-policy/angular`. Built with ng-packagr (partial compilation); TypeScript 6.0 is
   installed nested in this package because Angular 22 needs it, the workspace root uses TypeScript 7.
   Unit tests with TestBed (vitest + jsdom) run over the built FESM, not the source: JIT from source does not see
   signal inputs, so `npm test -w packages/angular` needs core and angular built first.
-  Runtime proof in `packages/angular/e2e` (JIT app over the FESM, Playwright).
+  Runtime proof in `packages/angular/e2e` (JIT app over the FESM, Playwright). A2UI `Text`/`Image` components are the
+  secondary entry point `packages/angular/a2ui` (`@render-policy/angular/a2ui`, its own FESM; optional peer `@render-policy/a2ui`).
 - `packages/mermaid`: `@render-policy/mermaid`. Strict Mermaid as a fragment transform; unit tests with a fake
   mermaid, browser proof with the real one in `packages/mermaid/e2e`.
 - `packages/a2ui`: `@render-policy/a2ui`. The policy for A2UI v0.9 surfaces: `createA2uiGuard` checks resolved

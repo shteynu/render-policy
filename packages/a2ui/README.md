@@ -71,7 +71,9 @@ const markdown = createA2uiMarkdownRenderer({ guard }); // share the guard with 
 ```
 
 This is the compatibility path, and it is weaker than a fragment: the HTML is serialized here and
-parsed again by the renderer. Where you render `Text` yourself, use `guard.renderText()`.
+parsed again by the renderer. Where you render `Text` yourself, use `guard.renderText()`, or the
+`Text` and `Image` components of [`@render-policy/react/a2ui`](../react#a2ui-text-and-image) and
+[`@render-policy/angular/a2ui`](../angular#a2ui-text-and-image), which are built on the guard.
 
 ## Proofs
 

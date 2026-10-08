@@ -2,11 +2,20 @@
 
 ## Unreleased
 
+- `@render-policy/react`: new entry point `@render-policy/react/a2ui` with `<RpA2uiText>`,
+  `<RpA2uiImage>`, `<A2uiGuardProvider>` and `useA2uiGuard()`: the A2UI basic catalog's `Text` and
+  `Image` on `@render-policy/a2ui` (now an optional peer dependency). `Text` is a sanitized fragment
+  under the catalog's contract; `Image` creates no element for a blocked URL and renders `fallback`.
+  `variant` and `fit` outside the catalog's enums count as the defaults, so agent data never becomes
+  a tag name or a class.
+- `@render-policy/angular`: the same as the secondary entry point `@render-policy/angular/a2ui`:
+  `<rp-a2ui-text>`, `<rp-a2ui-image>` (projected content when blocked), `provideA2uiGuard()`,
+  `A2UI_GUARD`, `A2UI_GUARD_CONFIG`. Covered by TestBed tests and the Angular browser proof.
 - `@render-policy/core`: every sanitizer on a window now shares one Trusted Types policy named
   `dompurify`. Before, each renderer's DOMPurify instance created its own, and under a CSP that names
   policies (`trusted-types dompurify`) the second renderer on a page was refused the duplicate and
   rendered nothing, because DOMPurify parses through `DOMParser.parseFromString`, a Trusted Types
-  sink. Found by an Angular proof with a second renderer next to `<rp-markdown>`; the core's browser
+  sink. Found by the Angular proof with `<rp-a2ui-text>` next to `<rp-markdown>`; the core's browser
   proof now renders with a second renderer under that CSP. The README no longer says `DOMParser` is
   not a sink.
 - `mcp-app-lint`: `--a2ui` scans A2UI v0.9 message streams (one message, a JSON array, the

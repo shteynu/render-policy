@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@render-policy/core': path.resolve(here, '../core/src/index.ts'),
+      '@render-policy/a2ui': path.resolve(here, '../a2ui/src/index.ts'),
     },
   },
   test: {

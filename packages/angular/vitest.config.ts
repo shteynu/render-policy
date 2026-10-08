@@ -10,14 +10,18 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // Signal inputs need compiled metadata, which plain decorators in source do not carry, so the
 // library source cannot be tested directly without the Angular CLI's JIT transform.
 const fesm = path.resolve(here, 'dist/fesm2022/render-policy-angular.mjs');
-if (!existsSync(fesm)) {
+const fesmA2ui = path.resolve(here, 'dist/fesm2022/render-policy-angular-a2ui.mjs');
+if (!existsSync(fesm) || !existsSync(fesmA2ui)) {
   throw new Error('@render-policy/angular tests run against the built package: npm run build -w packages/core && npm run build -w packages/angular');
 }
 
 export default defineConfig({
   resolve: {
     alias: {
+      // The secondary entry point first: a string alias also matches the paths below it.
+      '@render-policy/angular/a2ui': fesmA2ui,
       '@render-policy/angular': fesm,
+      '@render-policy/a2ui': path.resolve(here, '../a2ui/src/index.ts'),
       '@render-policy/core': path.resolve(here, '../core/src/index.ts'),
     },
   },

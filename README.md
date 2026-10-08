@@ -12,8 +12,8 @@ Framework-free core with Angular and React adapters.
 | Package | What it is | Status |
 | --- | --- | --- |
 | [`@render-policy/core`](packages/core) | Renderer, policy and modes, sink denylist, URL heuristics, streaming, `createUrlGuard` for URLs outside HTML | 185 unit and property tests + a real-Chromium proof |
-| [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()` | 11 TestBed tests over the ng-packagr bundle + browser proof in Chromium |
-| [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>` | 12 component tests |
+| [`@render-policy/angular`](packages/angular) | `[rpRender]` directive, `<rp-markdown>` component, `provideRenderPolicy()`; A2UI `<rp-a2ui-text>` and `<rp-a2ui-image>` in `@render-policy/angular/a2ui` | 22 TestBed tests over the ng-packagr bundle + browser proof in Chromium |
+| [`@render-policy/react`](packages/react) | `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>`; A2UI `<RpA2uiText>` and `<RpA2uiImage>` in `@render-policy/react/a2ui` | 25 component tests |
 | [`@render-policy/mermaid`](packages/mermaid) | strict Mermaid diagrams as a fragment transform: SVG-only sanitizer, shadow-root isolation | 14 unit tests + browser proof with the real mermaid |
 | [`@render-policy/a2ui`](packages/a2ui) | the policy for A2UI (v0.9) surfaces: image, media, icon and `openUrl` values checked after data binding; `Text` held to the catalog's "no HTML, images or links"; a Markdown plug-in for the A2UI renderers | 21 unit tests + browser proof (`updateDataModel`, `formatString`, `openUrl`) |
 | [`eslint-plugin-render-policy`](packages/eslint-plugin) | `no-unsafe-innerhtml` (JS/TS/JSX), `no-innerhtml-binding` (Angular templates) | 54 rule tests |
@@ -303,8 +303,10 @@ const result = guard.url('image', resolvedUrl, { surfaceId, componentId });
 if (result.allowed) img.src = result.value;
 ```
 
-`createUrlGuard` in the core is the same URL check for any other place agent output carries a URL as
-data. Details in [`packages/a2ui`](packages/a2ui).
+For a surface of your own, the React and Angular adapters have the catalog's `Text` and `Image` built
+on the guard: `@render-policy/react/a2ui` and `@render-policy/angular/a2ui`. `createUrlGuard` in the
+core is the same URL check for any other place agent output carries a URL as data. Details in
+[`packages/a2ui`](packages/a2ui).
 
 ## Evil-Markdown corpus
 
@@ -343,7 +345,7 @@ node corpus/run.mjs --adapter ./my-renderer.mjs --results my-results.md
 
 ## Roadmap
 
-See [ROADMAP.md](ROADMAP.md). Next: A2UI components for the React and Angular adapters, evil-mcp-app (a Playwright suite that grades MCP Apps hosts), and streaming v2 (re-parse only the unsettled tail).
+See [ROADMAP.md](ROADMAP.md). Next: evil-mcp-app (a Playwright suite that grades MCP Apps hosts), and streaming v2 (re-parse only the unsettled tail).
 
 ## Security
 

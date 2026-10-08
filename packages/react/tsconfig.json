@@ -5,7 +5,8 @@
     "jsx": "react-jsx",
     "types": ["node"],
     "paths": {
-      "@render-policy/core": ["../core/src/index.ts"]
+      "@render-policy/core": ["../core/src/index.ts"],
+      "@render-policy/a2ui": ["../a2ui/src/index.ts"]
     }
   },
   "include": ["src", "test", "vitest.config.ts"]
