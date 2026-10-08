@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.1.6 — 2026-10-08
+
+Changes in `@render-policy/core` (Trusted Types fix), `@render-policy/react` and
+`@render-policy/angular` (A2UI components on new entry points) and `mcp-app-lint` (`--a2ui`).
+`@render-policy/a2ui`, `@render-policy/mermaid` and `eslint-plugin-render-policy` are unchanged;
+they move to 0.1.6 so all seven packages share one version. The A2UI entry points need
+`@render-policy/a2ui` ^0.1.5, an optional peer dependency; the main entries do not.
 
 - `@render-policy/react`: new entry point `@render-policy/react/a2ui` with `<RpA2uiText>`,
   `<RpA2uiImage>`, `<A2uiGuardProvider>` and `useA2uiGuard()`: the A2UI basic catalog's `Text` and

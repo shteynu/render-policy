@@ -1,6 +1,6 @@
 {
   "name": "@render-policy/react",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "React adapter for @render-policy/core: render agent Markdown/HTML into a ref without dangerouslySetInnerHTML, with a streaming mode; A2UI Text and Image components under @render-policy/react/a2ui.",
   "license": "MIT",
   "type": "module",

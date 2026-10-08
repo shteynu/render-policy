@@ -1,6 +1,6 @@
 {
   "name": "@render-policy/angular",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Angular adapter for @render-policy/core: [rpRender] directive and <rp-markdown> component that render agent content without [innerHTML] or bypassSecurityTrustHtml; A2UI Text and Image components under @render-policy/angular/a2ui.",
   "license": "MIT",
   "type": "module",

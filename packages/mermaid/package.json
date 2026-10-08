@@ -1,6 +1,6 @@
 {
   "name": "@render-policy/mermaid",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Strict Mermaid diagrams for @render-policy/core: rendered in securityLevel strict without HTML labels, sanitized as SVG, isolated in a shadow root.",
   "license": "MIT",
   "type": "module",

@@ -32,6 +32,7 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 - [x] Релиз 0.1.3 (2026-10-06): только `mcp-app-lint` (MCPAPP001 при внешних хостах, `:undefined` в тексте); остальные пакеты без изменений. Все шесть на npm с provenance (release.yml run 37480565636). Метаданные npm появились через ~5 минут после публикации, это нормально.
 - [x] Релиз 0.1.4 (2026-10-07): core (denylist 2026-10-07: S3-совместимые хранилища и платформы) и `mcp-app-lint` (MCPAPP017/018 по полям; core ^0.1.4). Опубликован: все шесть пакетов 0.1.4 в npm с provenance; чистый `mcp-app-lint@0.1.4` даёт на политике A5 три MCPAPP005.
 - [x] Релиз 0.1.5 (2026-10-08): новый пакет `@render-policy/a2ui` (A2UI v0.9) и `createUrlGuard` в core. Все семь пакетов 0.1.5 на npm; `a2ui` 0.1.5 опубликован вручную, без provenance, со следующего релиза через trusted publishing.
+- [ ] Релиз 0.1.6 (2026-10-08): core (одна TT-политика `dompurify` на окно), `react`/`angular` (A2UI `Text`/`Image` на подпутях `/a2ui`), `mcp-app-lint --a2ui`; корпус +24 кейса A2UI. Подготовлен: версии 0.1.6, `npm run check` зелёный, тарболы проверены в чистом проекте. Осталось: `git push origin main`, затем `git tag v0.1.6 && git push origin v0.1.6`; все семь пакетов публикует `release.yml` (первый trusted-релиз `a2ui`: если шаг `a2ui` упадёт с 404, trusted publisher не подхватился).
 
 ## 3. Перепись CSP: протокольный обход (нужна обычная сеть, из облачной сессии не работает)
 
