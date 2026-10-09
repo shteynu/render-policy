@@ -12,6 +12,7 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 4. Плагин Claude (`plugins/render-policy`, два skill): подан в каталог Anthropic 2026-10-07 (версия 0.1.4, коммит `7a3cd50`), статус «Waiting for review», сначала идёт security scan. Заявка: https://claude.ai/directory/manage/plugins/47dfb84a-2026-4440-a4ed-42de26325092. Когда версия пройдёт проверки, нажать **Publish** (первую версию публикует ревьюер Anthropic). Новые коммиты каталог подхватывает примерно раз в 6 часов; для немедленного обновления можно включить push webhook (Settings → Set up push updates, нужны права администратора репозитория). Версия плагина растёт с каждым релизом (`release.yml` проверяет).
 5. Релиз 0.1.6 опубликован 2026-10-08: все семь пакетов через `release.yml` с provenance, включая `@render-policy/a2ui` (trusted publisher работает). Если ручная публикация отвечает 404 на PUT, истёк вход в npm: `npm login --registry https://registry.npmjs.org --auth-type=web`.
 6. Dependabot alert #4 (katex, low, только dev): dismiss как «risk is tolerable» — https://github.com/shteynu/render-policy/security/dependabot/4
+7. Вклад во внешние проекты (раздел 9): в октябре только первый небольшой PR в A2UI (Angular, безопасность), остальное — в Этап 4. Номера issue и непубличные находки — в `.agent-tasks/upstream-contributions-2026-10-09.md` (вне git): по правилу `CLAUDE.md` непочиненные проблемы чужих проектов в репозитории не называются.
 
 ## 1. Настройки, по пять минут каждая (без них часть автоматики не работает)
 
@@ -88,7 +89,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [ ] PR хотя бы в один MCP-сканер с `mcp-app-lint`. Обзор сканеров 2026-10-06: выбран Cisco mcp-scanner (встроенный анализатор на Python, сначала issue); запасные — ZAP MCP add-on, Tencent AI-Infra-Guard.
 - [x] MCPAPP001 только при внешних хостах в UI (атрибуты или абсолютный URL в `fetch`/`WebSocket`/…), 2026-10-06: по переписи 72 → 15 пакетов, на примерах ext-apps 19 → 0. В релиз не вышло.
 - [x] GitHub Action для `mcp-app-lint` (`action.yml`, composite): запуск сканера и загрузка SARIF в code scanning; SARIF-пути сделаны репо-относительными. Готово к использованию как `uses: shteynu/render-policy@v1` после публикации тега.
-- [ ] Предложить набор в ext-apps как проверку соответствия хостов.
+- [ ] Предложить набор в ext-apps как проверку соответствия хостов: как именно — раздел 9.
 
 ## 8. Этапы 5–6 плана (деньги и enterprise), с вашим участием
 
@@ -97,3 +98,27 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [ ] Заявки на гранты (OpenAI, Alpha-Omega).
 - [ ] С GA Copilot Studio: следить за моделью допуска сторонних MCP-приложений; 10–15 интервью с админами M365; прототип только при 3+ сильных сигналах.
 - [ ] Точка решения 2027-04-05 по порогам из плана.
+
+## 9. Вклад во внешние проекты: A2UI, ext-apps, AG-UI (разбор 2026-10-09)
+
+Факты проверены 2026-10-09 по GitHub и npm; a2ui.org из облачной сессии не открылся, роадмап A2UI взят из `docs/public/roadmap.md` в их репозитории. Номера issue, ссылки и непубличные находки — в `.agent-tasks/upstream-contributions-2026-10-09.md`.
+
+Что уже есть и что несём наружу: `@render-policy/a2ui` (guard по разрешённому значению, строгий `Text`, Markdown-плагин под контракт рендереров A2UI), `@render-policy/angular/a2ui`, `mcp-app-lint --a2ui`, 24 кейса A2UI в корпусе, `conformance/` для хостов MCP Apps.
+
+Исходные данные:
+
+- A2UI переехал: `google/A2UI` → `a2ui-project/a2ui`. Стабильная спецификация v0.9.1, v1.0 — release candidate («v0.10» — её прежнее имя). Angular-рендерер — `@a2ui/angular` 0.12.0 (Angular ^21.2.5), Markdown через `provideMarkdownRenderer`, по умолчанию `@a2ui/markdown-it`. Участие команды Angular не подтвердилось.
+- В роадмапе A2UI нет ни безопасности, ни валидации каталога; бенчмарки рендереров — Q3 2026, тулинг сборки — «долгосрочно», без даты; к v1.0 (Q4 2026) — тест-сьют и сертификация рендереров.
+- Правила A2UI: Google CLA; PR обязан ссылаться на issue, назначенный на автора или с меткой `type: contributions-welcome`; на P4 PR не смотрят; e2e на PR из форков не запускаются; `SECURITY.md` нет, отчёты идут обычными issue.
+- ext-apps: PR #726 (conformance-server по модели web-platform-tests) открыт, не влит, без ревью. Мейнтейнер в #693 предпочёл автоматизацию браузера против самих хостов, а не отдельный сервер; CONTRIBUTING не принимает внешние PR с новыми example-серверами. Обсуждение платформенных тестов — issue #674; черновик интерфейса хоста — #743 (нет согласия на вызов инструментов, схем в `open-link`, `resourceDomains`, атрибута `allow`; у нас `toolNeedsConsent` и `buildAllowAttribute` есть). Конкурирующий валидатор — PR #722 (`mcp-app-validator`, без ревью). Вопрос о поиске вредоносных паттернов в HTML view — #664.
+- json-render: официального адаптера A2UI нет, issue vercel-labs/json-render#9 открыт, мейнтейнер «открыт к A2UI как входному формату». Threadplane (`@threadplane/a2ui`, `@threadplane/ag-ui` 0.3.2) конвертирует A2UI в json-render Spec, но на `@json-render/core` ^0.16 и с телеметрией в postinstall.
+
+Порядок:
+
+- [ ] A2UI, октябрь: подписать Google CLA; взять небольшое issue по безопасности в Angular-части (кандидаты в `.agent-tasks/`), попросить назначить его на себя, PR с тестом. Цель — чтобы мейнтейнеры узнали, при минимальной цене.
+- [ ] A2UI, Этап 4: прогнать 24 кейса `corpus/evil-a2ui.json` против `@a2ui/angular` с плагином по умолчанию (адаптер корпуса локально, не в git). Подтверждённое и ещё не известное — приватно, через GitHub Security Advisory, если включено; рендерер в корпусе не называть до исправления.
+- [ ] A2UI: в RFC по схеме валидации каталога и в предложении Markdown Profile — комментарий с опытом `@render-policy/a2ui` (строгий `Text`, проверка значения после привязки и `formatString`), со ссылкой на `createA2uiMarkdownRenderer`.
+- [ ] ext-apps, Этап 4: идти в #674, а не в #726. Описать `conformance/` (автоматизация Chromium, совпадает с позицией мейнтейнера) и пробелы #743, которые у нас закрыты; предложить пробы как тесты. Воспроизводящий тест на одно открытое issue — см. `.agent-tasks/`.
+- [ ] ext-apps: абзац о проверке CSP в `docs/csp-cors.md` (пункт 3 очереди; сейчас там нет ни wildcard, ни проверки); ответ в #664 со ссылкой на `mcp-app-lint`; правила `mcp-app-lint` предложить в #722, а не спорить с ним.
+- [ ] ngx-json-render, после статьи: спайк вторичной точки входа `ngx-json-render/a2ui` — сообщения v0.9.1 → json-render Spec, базовый каталог → Material-каталог, URL через `@render-policy/a2ui`. Разобрать: `DynamicValue` и `formatString` против выражений json-render, действия, `updateDataModel` как state. Отличие от Threadplane: актуальный json-render, без телеметрии, с политикой. Потом — комментарий в json-render#9.
+- [ ] AG-UI: отложено. Ниша занята Threadplane и Hashbrown; для render-policy адаптер не нужен (ROADMAP, раздел A2UI).
