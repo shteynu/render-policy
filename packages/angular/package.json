@@ -41,7 +41,10 @@
     "llm",
     "agent",
     "a2ui",
-    "security"
+    "security",
+    "sanitizer",
+    "trusted-types",
+    "streaming"
   ],
   "repository": {
     "type": "git",

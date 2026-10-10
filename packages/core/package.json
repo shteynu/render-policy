@@ -42,7 +42,10 @@
     "agent",
     "mcp",
     "dompurify",
-    "security"
+    "security",
+    "sanitizer",
+    "streaming",
+    "exfiltration"
   ],
   "repository": {
     "type": "git",

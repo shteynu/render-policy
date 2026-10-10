@@ -58,7 +58,9 @@
     "agent",
     "streaming",
     "a2ui",
-    "security"
+    "security",
+    "sanitizer",
+    "trusted-types"
   ],
   "repository": {
     "type": "git",
