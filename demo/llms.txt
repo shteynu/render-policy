@@ -1,0 +1,40 @@
+# render-policy
+
+> Safe rendering of Markdown and HTML that an LLM, agent or tool produced. Content is sanitized into a DocumentFragment with DOMPurify and inserted with replaceChildren(), never through innerHTML, and a policy decides which hosts may receive image requests, which URL schemes links may use and which exfiltration sinks are blocked. Streaming aware and compatible with Trusted Types. Framework-free core with Angular and React adapters.
+
+- Install: `npm install @render-policy/core`, plus `@render-policy/angular` or `@render-policy/react`. The packages are ESM only.
+- Never show agent output through `innerHTML`, `dangerouslySetInnerHTML`, `[innerHTML]` or `bypassSecurityTrustHtml`. Use `renderer.renderMarkdownInto(element, text)`, `<RpMarkdown>` in React, or `[rpRender]` / `<rp-markdown>` in Angular.
+- Streaming: `renderer.createStream(element)`, then `push(chunk)` and `end()`. A half-received link or image is never turned into a request, and an unfinished code fence renders as code.
+- Modes: `strict`, `balanced` (default) and `permissive`. Balanced loads remote images only from hosts listed in `policy.images.hosts`.
+- Every decision is returned in a journal with a stable `code`.
+- License: MIT.
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/shteynu/render-policy/main/README.md): why a policy rather than "sanitize, then innerHTML", quick start for core, Angular, React and ESLint, modes, policy reference, threat model, streaming, size and speed, Trusted Types and CSP, diagrams, A2UI
+- [@render-policy/core](https://raw.githubusercontent.com/shteynu/render-policy/main/packages/core/README.md): renderer, policy and modes, sink denylist, URL heuristics, streaming, `createUrlGuard` for URLs outside HTML
+- [@render-policy/angular](https://raw.githubusercontent.com/shteynu/render-policy/main/packages/angular/README.md): `provideRenderPolicy()`, the `[rpRender]` directive and `<rp-markdown>` component; A2UI components in `@render-policy/angular/a2ui`
+- [@render-policy/react](https://raw.githubusercontent.com/shteynu/render-policy/main/packages/react/README.md): `<RenderPolicyProvider>`, `useRenderPolicy()`, `<RpMarkdown>`, `<RpHtml>`; A2UI components in `@render-policy/react/a2ui`
+- [@render-policy/mermaid](https://raw.githubusercontent.com/shteynu/render-policy/main/packages/mermaid/README.md): strict Mermaid diagrams as a fragment transform, isolated in a shadow root
+- [@render-policy/a2ui](https://raw.githubusercontent.com/shteynu/render-policy/main/packages/a2ui/README.md): the policy for A2UI v0.9 surfaces, with URL values checked after data binding and `Text` held to plain text
+- [eslint-plugin-render-policy](https://raw.githubusercontent.com/shteynu/render-policy/main/packages/eslint-plugin/README.md): `no-unsafe-innerhtml` for JS/TS/JSX and `no-innerhtml-binding` for Angular templates
+- [mcp-app-lint](https://raw.githubusercontent.com/shteynu/render-policy/main/packages/mcp-app-lint/README.md): SARIF findings about an MCP App's `_meta.ui` CSP lists, permissions and HTML, and about A2UI message streams; CLI and GitHub Action
+- [Migration guide](https://raw.githubusercontent.com/shteynu/render-policy/main/docs/migration.md): replacing existing HTML sinks with the packages
+- [Image proxy](https://raw.githubusercontent.com/shteynu/render-policy/main/docs/image-proxy.md): routing allowed images through your own proxy
+
+## Agent skills
+
+- [safe-agent-html](https://raw.githubusercontent.com/shteynu/render-policy/main/plugins/render-policy/skills/safe-agent-html/SKILL.md): replace HTML sinks in code that shows agent output with these packages
+- [mcp-app-csp](https://raw.githubusercontent.com/shteynu/render-policy/main/plugins/render-policy/skills/mcp-app-csp/SKILL.md): check and fix an MCP App's security metadata with mcp-app-lint
+
+## Examples
+
+- [Live demo](https://shteynu.github.io/render-policy/): the same hostile Markdown rendered with innerHTML and through the policy, side by side
+- [Trusted Types variant](https://shteynu.github.io/render-policy/trusted-types.html): the demo under `require-trusted-types-for 'script'`
+
+## Optional
+
+- [Source on GitHub](https://github.com/shteynu/render-policy)
+- [@render-policy/core on npm](https://www.npmjs.com/package/@render-policy/core)
+- [Evil-Markdown corpus](https://raw.githubusercontent.com/shteynu/render-policy/main/corpus/README.md): hostile Markdown and A2UI cases with the invariants a safe renderer must hold, and a runner for any renderer
+- [MCP Apps host conformance](https://raw.githubusercontent.com/shteynu/render-policy/main/conformance/README.md): a reference for the CSP and `allow` attribute a host builds from `_meta.ui`

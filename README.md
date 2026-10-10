@@ -119,6 +119,10 @@ claude plugin marketplace add shteynu/render-policy
 claude plugin install render-policy@render-policy
 ```
 
+An agent without the plugin can start from [`llms.txt`](https://shteynu.github.io/render-policy/llms.txt)
+on the demo site, which links every package README, the guides and both skills as raw Markdown
+([`demo/llms.txt`](demo/llms.txt)).
+
 `no-unsafe-innerhtml` flags `innerHTML`/`outerHTML` assignment, `insertAdjacentHTML`, `setHTMLUnsafe`, `createContextualFragment`, `document.write`, `bypassSecurityTrustHtml` and `dangerouslySetInnerHTML` with anything but a static string. `no-innerhtml-binding` flags `[innerHTML]`, `[(innerHTML)]`, `bind-innerHTML`, `[innerHtml]` and `[outerHTML]` in Angular templates.
 
 ## Modes
