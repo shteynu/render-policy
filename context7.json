@@ -1,0 +1,18 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "render-policy",
+  "description": "Safe rendering of Markdown and HTML that an LLM, agent or tool produced: sanitizes into a DocumentFragment with DOMPurify, never through innerHTML, and applies a policy for image hosts, link schemes and exfiltration sinks. Streaming aware and Trusted Types compatible. Framework-free core with Angular, React, Mermaid and A2UI packages, an ESLint plugin for HTML sinks, and mcp-app-lint for MCP App security metadata.",
+  "branch": "main",
+  "folders": ["packages", "docs", "plugins/render-policy/skills"],
+  "excludeFolders": ["node_modules", "dist", "e2e", "test"],
+  "excludeFiles": ["CLAUDE.md", "CLAUDE.local.md", "TODO.md", "ROADMAP.md", "CONTRIBUTING.md", "CHANGELOG.md"],
+  "rules": [
+    "Install `@render-policy/core`, plus `@render-policy/angular` or `@render-policy/react` for those frameworks. The packages are ESM only; Node 20.19 and later can `require()` them.",
+    "Never show agent output through `innerHTML`, `dangerouslySetInnerHTML`, `[innerHTML]` or `bypassSecurityTrustHtml`: use `renderer.renderMarkdownInto(element, text)`, `<RpMarkdown>`, `[rpRender]` or `<rp-markdown>`.",
+    "For a streaming reply, use `renderer.createStream(element)`, then `push(chunk)` and `end()`; in Angular and React pass the streaming flag (`[rpRenderStreaming]`, `streaming`) instead of re-rendering by hand.",
+    "Modes are `strict`, `balanced` (default) and `permissive`. Balanced blocks remote images whose host is not in `policy.images.hosts`: list your image hosts rather than switching to permissive.",
+    "Every decision lands in the journal with a stable `code` (`onDecision`), and application hooks that throw never abort a render.",
+    "`@render-policy/core/internal` is outside semver; application code imports from `@render-policy/core`.",
+    "Enforce the safe path with `eslint-plugin-render-policy` (`configs.recommended`, `configs['angular-templates']`); check an MCP App's `_meta.ui` CSP and permissions with `mcp-app-lint`."
+  ]
+}
