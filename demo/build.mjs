@@ -1,8 +1,8 @@
 /**
  * Builds the static demo site (site/): the demo bundled with esbuild, an index page,
  * a trusted-types.html variant that enforces `require-trusted-types-for 'script'`
- * through a CSP meta tag, and llms.txt for language models. Deployed to GitHub Pages
- * by .github/workflows/pages.yml.
+ * through a CSP meta tag, llms.txt for language models and sitemap.xml for search
+ * engines. Deployed to GitHub Pages by .github/workflows/pages.yml.
  */
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -36,4 +36,5 @@ await writeFile(path.join(out, 'trusted-types.html'), page.replace('<meta charse
 await cp(path.join(root, 'demo/demo.css'), path.join(out, 'demo.css'));
 await cp(path.join(root, 'demo/ok.svg'), path.join(out, 'ok.svg'));
 await cp(path.join(root, 'demo/llms.txt'), path.join(out, 'llms.txt'));
+await cp(path.join(root, 'demo/sitemap.xml'), path.join(out, 'sitemap.xml'));
 console.log(`demo site written to ${path.relative(root, out)}/`);
