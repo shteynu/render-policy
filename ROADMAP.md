@@ -85,6 +85,29 @@ expression parser.
 AG-UI needs no adapter of its own: it transports text deltas, which the existing streaming mode
 already renders.
 
+## Proposed: prose and generated UI in one reply (ngx-json-render)
+
+Not yet in the plan document. From a review on 2026-10-10 of non-JSON approaches to generative UI
+(Markdown with component islands, custom elements inserted as HTML, tool-call slots, XML/YAML
+server-driven UI, runtime compilation of model-written components). Most of the value comes from
+two cheap steps that change no API of either library:
+
+| Component | Plan | Status |
+| --- | --- | --- |
+| Recipe: `<rp-markdown>` + `<json-render>` | In the `ngx-json-render` demo chat, render a message's prose with `<rp-markdown>` and its spec with `<json-render>`: real Markdown instead of a plain string, rendered through the policy, and a working showcase of `render-policy` in another project. No library changes: the demo plus a paragraph in the `ngx-json-render` README and skill | not started |
+| `segments` in `injectChatUI` | An additive field on each chat message: prose and specs in the order the model wrote them, so the UI appears where the model put it instead of after the text. `text` and `spec` stay as they are. Work inside `ngx-json-render` only, with tests | not started |
+
+Deferred: islands inside one Markdown stream in core (a `spec` fence replaced by a placeholder that
+the adapter mounts a component into, kept across streaming re-renders). It touches `patchChildren`
+and `createContentBinding`, the same code streaming v2 had to revert, and nobody has asked for it.
+Revisit when a real user needs it, when Stage 2 is closed, or when `segments` proves too coarse (a
+component inside a list or a table rather than between paragraphs).
+
+Not planned: custom elements inserted as model-written HTML (needs `innerHTML` or a disabled
+sanitizer), an XML/YAML input format (JSONL patches already stream one complete line at a time, and
+JSON has strict structured output), runtime compilation of model-written components (executes
+generated code; the safe form of that is an MCP App in a sandboxed iframe).
+
 ## Stage 3: census of CSP in public MCP Apps (26 Oct – 27 Nov 2026)
 
 Measure how public MCP Apps declare CSP and allowed domains (`_meta.ui`: CSP, `connectDomains`,
