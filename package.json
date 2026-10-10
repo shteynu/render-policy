@@ -43,6 +43,7 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
+    "katex": "^0.18.2",
     "lodash-es": "^4.18.1"
   }
 }
