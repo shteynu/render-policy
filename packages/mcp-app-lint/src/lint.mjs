@@ -2,11 +2,13 @@
  * From analysis to findings (see Finding below).
  */
 import { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, uiMetaOf, withSinkHosts } from './analyze.mjs';
+import { mergeNeeds, suggestCsp, undeclaredOrigins, unusedEntries } from './csp.mjs';
 import { parseDomainPattern, sinkScope } from './domains.mjs';
 import { RULES } from './rules.mjs';
 
 /**
  * @import { HtmlAnalysis } from './analyze.mjs'
+ * @import { CspNeeds } from './csp.mjs'
  * @import { PackageScan } from './npm.mjs'
  * @import { Level } from './rules.mjs'
  */
@@ -86,14 +88,15 @@ function referencedHosts(docs) {
  * @param {unknown} meta
  * @param {string} uri
  * @param {readonly string[]} [hosts]
+ * @param {Partial<CspNeeds>} [needs] the origins the UI needs, for the suggestion MCPAPP001 carries
  */
-export function lintUiMeta(meta, uri, hosts = []) {
+export function lintUiMeta(meta, uri, hosts = [], needs = undefined) {
   /** @type {Finding[]} */
   const findings = [];
   const ui = uiMetaOf(meta);
   const analysis = analyzeUiMeta(meta);
   if (!analysis.cspDeclared) {
-    if (hosts.length > 0) findings.push(cspMissing(hosts, uri));
+    if (hosts.length > 0) findings.push(cspMissing(hosts, uri, needs));
   } else {
     for (const key of CSP_KEYS) {
       for (const raw of ui?.csp?.[key] ?? []) findings.push(...cspEntryFindings(key, raw, uri, { logical: { name: `csp.${key}`, kind: 'member' } }));
@@ -106,11 +109,37 @@ export function lintUiMeta(meta, uri, hosts = []) {
 }
 
 /**
+ * MCPAPP001, with the declaration the UI needs when the document shows it (`properties.suggestedCsp`).
  * @param {readonly string[]} hosts
  * @param {string} uri
+ * @param {Partial<CspNeeds>} [needs]
  */
-const cspMissing = (hosts, uri) =>
-  finding('MCPAPP001', `No ui.csp declared, but the UI references ${hosts.join(', ')}; a compliant host applies default-src 'none' and blocks them.`, uri, { properties: { hosts: [...hosts] } });
+function cspMissing(hosts, uri, needs) {
+  const suggested = needs ? suggestCsp(mergeNeeds([needs])) : null;
+  const message = `No ui.csp declared, but the UI references ${hosts.join(', ')}; a compliant host applies default-src 'none' and blocks them.${suggested ? ` Declare: ${JSON.stringify(suggested)}.` : ''}`;
+  return finding('MCPAPP001', message, uri, { properties: { hosts: [...hosts], ...(suggested ? { suggestedCsp: suggested } : {}) } });
+}
+
+/**
+ * MCPAPP020 and MCPAPP021: a declared CSP against the document it governs.
+ * @param {unknown} meta the resolved `_meta`
+ * @param {string} html
+ * @param {Partial<HtmlAnalysis>} analysis
+ * @param {string} uri
+ */
+function cspCoverageFindings(meta, html, analysis, uri) {
+  const csp = uiMetaOf(meta)?.csp;
+  if (!csp || typeof csp !== 'object' || !analysis.cspNeeds) return [];
+  /** @type {Finding[]} */
+  const findings = [];
+  for (const { key, entry } of unusedEntries(csp, html)) {
+    findings.push(finding('MCPAPP020', `${key} entry "${entry}" names a host the document never mentions.`, uri, { logical: { name: `csp.${key}`, kind: 'member' } }));
+  }
+  for (const [key, origins] of Object.entries(undeclaredOrigins(csp, analysis.cspNeeds))) {
+    findings.push(finding('MCPAPP021', `The document needs ${origins.join(', ')} in ${key}, which does not allow ${origins.length > 1 ? 'them' : 'it'}; the host blocks the request.`, uri, { logical: { name: `csp.${key}`, kind: 'member' }, properties: { key, origins } }));
+  }
+  return findings;
+}
 
 /**
  * Findings about a UI resource as served: listing entry, read result content item, HTML.
@@ -121,7 +150,8 @@ export function lintResource({ uri, listMeta = null, readMeta = null, html = nul
   const findings = [];
   const effective = readMeta ?? listMeta;
   const analysis = typeof html === 'string' ? withSinkHosts(analyzeHtml(html)) : null;
-  findings.push(...lintUiMeta(effective, uri, analysis ? referencedHosts([analysis]) : []));
+  findings.push(...lintUiMeta(effective, uri, analysis ? referencedHosts([analysis]) : [], analysis?.cspNeeds));
+  if (analysis && typeof html === 'string') findings.push(...cspCoverageFindings(effective, html, analysis, uri));
   if (listMeta && readMeta) {
     const compared = compareListRead(listMeta, readMeta);
     if (compared.readWider) findings.push(finding('MCPAPP018', 'resources/read declares a wider policy than resources/list.', uri));
@@ -194,6 +224,34 @@ export function lintTools(tools, uri = 'tools/list') {
 }
 
 /**
+ * What a server publishes, from a live connection or from saved results.
+ * @typedef {object} Snapshot
+ * @property {readonly any[]} contents resources/read content items (each with its `uri`)
+ * @property {readonly any[]} [resources] resources/list entries, for the list/read comparison
+ * @property {readonly any[]} [tools] tools/list entries
+ */
+
+/** @type {(r: any) => boolean} */
+const isUiContent = (r) => String(r?.mimeType ?? '').startsWith('text/html') || String(r?.uri ?? '').startsWith('ui://');
+
+/**
+ * Findings about everything a server publishes: each UI resource as listed and read, and its tools.
+ * @param {Snapshot} snapshot
+ * @param {{ uri?: string, toolsUri?: string }} [where] fallback uri of a content item without one; location of tool findings
+ */
+export function lintSnapshot({ contents, resources = [], tools = [] }, { uri = 'resources/read', toolsUri = 'tools/list' } = {}) {
+  /** @type {Finding[]} */
+  const findings = [];
+  for (const item of contents) {
+    if (!isUiContent(item)) continue;
+    const entry = resources.find((r) => r?.uri === item.uri) ?? null;
+    findings.push(...lintResource({ uri: item.uri ?? uri, listMeta: entry?._meta ?? null, readMeta: item._meta ?? null, html: typeof item.text === 'string' ? item.text : null }));
+  }
+  if (tools.length > 0) findings.push(...lintTools(tools, toolsUri));
+  return findings;
+}
+
+/**
  * Findings about a scanned package directory (see scanPackageDir). `root` prefixes file locations.
  * @param {PackageScan} scan
  * @param {string} [root]
@@ -201,6 +259,11 @@ export function lintTools(tools, uri = 'tools/list') {
 export function lintPackageScan(scan, root = '.') {
   /** @type {Finding[]} */
   const findings = [];
+  // `--dir path/` must not give `path//file`.
+  const base = root.length > 1 ? root.replace(/[\\/]+$/, '') || root : root;
+  /** @param {string} file */
+  const at = (file) => `${base}/${file}`.replace(/^\.\//, '');
+  const needs = mergeNeeds((scan.html ?? []).map((doc) => doc.cspNeeds));
   // Scans that know whether the package serves a UI resource use that; older ones only knew it mentions one.
   const servesUi = scan.servesUi ?? scan.declaresUi;
   if (servesUi || (Array.isArray(scan.domainSites) && scan.domainSites.length > 0)) {
@@ -209,15 +272,15 @@ export function lintPackageScan(scan, root = '.') {
     if (Array.isArray(scan.domainSites)) {
       // Each entry where it is written, so code scanning can point at the line.
       const hosts = referencedHosts(scan.html ?? []);
-      if (!scan.cspDeclared && servesUi && hosts.length > 0) findings.push(cspMissing(hosts, root));
-      for (const site of scan.domainSites) findings.push(...cspEntryFindings(site.key, site.raw, `${root}/${site.file}`.replace(/^\.\//, ''), { region: { startLine: site.line } }));
-      findings.push(...lintUiMeta({ ui: { csp: {}, permissions: fake.ui.permissions } }, root).filter((f) => f.ruleId === 'MCPAPP007'));
+      if (!scan.cspDeclared && servesUi && hosts.length > 0) findings.push(cspMissing(hosts, base, needs));
+      for (const site of scan.domainSites) findings.push(...cspEntryFindings(site.key, site.raw, at(site.file), { region: { startLine: site.line } }));
+      findings.push(...lintUiMeta({ ui: { csp: {}, permissions: fake.ui.permissions } }, base).filter((f) => f.ruleId === 'MCPAPP007'));
     } else {
-      findings.push(...lintUiMeta(fake, root, servesUi ? referencedHosts(scan.html ?? []) : []));
+      findings.push(...lintUiMeta(fake, base, servesUi ? referencedHosts(scan.html ?? []) : [], needs));
     }
   }
   for (const doc of scan.html ?? []) {
-    findings.push(...htmlFindings(doc, `${root}/${doc.file}`.replace(/^\.\//, '')));
+    findings.push(...htmlFindings(doc, at(doc.file)));
   }
   return findings;
 }

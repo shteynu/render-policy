@@ -90,6 +90,7 @@ npm run census:report            # census/SUMMARY.md и census/data/summary.json
 - [x] MCPAPP001 только при внешних хостах в UI (атрибуты или абсолютный URL в `fetch`/`WebSocket`/…), 2026-10-06: по переписи 72 → 15 пакетов, на примерах ext-apps 19 → 0. В релиз не вышло.
 - [x] GitHub Action для `mcp-app-lint` (`action.yml`, composite): запуск сканера и загрузка SARIF в code scanning; SARIF-пути сделаны репо-относительными. Готово к использованию как `uses: shteynu/render-policy@v1` после публикации тега.
 - [ ] Предложить набор в ext-apps как проверку соответствия хостов: как именно — раздел 9.
+- [~] `mcp-app-lint`, ветка `feat/mcp-app-lint-live` (2026-10-13, в релиз не вышло): `--url`/`--header` и `--stdio` (живой сервер, инструменты не вызываются; HTTP-клиент переехал из `census/lib/mcp-client.mjs` в пакет), `--suggest-csp` (готовый `_meta.ui.csp`, он же в `properties.suggestedCsp` у MCPAPP001), новые правила MCPAPP020 `csp-unused-domain` и MCPAPP021 `csp-host-undeclared`, режим MCP-сервера `--mcp` (шесть read-only инструментов, ни один не запускает процесс), исправлен `path//file` при `--dir path/`. Проверено на примере `basic-server-vue` из ext-apps по stdio и HTTP. Плагин MCP-сервер не ставит (правило «без запуска пакетов»), skill пользуется его инструментами, если они есть. Дальше: ревью, merge, релиз 0.1.7 (все пакеты и плагин на одну версию); в письмах владельцам строку проверки заменить на `npx mcp-app-lint --url <их endpoint> --format text`.
 
 ## 8. Этапы 5–6 плана (деньги и enterprise), с вашим участием
 

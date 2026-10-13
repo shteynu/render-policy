@@ -12,8 +12,11 @@ silently breaks the App.
 
 ## 1. Run the linter
 
-`mcp-app-lint` is an MIT CLI from the render-policy project. It reads the files you point it at and
-prints findings. It sends nothing anywhere.
+`mcp-app-lint` is an MIT CLI from the render-policy project. It reads the files you point it at, or
+asks a server you name what it publishes, and prints findings. It sends nothing else anywhere.
+
+If this session has the `mcp-app-lint` MCP server's tools (`lint_ui_resource`, `suggest_csp`,
+`lint_directory`, `lint_server`, …), use them instead of the CLI; they run the same checks.
 
 Use the copy installed in the project. Check `package.json` (`devDependencies`) and
 `node_modules/.bin/mcp-app-lint`. If it is not installed, ask the user before adding it as a dev
@@ -28,11 +31,19 @@ build output):
 Suggest a script in `package.json` so the check stays in the project, for example
 `"lint:mcp-app": "mcp-app-lint --dir . --format text"`. Other inputs:
 
+- `--url http://localhost:3001/mcp`: a running server over Streamable HTTP (add
+  `--header "Authorization: Bearer …"` if it needs credentials). It reads what the server publishes
+  and never calls a tool. This is the most accurate check: it sees the CSP and HTML the host gets.
+- `--stdio "node dist/index.js --stdio"`: the same for a local server started as a process. Use the
+  project's own start command; tell the user which command it runs.
 - `--read read.json --list list.json --tools tools.json`: saved results of `resources/read`,
   `resources/list` and `tools/list` from a running server
 - `--html app.html`: one UI document
 - `--format sarif --out mcp-app-lint.sarif`: SARIF 2.1.0 for CI and GitHub code scanning
 - `--fail-on error|warning|note|none`: exit code 1 when a finding reaches the level
+- `--suggest-csp`: instead of findings, the `_meta.ui.csp` each UI document needs. Run it on the
+  built document (or with `--url`) and use it as the starting point for the declaration; add hosts
+  the script assembles at run time by hand.
 
 ## 2. Fix the findings
 
@@ -54,6 +65,8 @@ Suggest a script in `package.json` so the check stays in the project, for exampl
 | MCPAPP017 meta-list-read-mismatch | warning | `resources/read` and `resources/list` declare the same field with different values. Declare one `_meta.ui` and use it in both. A listing with no CSP is fine. |
 | MCPAPP018 meta-read-wider-than-list | error | The read-time CSP adds entries the listing did not declare. Declare the same CSP in both. |
 | MCPAPP019 csp-sink-tenant-host | note | One named bucket or app on a storage or serverless service. Fine while you own that name; confirm it is yours. |
+| MCPAPP020 csp-unused-domain | note | The CSP allows a host the document never mentions. Remove it, unless the script builds that URL at run time. |
+| MCPAPP021 csp-host-undeclared | warning | The document loads from or calls an origin its CSP does not allow, so the host blocks it. Add it under the key the finding names (`--suggest-csp` prints the full declaration). |
 
 Other notes (inline `on*` handlers, forms that post elsewhere, external hosts the document loads)
 are informational. The tool prints a

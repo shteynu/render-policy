@@ -4,16 +4,64 @@ SARIF findings about what an MCP App declares and what its HTML does. Meant to b
 scanners and CI, or by hand on a package, a directory, or the JSON a server returned.
 
 ```
+npx mcp-app-lint --url https://example.com/mcp        # a running server over Streamable HTTP
+npx mcp-app-lint --stdio "node dist/server.js"        # a local server, started as a process
 npx mcp-app-lint --dir ./my-server                    # a package directory, built or source
 npx mcp-app-lint --package @scope/name                # an npm package: downloaded, scanned, deleted
 npx mcp-app-lint --read read.json --list list.json --tools tools.json
-                                                      # results of resources/read, resources/list, tools/list
+                                                      # saved results of resources/read, resources/list, tools/list
 npx mcp-app-lint --html app.html                      # one UI document
 npx mcp-app-lint --a2ui stream.jsonl                  # A2UI v0.9 messages: one, a JSON array, { messages } or JSONL
+npx mcp-app-lint --html dist/app.html --suggest-csp   # the _meta.ui.csp the document needs
+npx mcp-app-lint --mcp                                # run as an MCP server over stdio (see below)
 ```
 
 Options: `--out file.sarif`, `--format sarif|text`, `--fail-on error|warning|note|none` (default
-`error`; the exit code is 1 when a finding reaches the threshold, 2 on usage errors).
+`error`; the exit code is 1 when a finding reaches the threshold, 2 on usage errors and on a
+server that cannot be reached), `--header "Name: value"` (repeatable, for `--url`), `--timeout ms`
+(per request to a live server, default 20000), `--suggest-csp`.
+
+## A running server
+
+`--url` and `--stdio` ask the server what it publishes, the same way a host does: `initialize`,
+`resources/list`, `resources/read` for every UI resource (`text/html` or `ui://`), `tools/list`.
+They never call a tool. Findings point at the resource (`ui://…`) or at `tools/list`, and a summary
+of what was read goes to stderr, so stdout stays a clean SARIF log.
+
+```
+npx mcp-app-lint --url https://example.com/mcp --header "Authorization: Bearer $TOKEN" --format text
+npx mcp-app-lint --stdio "node dist/index.js --stdio" --format text
+```
+
+`--url` speaks Streamable HTTP (JSON or SSE answers, session header, a `DELETE` to end the session).
+A 401 or 403 means the server wants credentials: pass them with `--header`. `--stdio` runs the
+command through the shell in the current directory, keeps the server's stderr out of the output
+(its last lines go into the error if it exits), answers its `ping`, and closes stdin when done. The
+SARIF log records the command line with header values, URL credentials and query values, and
+`NAME=value` assignments in the `--stdio` command masked, since code scanning stores it.
+
+## Suggested CSP
+
+`--suggest-csp` prints, instead of findings, the `_meta.ui.csp` each UI document needs, as JSON
+keyed by document (or one block per document with `--format text`):
+
+```json
+{
+  "ui://weather/view": {
+    "connectDomains": ["https://api.weather.example", "wss://live.weather.example"],
+    "resourceDomains": ["https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://img.weather.example"]
+  }
+}
+```
+
+The keys follow the host formula in the specification: `connectDomains` for `fetch`, `WebSocket`,
+`EventSource`, XHR and `sendBeacon`; `resourceDomains` for scripts (including module imports from a
+URL), stylesheets and CSS `url()`/`@import`, images (`src`, `srcset`, `poster`) and media;
+`frameDomains` for iframes. Links (`<a href>`, `rel="canonical"`, `preconnect`) need nothing. A
+Google Fonts stylesheet brings `fonts.gstatic.com` with it. It is static: a URL the script assembles
+at run time is not seen, so run it on the built document and add such hosts by hand. `null` means
+the document references no external origin and the restrictive default fits it. MCPAPP001 carries
+the same suggestion in its message and in `properties.suggestedCsp`.
 
 ## Use in CI (GitHub code scanning)
 
@@ -75,6 +123,8 @@ npx mcp-app-lint --dir . --format sarif --out mcp-app-lint.sarif --fail-on error
 | MCPAPP017 | meta-list-read-mismatch | warning | `resources/read` and `resources/list` both declare a field (`csp`, `permissions`, `domain`) with different values; a listing with no CSP is not a mismatch, since the SDK puts the CSP in the read result |
 | MCPAPP018 | meta-read-wider-than-list | error | both declare a CSP and the read-time one adds an entry (domain or wildcard) the listing did not declare under the same key |
 | MCPAPP019 | csp-sink-tenant-host | note | one bucket, worker or app on a storage or serverless service from the denylist (`acct.blob.core.windows.net`, `pub-<id>.r2.dev`); fine while the owner keeps the name |
+| MCPAPP020 | csp-unused-domain | note | a declared entry whose host the document never mentions: the policy is wider than the UI needs. Only where the exact document is known (a read result, a live server); a host the script assembles from parts at run time is reported too |
+| MCPAPP021 | csp-host-undeclared | warning | the UI declares a CSP, but the document loads from or calls an origin under a key that does not allow it (see Suggested CSP); the host blocks the request and the UI breaks |
 
 ### A2UI rules
 
@@ -111,10 +161,35 @@ Apps MIME type or `ui://` (hosts, renderers, SDKs) are not treated as serving a 
 looked for in the package's HTML documents only: a `fetch` in server code is not bound by the CSP,
 so it does not count.
 
+## As an MCP server
+
+`mcp-app-lint --mcp` serves the checks over stdio, so an agent that builds an MCP App can run them
+while it works. Install the package, then register it with the client, for example in Claude Code:
+
+```
+npm install --global mcp-app-lint
+claude mcp add mcp-app-lint -- mcp-app-lint --mcp
+```
+
+| Tool | Input | Output |
+| --- | --- | --- |
+| `lint_ui_resource` | `html`, `meta` (the read result's `_meta`), `list_meta`, `uri` | findings for the document and its `_meta.ui` |
+| `suggest_csp` | `html` | the `_meta.ui.csp` the document needs, or `null` |
+| `lint_tools` | `tools` (a `tools/list` array) | findings |
+| `lint_a2ui` | `messages` (array, JSON or JSONL text) | findings |
+| `lint_directory` | `path` of a package directory | findings, with file and line |
+| `lint_server` | `url` of a Streamable HTTP endpoint, `headers` | findings for what the server publishes |
+
+Every tool is marked read-only. Findings come as text (one line each) and as `structuredContent`
+(`counts` by level and the findings). No tool starts a process: a local stdio server is linted from
+the command line with `--stdio`, where the user sees the command.
+
 The MCP Apps rules come out of the [MCP Apps UI census](../../census) in this repository; the analyzer is
 shared. The HTML sink detection is `eslint-plugin-render-policy`'s `no-unsafe-innerhtml`. The sink
 denylist is `@render-policy/core`'s. The package also exports the analysis functions (`analyzeHtml`,
-`analyzeUiMeta`, `compareListRead`, `scanPackageDir`, `lintA2uiMessages`, `parseA2uiMessages`, …) and `categorizeDomain`, the heuristic host
+`analyzeUiMeta`, `compareListRead`, `scanPackageDir`, `lintA2uiMessages`, `parseA2uiMessages`,
+`cspNeeds`, `suggestCsp`, `lintSnapshot`, …), the read-only clients (`McpHttpClient`,
+`McpStdioClient`, `snapshotServer`), the MCP server (`serveMcp`, `handleMessage`) and `categorizeDomain`, the heuristic host
 category (fonts, analytics, maps, storage, media, cdn, api, …) the census report tabulates; it is
 data for aggregates, not a rule.
 

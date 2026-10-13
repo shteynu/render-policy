@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+Changes in `mcp-app-lint` only.
+
+- `--url <endpoint>` and `--stdio "<command>"` lint a running server: the CLI does what a host does
+  (`initialize`, `resources/list`, `resources/read` for every UI resource, `tools/list`) and never
+  calls a tool. `--header "Name: value"` (repeatable) carries credentials, `--timeout` bounds each
+  request; a 401, a 404 or a timeout comes with a hint. The Streamable HTTP client moved here from
+  the census (`census/lib/mcp-client.mjs` now extends it with the census user agent), with a
+  `DELETE` that ends the session; the stdio client answers the server's `ping`, ignores log lines
+  on stdout and reports the stderr tail of a server that exits. Exported: `McpHttpClient`,
+  `McpStdioClient`, `snapshotServer`, `lintSnapshot` (which `--read` now uses too). The SARIF
+  `commandLine` masks header values, URL credentials and query values, and environment assignments
+  in the `--stdio` command, so a token does not end up in code scanning.
+- `--suggest-csp` prints the `_meta.ui.csp` each UI document needs (`connectDomains`,
+  `resourceDomains`, `frameDomains`, following the host formula), as JSON or text, for every input
+  that carries HTML. MCPAPP001 now includes that suggestion in its message and in
+  `properties.suggestedCsp`. Exported: `cspNeeds`, `suggestCsp`, `undeclaredOrigins`, `unusedEntries`.
+- New rules, where the exact document of a resource is known (read result, live server):
+  MCPAPP020 `csp-unused-domain` (note), a declared host the document never mentions; MCPAPP021
+  `csp-host-undeclared` (warning), an origin the document loads from or calls that the declared CSP
+  does not allow, so the host blocks it.
+- `--mcp` runs the linter as an MCP server over stdio with six read-only tools: `lint_ui_resource`,
+  `suggest_csp`, `lint_tools`, `lint_a2ui`, `lint_directory`, `lint_server`. No tool starts a
+  process. Exported: `serveMcp`, `handleMessage`, `MCP_TOOLS`.
+- Fixed: `--dir path/` gave `path//file` in finding locations, which code scanning cannot map.
+
 ## 0.1.6 — 2026-10-08
 
 Changes in `@render-policy/core` (Trusted Types fix), `@render-policy/react` and

@@ -34,7 +34,12 @@ The plugin has no hooks, MCP servers or background processes. It runs nothing on
   not installed, Claude asks you before adding it as a dev dependency with your package manager,
   which downloads it from the npm registry. The CLI reads the directory or files you point it at and
   prints findings locally. With `--package <name>` it downloads that npm package to a temporary
-  directory, scans it and deletes it. It sends nothing else anywhere.
+  directory, scans it and deletes it. With `--url` or `--stdio` it asks the server you name what it
+  publishes (`resources/list`, `resources/read`, `tools/list`) and never calls a tool. It sends
+  nothing else anywhere.
+
+`mcp-app-lint` can also run as an MCP server (`mcp-app-lint --mcp`, see its README). The plugin
+does not install or start it; if you register it yourself, the skill uses its tools.
 
 Every command goes through Claude's normal tool permissions. The plugin collects no data; see
 [PRIVACY.md](PRIVACY.md).

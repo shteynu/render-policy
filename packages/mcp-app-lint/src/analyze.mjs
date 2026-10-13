@@ -3,6 +3,7 @@
  * its tools, and the HTML of the resources themselves. No network here.
  */
 import { createRequire } from 'node:module';
+import { cspNeeds } from './csp.mjs';
 import { classifyDomains, sinkFor } from './domains.mjs';
 
 /**
@@ -262,6 +263,8 @@ export function analyzeHtml(html) {
     // Hosts that script calls with an absolute URL (fetch, WebSocket, …), bundles included.
     networkHosts: /** @type {string[]} */ ([]),
     sinkHosts: /** @type {string[]} */ ([]),
+    // The origins the document loads from or calls, by the _meta.ui.csp key that must allow them.
+    cspNeeds: cspNeeds(text),
   };
   result.externalHosts = hostnames([...text.matchAll(URL_ATTR_RE)].map((m) => m[1] ?? '').filter((v) => /^(https?:)?\/\//i.test(v)));
   result.networkHosts = hostnames([...text.matchAll(NETWORK_CALL_RE)].map((m) => m[1] ?? ''));
