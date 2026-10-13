@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.7 — 2026-10-13
 
-Changes in `mcp-app-lint` only.
+Changes in `mcp-app-lint` only. The other six packages are unchanged; they move to 0.1.7 so all
+seven share one version. The Claude Code plugin's `mcp-app-csp` skill covers the new inputs and rules.
 
 - `--url <endpoint>` and `--stdio "<command>"` lint a running server: the CLI does what a host does
   (`initialize`, `resources/list`, `resources/read` for every UI resource, `tools/list`) and never
