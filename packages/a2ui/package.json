@@ -24,7 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "marked": "^18.0.14"
+    "marked": "^18.1.0"
   },
   "peerDependencies": {
     "@render-policy/core": "^0.1.5"
