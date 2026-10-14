@@ -35,7 +35,7 @@ Maintainer's working list, kept in Russian on purpose; the public documentation 
 - [x] Релиз 0.1.5 (2026-10-08): новый пакет `@render-policy/a2ui` (A2UI v0.9) и `createUrlGuard` в core. Все семь пакетов 0.1.5 на npm; `a2ui` 0.1.5 опубликован вручную, без provenance, со следующего релиза через trusted publishing.
 - [x] Релиз 0.1.6 (2026-10-08): core (одна TT-политика `dompurify` на окно), `react`/`angular` (A2UI `Text`/`Image` на подпутях `/a2ui`), `mcp-app-lint --a2ui`; корпус +24 кейса A2UI. Первый тег упал на сборке (`react` раньше `a2ui`), исправлено в `a41c418`, тег пересоздан. Все семь пакетов 0.1.6 на npm с provenance (release.yml run 37776000577), `a2ui` впервые через trusted publishing.
 - [x] Релиз 0.1.7 (2026-10-13, опубликован 2026-10-14): только `mcp-app-lint` (`--url`/`--stdio`, `--suggest-csp`, MCPAPP020/021, `--mcp`, маскирование секретов в SARIF, исправление `path//file`); PR #15. Все семь пакетов 0.1.7 на npm с provenance (release.yml run 38555681204), тарболы в GitHub Release.
-- [ ] Релиз 0.1.8 (2026-10-14): только `mcp-app-lint`, PR #16: CSS `url()` ищется только в CSS (ложный `github.com` из `new URL()` в бандле), адреса из скрипта без известного ключа (тайлы карты, база CDN) выводятся подсказкой. Подготовлен: версии 0.1.8, `npm run check` зелёный. Осталось: `git push origin main && git push origin v0.1.8`.
+- [x] Релиз 0.1.8 (2026-10-14): только `mcp-app-lint`, PR #16: CSS `url()` ищется только в CSS (ложный `github.com` из `new URL()` в бандле), адреса из скрипта без известного ключа (тайлы карты, база CDN) выводятся подсказкой. Все семь пакетов 0.1.8 на npm с provenance (release.yml run 38578250464).
 
 ## 3. Перепись CSP: протокольный обход (нужна обычная сеть, из облачной сессии не работает)
 
