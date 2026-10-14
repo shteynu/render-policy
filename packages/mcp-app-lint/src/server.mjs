@@ -88,12 +88,17 @@ export const TOOLS = [
     description:
       'The minimal _meta.ui.csp for an MCP App document: connectDomains for the origins it fetches or opens sockets to, ' +
       'resourceDomains for scripts, styles, fonts, images and media, frameDomains for iframes. Static: a URL the script ' +
-      'assembles at run time is not seen. Returns null when the document references no external origin.',
+      'assembles at run time is not seen. csp is null when no origin has a known key; mentioned lists absolute URLs the ' +
+      'script holds whose key cannot be told statically (for example a tile URL handed to a map library), to check by hand.',
     inputSchema: { type: 'object', properties: { html: { type: 'string', description: 'The HTML text of the resource.' } }, required: ['html'] },
     annotations: { readOnlyHint: true, openWorldHint: false },
     async run(args) {
-      const csp = suggestCsp(analyzeHtml(requireString(args, 'html')).cspNeeds);
-      return { text: csp ? JSON.stringify({ csp }, null, 2) : 'The document references no external origin; it needs no CSP.', structured: { csp } };
+      const analysis = analyzeHtml(requireString(args, 'html'));
+      const csp = suggestCsp(analysis.cspNeeds);
+      const mentioned = analysis.cspMentioned;
+      const hint = mentioned.length > 0 ? `\nThe script also holds ${mentioned.join(', ')}; the key is unknown. Check whether the UI loads them (a map tile server or a CDN base URL usually belongs in resourceDomains, an API in connectDomains).` : '';
+      const text = csp ? `${JSON.stringify({ csp }, null, 2)}${hint}` : mentioned.length > 0 ? `No origin with a known key.${hint}` : 'The document references no external origin; it needs no CSP.';
+      return { text, structured: { csp, mentioned } };
     },
   },
   {

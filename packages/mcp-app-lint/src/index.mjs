@@ -1,6 +1,6 @@
 export { lintA2uiMessages, parseA2uiMessages } from './a2ui.mjs';
 export { failureKind, firstJsonRpcFromSse, isUiResource, McpHttpClient, McpStdioClient, snapshotServer } from './client.mjs';
-export { cspNeeds, entryCovers, mergeNeeds, suggestCsp, undeclaredOrigins, unusedEntries } from './csp.mjs';
+export { cspNeeds, entryCovers, mentionedOrigins, mergeNeeds, suggestCsp, undeclaredOrigins, unusedEntries } from './csp.mjs';
 export { analyzeHtml, analyzeTools, analyzeUiMeta, compareListRead, ESCAPE_FUNCTIONS, isHandwritten, postMessageStarCalls, UI_MIME, uiMetaOf, withSinkHosts } from './analyze.mjs';
 export { categorizeDomain, categorizeHost, classifyDomains, DOMAIN_CATEGORIES, parseDomainPattern, sinkFor, sinkScope } from './domains.mjs';
 export { levelOf, lintHtml, lintPackageScan, lintResource, lintSnapshot, lintTools, lintUiMeta } from './lint.mjs';

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { test } from 'node:test';
-import { cspNeeds, entryCovers, lintPackageScan, lintResource, scanPackageDir, suggestCsp, undeclaredOrigins, unusedEntries } from '../src/index.mjs';
+import { cspNeeds, entryCovers, mentionedOrigins, lintPackageScan, lintResource, scanPackageDir, suggestCsp, undeclaredOrigins, unusedEntries } from '../src/index.mjs';
 import { run } from '../src/cli.mjs';
 
 const ids = (findings) => findings.map((f) => f.ruleId);
@@ -45,6 +45,33 @@ test('cspNeeds: origins by the key that has to allow them; links, data: and rela
     frameDomains: ['https://embed.example'],
   });
   assert.equal(suggestCsp(cspNeeds('<p>self-contained</p><a href="https://x.example">x</a>')), null);
+});
+
+test('cspNeeds: CSS url() and @import count only in CSS; new URL() in script is not a fetch', () => {
+  const html = [
+    '<div style="background-image: url(\'https://bg.example/a.png\')"></div>',
+    '<style>@import url("https://css.example/a.css"); .x { background: URL(https://upper.example/b.png) }</style>',
+    // A bundled JSON Schema validator builds a base URL it never fetches.
+    '<script>const base = new URL("https://github.com/cfworker"); const u = url("https://fn.example/x");</script>',
+  ].join('\n');
+  assert.deepEqual(cspNeeds(html).resourceDomains, ['https://bg.example', 'https://css.example', 'https://upper.example']);
+});
+
+test('mentionedOrigins: URL literals with no known key are hints; docs, namespaces, placeholders and links are not', () => {
+  const html = [
+    '<a href="https://help.example.net/x">help</a><a href="https://site.test/about">about</a>',
+    '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+    '<script>',
+    'const base = `https://cdn.lib.test/releases/${version}/Build`;',
+    'new Map.Tiles({ url: "https://tile.osm.test/{z}/{x}/{y}.png" });',
+    'fetch("https://api.test/x");',
+    'console.warn("see https://vuejs.org/guide and https://github.com/o/r/issues");',
+    'const doc = "https://*.example.com", home = "https://site.test/";',
+    '</script>',
+  ].join('\n');
+  // api.test has a key (connect); site.test is a link target; the rest is noise.
+  assert.deepEqual(mentionedOrigins(html), ['https://cdn.lib.test', 'https://tile.osm.test']);
+  assert.deepEqual(cspNeeds(html).connectDomains, ['https://api.test']);
 });
 
 test('entryCovers: exact hosts, leading wildcards (not the apex), full wildcards; scheme and port are not compared', () => {
@@ -128,6 +155,17 @@ test('--suggest-csp prints the declaration per document, as JSON or text, and ex
     assert.equal(await run(['--dir', `${dir}${path.sep}`, '--suggest-csp', '--format', 'text'], io), 0);
     assert.match(out.join(''), /dist\/app\.html\n {2}connectDomains: https:\/\/api\.example\n {2}resourceDomains: https:\/\/img\.example\n/);
     assert.ok(!out.join('').includes('//dist'));
+    // A URL with no known key is a hint: a line in text, stderr next to JSON (stdout stays the declaration).
+    const tiles = path.join(dir, 'tiles.html');
+    await writeFile(tiles, '<script>new Tiles({ url: "https://tile.osm.test/{z}/{x}/{y}.png" })</script>');
+    out.length = 0;
+    await run(['--html', tiles, '--suggest-csp', '--format', 'text'], io);
+    assert.match(out.join(''), /also in script, key unknown \(check whether the UI loads them\): https:\/\/tile\.osm\.test\n/);
+    out.length = 0;
+    const err = [];
+    await run(['--html', tiles, '--suggest-csp'], { stdout: io.stdout, stderr: { write: (s) => err.push(s) } });
+    assert.deepEqual(Object.values(JSON.parse(out.join(''))), [null]);
+    assert.match(err.join(''), /the script also holds https:\/\/tile\.osm\.test; the key is unknown/);
     // Self-contained documents need none.
     const plain = path.join(dir, 'plain.html');
     await writeFile(plain, '<p>hi</p>');

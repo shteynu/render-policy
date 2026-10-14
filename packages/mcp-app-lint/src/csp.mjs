@@ -16,7 +16,9 @@ const ELEMENT_RE = /<(script|img|video|audio|source|track|link|iframe|frame|imag
 const ATTR_RE = /(?:^|\s)(src|href|xlink:href|poster|srcset|rel)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
 // rel values of a <link> that fetch nothing (or nothing the CSP governs).
 const NON_FETCHING_REL_RE = /^(?:canonical|alternate|author|help|license|next|prev|search|me|bookmark|external|dns-prefetch|preconnect)$/i;
-const CSS_URL_RE = /url\(\s*["']?((?:https?:)?\/\/[^"')\s]+)|@import\s+["']((?:https?:)?\/\/[^"']+)/gi;
+// CSS only: <style> blocks and style attributes. Script is not searched, where `new URL("https://…")` is not a fetch.
+const STYLE_RE = /<style\b[^>]*>([\s\S]*?)<\/style>|\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+const CSS_URL_RE = /(?<![\w$.-])url\(\s*["']?((?:https?:)?\/\/[^"')\s]+)|@import\s+(?:url\(\s*)?["']?((?:https?:)?\/\/[^"')\s;]+)/gi;
 // fetch, sendBeacon, WebSocket, EventSource, XHR open: connect-src.
 const CONNECT_CALL_RE = /(?:\b(?:fetch|sendBeacon)\s*\(|\bnew\s+(?:WebSocket|EventSource)\s*\(|\.open\s*\(\s*["'`][A-Za-z]+["'`]\s*,)\s*["'`]((?:https?|wss?):\/\/[^"'`\s]+)/g;
 // import() and static imports from a URL: script-src.
@@ -67,7 +69,9 @@ export function cspNeeds(html) {
     add(key, attrs.poster);
     for (const candidate of (attrs.srcset ?? '').split(',')) add(key, candidate.trim().split(/\s+/)[0]);
   }
-  for (const match of text.matchAll(CSS_URL_RE)) add('resourceDomains', match[1] ?? match[2]);
+  for (const style of text.matchAll(STYLE_RE)) {
+    for (const match of (style[1] ?? style[2] ?? style[3] ?? '').matchAll(CSS_URL_RE)) add('resourceDomains', match[1] ?? match[2]);
+  }
   for (const match of text.matchAll(CONNECT_CALL_RE)) add('connectDomains', match[1]);
   for (const match of text.matchAll(IMPORT_RE)) add('resourceDomains', match[1]);
   return {
@@ -75,6 +79,40 @@ export function cspNeeds(html) {
     resourceDomains: [...sets.resourceDomains].sort(),
     frameDomains: [...sets.frameDomains].sort(),
   };
+}
+
+// Absolute URL literals anywhere in the document, and hosts that name things rather than serve them.
+const URL_LITERAL_RE = /["'`]((?:https?|wss?):\/\/[^"'`\s<>]+)/g;
+const NAMESPACE_HOSTS = new Set(['www.w3.org', 'w3.org', 'json-schema.org', 'purl.org', 'schema.org', 'ns.adobe.com']);
+// Hosts that bundles name in error messages and comments (framework docs, source links), not to fetch from.
+const DOC_HOSTS = new Set(['github.com', 'vuejs.org', 'react.dev', 'reactjs.org', 'legacy.reactjs.org', 'angular.dev', 'angular.io', 'svelte.dev', 'solidjs.com', 'preactjs.com', 'developer.mozilla.org', 'nodejs.org', 'www.npmjs.com', 'npmjs.com', 'modelcontextprotocol.io', 'spec.modelcontextprotocol.io', 'zod.dev', 'tc39.es', 'bugs.chromium.org']);
+const PLACEHOLDER_HOST_RE = /\*|(^|\.)example\.(com|org|net)$|^(localhost|127\.0\.0\.1)$/;
+const LINK_RE = /<a\b[^>]*\shref\s*=\s*["']([^"']+)["']/gi;
+
+/**
+ * Origins of absolute URL literals the document holds without a call or attribute that tells which
+ * key they need (`url: "https://tiles.example/{z}/{x}/{y}.png"` handed to a map library, a base URL
+ * in a template literal). They may or may not be fetched; `--suggest-csp` lists them so a person
+ * decides. Origins already in `needs`, link targets, XML namespace hosts, framework documentation
+ * hosts and placeholders (`*.example.com`, localhost) are left out.
+ * @param {unknown} html
+ * @param {CspNeeds} [needs]
+ * @returns {string[]}
+ */
+export function mentionedOrigins(html, needs = cspNeeds(html)) {
+  const text = String(html ?? '');
+  const known = new Set([...needs.connectDomains, ...needs.resourceDomains, ...needs.frameDomains]);
+  const links = new Set([...text.matchAll(LINK_RE)].map((m) => originOf(m[1] ?? '')).filter(Boolean));
+  /** @type {Set<string>} */
+  const mentioned = new Set();
+  for (const match of text.matchAll(URL_LITERAL_RE)) {
+    const origin = originOf(match[1] ?? '');
+    if (!origin || known.has(origin) || links.has(origin)) continue;
+    const host = new URL(origin).hostname;
+    if (NAMESPACE_HOSTS.has(host) || DOC_HOSTS.has(host) || PLACEHOLDER_HOST_RE.test(host)) continue;
+    mentioned.add(origin);
+  }
+  return [...mentioned].sort();
 }
 
 /**

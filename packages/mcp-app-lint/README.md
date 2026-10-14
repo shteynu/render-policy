@@ -56,12 +56,20 @@ keyed by document (or one block per document with `--format text`):
 
 The keys follow the host formula in the specification: `connectDomains` for `fetch`, `WebSocket`,
 `EventSource`, XHR and `sendBeacon`; `resourceDomains` for scripts (including module imports from a
-URL), stylesheets and CSS `url()`/`@import`, images (`src`, `srcset`, `poster`) and media;
+URL), stylesheets and CSS `url()`/`@import` (in `<style>` and `style` attributes), images (`src`,
+`srcset`, `poster`) and media;
 `frameDomains` for iframes. Links (`<a href>`, `rel="canonical"`, `preconnect`) need nothing. A
 Google Fonts stylesheet brings `fonts.gstatic.com` with it. It is static: a URL the script assembles
 at run time is not seen, so run it on the built document and add such hosts by hand. `null` means
-the document references no external origin and the restrictive default fits it. MCPAPP001 carries
-the same suggestion in its message and in `properties.suggestedCsp`.
+no origin has a known key. MCPAPP001 carries the same suggestion in its message and in
+`properties.suggestedCsp`.
+
+A bundle often holds a URL as a plain string that a library fetches later: a map tile template
+(`url: "https://tile.example.org/{z}/{x}/{y}.png"`), a CDN base URL in a template literal. The key
+cannot be told from the code, so these origins are listed as hints, not put into the declaration:
+on a line of their own with `--format text`, on stderr next to the JSON (stdout stays the
+declaration to copy), and as `mentioned` from the MCP tool. Link targets, XML namespaces,
+framework documentation hosts and placeholders such as `*.example.com` are left out.
 
 ## Use in CI (GitHub code scanning)
 

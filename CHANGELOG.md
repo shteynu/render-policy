@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+Changes in `mcp-app-lint` only.
+
+- Fixed: `--suggest-csp` (and the suggestion in MCPAPP001, and MCPAPP021) read `new URL("https://…")`
+  in script as a CSS `url()`, so a bundled JSON Schema validator's base URL showed up as a needed
+  resource origin. CSS `url()` and `@import` are now read only from `<style>` blocks and `style`
+  attributes.
+- `--suggest-csp` lists absolute URLs the script holds whose key cannot be told statically (a map
+  tile template, a CDN base URL) as hints: a text line, a stderr note next to the JSON, `mentioned`
+  in the MCP tool's result. Before, such a UI was reported as needing no CSP. The JSON on stdout
+  keeps its 0.1.7 shape. Exported: `mentionedOrigins`.
+
 ## 0.1.7 — 2026-10-13
 
 Changes in `mcp-app-lint` only. The other six packages are unchanged; they move to 0.1.7 so all
