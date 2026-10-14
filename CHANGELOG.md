@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.8 — 2026-10-14
 
-Changes in `mcp-app-lint` only.
+Changes in `mcp-app-lint` only: two fixes to `--suggest-csp` from 0.1.7. The other six packages
+and the plugin are unchanged and move to 0.1.8 so all share one version.
 
 - Fixed: `--suggest-csp` (and the suggestion in MCPAPP001, and MCPAPP021) read `new URL("https://…")`
   in script as a CSS `url()`, so a bundled JSON Schema validator's base URL showed up as a needed
