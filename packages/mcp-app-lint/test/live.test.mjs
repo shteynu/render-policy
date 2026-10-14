@@ -175,7 +175,10 @@ test('--mcp: initialize, tools/list (all read-only), tools/call, errors', async 
   assert.match(lint.result.content[0].text, /MCPAPP010 ui:\/\/demo\/app:2:/);
 
   const csp = await handleMessage({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'suggest_csp', arguments: { html: UI_HTML } } });
-  assert.deepEqual(csp.result.structuredContent, { csp: { resourceDomains: ['https://img.example'] } });
+  assert.deepEqual(csp.result.structuredContent, { csp: { resourceDomains: ['https://img.example'] }, mentioned: [] });
+  const tiles = await handleMessage({ jsonrpc: '2.0', id: 41, method: 'tools/call', params: { name: 'suggest_csp', arguments: { html: '<script>new Tiles({ url: "https://tile.osm.test/{z}.png" })</script>' } } });
+  assert.deepEqual(tiles.result.structuredContent, { csp: null, mentioned: ['https://tile.osm.test'] });
+  assert.match(tiles.result.content[0].text, /No origin with a known key\.\nThe script also holds https:\/\/tile\.osm\.test/);
 
   const bad = await handleMessage({ jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'suggest_csp', arguments: {} } });
   assert.equal(bad.result.isError, true);

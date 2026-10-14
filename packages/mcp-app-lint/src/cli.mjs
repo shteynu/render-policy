@@ -152,12 +152,19 @@ const USAGE = [
 ].join('\n');
 
 /**
- * One block per document: its uri, then each key with the origins it needs.
+ * One block per document: its uri, then each key with the origins it needs, then the absolute URLs
+ * the script holds whose key is unknown (see mentionedOrigins).
  * @param {Record<string, Partial<CspNeeds> | null>} suggestions
+ * @param {Record<string, string[]>} mentioned
  */
-function suggestionsText(suggestions) {
-  const blocks = Object.entries(suggestions).map(([uri, csp]) =>
-    csp ? `${uri}\n${Object.entries(csp).map(([key, origins]) => `  ${key}: ${origins.join(' ')}`).join('\n')}` : `${uri}\n  needs no CSP (references no external host)`);
+function suggestionsText(suggestions, mentioned) {
+  const blocks = Object.entries(suggestions).map(([uri, csp]) => {
+    const lines = csp ? Object.entries(csp).map(([key, origins]) => `  ${key}: ${origins.join(' ')}`) : [];
+    const extra = mentioned[uri] ?? [];
+    if (extra.length > 0) lines.push(`  also in script, key unknown (check whether the UI loads them): ${extra.join(' ')}`);
+    else if (!csp) lines.push('  needs no CSP (references no external host)');
+    return `${uri}\n${lines.join('\n')}`;
+  });
   return blocks.length > 0 ? `${blocks.join('\n')}\n` : 'no UI documents\n';
 }
 
@@ -211,17 +218,24 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
   const findings = [];
   /** @type {Record<string, Partial<CspNeeds> | null>} */
   const suggestions = {};
-  /** @param {string} uri @param {Partial<CspNeeds> | undefined} needs */
-  const suggest = (uri, needs) => {
+  /** @type {Record<string, string[]>} */
+  const mentioned = {};
+  /** @param {string} uri @param {Partial<CspNeeds> | undefined} needs @param {string[] | undefined} [extra] */
+  const suggest = (uri, needs, extra) => {
     suggestions[relativeUri(uri)] = needs ? suggestCsp(mergeNeeds([needs])) : null;
+    if (extra?.length) mentioned[relativeUri(uri)] = extra;
   };
   /** @param {PackageScan} scan @param {string} root */
   const suggestPackage = (scan, root) => {
-    for (const doc of scan.html ?? []) suggest(`${root.replace(/[\\/]+$/, '') || root}/${doc.file}`.replace(/^\.\//, ''), doc.cspNeeds);
+    for (const doc of scan.html ?? []) suggest(`${root.replace(/[\\/]+$/, '') || root}/${doc.file}`.replace(/^\.\//, ''), doc.cspNeeds, doc.cspMentioned);
   };
   /** @param {{ contents: readonly any[] }} snapshot */
   const suggestSnapshot = ({ contents }) => {
-    for (const item of contents) if (typeof item.text === 'string') suggest(item.uri ?? 'resources/read', analyzeHtml(item.text).cspNeeds);
+    for (const item of contents) {
+      if (typeof item.text !== 'string') continue;
+      const analysis = analyzeHtml(item.text);
+      suggest(item.uri ?? 'resources/read', analysis.cspNeeds, analysis.cspMentioned);
+    }
   };
   const timeoutMs = options.timeout;
 
@@ -263,7 +277,8 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
   if (options.html) {
     const html = await readFile(options.html, 'utf8');
     findings.push(...lintHtml(html, options.html));
-    suggest(options.html, analyzeHtml(html).cspNeeds);
+    const analysis = analyzeHtml(html);
+    suggest(options.html, analysis.cspNeeds, analysis.cspMentioned);
   }
   if (options.a2ui) {
     findings.push(...lintA2uiMessages(parseA2uiMessages(await readFile(options.a2ui, 'utf8')), options.a2ui));
@@ -274,7 +289,11 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
   }
 
   if (options.suggestCsp) {
-    const output = options.format === 'text' ? suggestionsText(suggestions) : `${JSON.stringify(suggestions, null, 2)}\n`;
+    const output = options.format === 'text' ? suggestionsText(suggestions, mentioned) : `${JSON.stringify(suggestions, null, 2)}\n`;
+    // The JSON stays a declaration to copy; the hints go to stderr.
+    if (options.format !== 'text') {
+      for (const [uri, extra] of Object.entries(mentioned)) stderr.write(`mcp-app-lint: ${uri}: the script also holds ${extra.join(', ')}; the key is unknown, check whether the UI loads them\n`);
+    }
     if (options.out) await writeFile(options.out, output);
     else stdout.write(output);
     return 0;
